@@ -1,0 +1,29 @@
+kind: lane
+lane: ambient
+# The filename token: the output regex forbids hyphens.
+file_token: ambient
+alias: Long Exposure
+album: Rooms in Half Light
+
+tempo_range_bpm: [112, 124]
+meter: [4, 4]
+
+# D dorian, two octaves. The fundamental is drawn from here.
+scale_midi: [38, 40, 41, 43, 45, 47, 48, 50, 52, 53, 55, 57, 59, 60, 62, 64]
+
+fx_sends:
+  - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 5000, q_num: 1, q_den: 1}
+
+techniques:
+  - name: pad_drone
+    partials: 3
+    detune_min_cents: -5
+    detune_max_cents: 5
+    lfo_rate: {numerator: 1, denominator: 8}
+    lfo_depth_cents: 4
+    amplitude_millibels: -300
+
+section_count_range: [4, 4]
+duration_range_seconds: [10, 10]
+attack_frames: 13230
+release_frames: 13230

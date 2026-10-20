@@ -1,0 +1,76 @@
+kind: station
+station_id: indiegenerator
+
+# The blend. The lane is drawn inside compose(), which is the only place
+# randomness is allowed to exist.
+lane_weights:
+  - {lane: motorik, weight: 30}
+  - {lane: kosmische, weight: 25}
+  - {lane: ambient, weight: 20}
+  - {lane: dub-electronic, weight: 15}
+  - {lane: indie-noise, weight: 10}
+
+# The instrument palette every lane draws from. Nothing outside it without a
+# reason in the README.
+palette:
+  - pad
+  - bass
+  - drums
+  - ks
+  - formant
+  - noise
+
+# Three to seven notes, one cell, transformed per track but recognisable.
+motif_bank:
+  - [0, 3, 5, 7]
+  - [0, 2, 3, 7]
+  - [0, 2, 5, 7, 9]
+  - [0, 4, 7, 11]
+  - [0, 3, 7, 10]
+  - [0, 5, 7, 10]
+
+title_words:
+  - Low
+  - Tide
+  - Glass
+  - Harbour
+  - Hollow
+  - Signal
+  - Quiet
+  - Circuit
+  - Paper
+  - Salt
+  - Ember
+  - Drift
+  - North
+  - Compass
+  - Slow
+  - Weather
+  - Pale
+  - Lantern
+  - Iron
+  - Meadow
+
+# The shape of a track: what each section is for and how loud it is.
+section_profiles:
+  - {function: intro, density: 20, level_millibels: -1200}
+  - {function: build, density: 55, level_millibels: -600}
+  - {function: plateau, density: 80, level_millibels: -500}
+  - {function: outro, density: 30, level_millibels: -1400}
+
+# The Director's deck. Every draw is logged in the plan.
+strategy_deck:
+  - sample: 220500
+    strategy: transpose_up_fourth
+    detail: transpose the motif up a fourth
+    parameter: 5
+    crossfade_frames: 11025
+
+fade_in_frames: 13230
+fade_out_frames: 22050
+section_crossfade_frames: 2205
+target_peak_millibels: -1800
+ceiling_millibels: -150
+dither_lsb: 1
+track_number: 1
+format_version: 1

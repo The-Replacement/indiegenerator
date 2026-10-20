@@ -1,0 +1,29 @@
+kind: lane
+lane: kosmische
+# The filename token: the output regex forbids hyphens.
+file_token: kosmische
+alias: Hollow Signal
+album: Sustained Weather
+
+tempo_range_bpm: [70, 110]
+meter: [4, 4]
+
+# Aeolian, low and wide.
+scale_midi: [36, 38, 39, 41, 43, 45, 48, 50, 51, 53, 55, 57, 60, 62, 63, 65]
+
+fx_sends:
+  - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 6000, q_num: 1, q_den: 1}
+
+techniques:
+  - name: pad_drone
+    partials: 3
+    detune_min_cents: -5
+    detune_max_cents: 5
+    lfo_rate: {numerator: 1, denominator: 10}
+    lfo_depth_cents: 5
+    amplitude_millibels: -300
+
+section_count_range: [4, 4]
+duration_range_seconds: [10, 10]
+attack_frames: 22050
+release_frames: 22050

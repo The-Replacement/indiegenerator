@@ -1,0 +1,29 @@
+kind: lane
+lane: motorik
+# The filename token: the output regex forbids hyphens.
+file_token: motorik
+alias: Steady Hand
+album: Sixteen Steps
+
+tempo_range_bpm: [110, 140]
+meter: [4, 4]
+
+# A dorian set with a bright ninth. One chord, held.
+scale_midi: [38, 40, 41, 43, 45, 47, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65]
+
+fx_sends:
+  - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 12000, q_num: 1, q_den: 1}
+
+techniques:
+  - name: pad_drone
+    partials: 3
+    detune_min_cents: -5
+    detune_max_cents: 5
+    lfo_rate: {numerator: 1, denominator: 6}
+    lfo_depth_cents: 3
+    amplitude_millibels: -300
+
+section_count_range: [4, 4]
+duration_range_seconds: [10, 10]
+attack_frames: 8820
+release_frames: 13230

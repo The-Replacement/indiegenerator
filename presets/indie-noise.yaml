@@ -1,0 +1,29 @@
+kind: lane
+lane: indie-noise
+# The filename token: the output regex forbids hyphens.
+file_token: indienoise
+alias: Tin Roof
+album: Loose Ends
+
+tempo_range_bpm: [90, 135]
+meter: [4, 4]
+
+# Mixolydian with an added sixth. Gritty and unresolved.
+scale_midi: [38, 40, 42, 43, 45, 47, 50, 52, 54, 55, 57, 59, 62, 64, 66, 67]
+
+fx_sends:
+  - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}
+
+techniques:
+  - name: pad_drone
+    partials: 3
+    detune_min_cents: -5
+    detune_max_cents: 5
+    lfo_rate: {numerator: 1, denominator: 5}
+    lfo_depth_cents: 5
+    amplitude_millibels: -300
+
+section_count_range: [4, 4]
+duration_range_seconds: [10, 10]
+attack_frames: 13230
+release_frames: 13230
