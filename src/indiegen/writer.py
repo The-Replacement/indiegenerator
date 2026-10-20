@@ -43,7 +43,16 @@ def pcm_sha256(samples: np.ndarray) -> str:
     return hashlib.sha256(np.ascontiguousarray(samples, dtype="<i2").tobytes()).hexdigest()
 
 
-def write_flac_atomic(out_dir: Path, name: str, pcm: np.ndarray, sample_rate: int, tags: dict[str, str]) -> Path:
+def write_flac_atomic(
+    out_dir: Path,
+    name: str,
+    pcm: np.ndarray,
+    sample_rate: int,
+    tags: dict[str, str],
+    *,
+    preset: str = "",
+    seed: int = 0,
+) -> Path:
     """Write the master, atomically, and return its final path."""
     out_dir.mkdir(parents=True, exist_ok=True)
     temp_dir = out_dir / TEMP_DIR_NAME
@@ -60,11 +69,18 @@ def write_flac_atomic(out_dir: Path, name: str, pcm: np.ndarray, sample_rate: in
         _fsync_dir(out_dir)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
-        raise RenderError(f"cannot write {name}: {exc}", preset="", seed=0, block_index=0) from exc
+        raise RenderError(f"cannot write {name}: {exc}", preset=preset, seed=seed, block_index=0) from exc
     return target
 
 
-def write_sidecar_atomic(out_dir: Path, name: str, payload: dict[str, Any]) -> Path:
+def write_sidecar_atomic(
+    out_dir: Path,
+    name: str,
+    payload: dict[str, Any],
+    *,
+    preset: str = "",
+    seed: int = 0,
+) -> Path:
     """Write the JSON sidecar next to the master, atomically."""
     out_dir.mkdir(parents=True, exist_ok=True)
     temp_dir = out_dir / TEMP_DIR_NAME
@@ -82,5 +98,5 @@ def write_sidecar_atomic(out_dir: Path, name: str, payload: dict[str, Any]) -> P
         _fsync_dir(out_dir)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
-        raise RenderError(f"cannot write sidecar for {name}: {exc}", preset="", seed=0, block_index=0) from exc
+        raise RenderError(f"cannot write sidecar for {name}: {exc}", preset=preset, seed=seed, block_index=0) from exc
     return target

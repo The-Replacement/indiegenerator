@@ -135,7 +135,7 @@ def _render(
 
     filename = filename_for(plan)
     tags = build_tags(plan)
-    path = write_flac_atomic(out, filename, pcm, plan.sample_rate, tags)
+    path = write_flac_atomic(out, filename, pcm, plan.sample_rate, tags, preset=plan.preset, seed=plan.seed)
     decoded = read_pcm(path)
     measurements = measure(decoded, plan.sample_rate)
     digest = pcm_sha256(decoded)
@@ -158,6 +158,8 @@ def _render(
                 "render_seconds": render_seconds,
             },
         },
+        preset=plan.preset,
+        seed=plan.seed,
     )
 
     typer.echo(f"path: {path}")
