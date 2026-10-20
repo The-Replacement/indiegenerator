@@ -18,7 +18,7 @@
 
 - `src/` — Source code
 - `tests/` — Test suite
-
+- `docs/` — Documentation
 
 
 ### Entry Points
