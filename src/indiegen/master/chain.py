@@ -22,15 +22,21 @@ INT16_MAX: float = 32767.0
 
 
 def _limit(signal: np.ndarray, ceiling_millibels: int, block: int) -> np.ndarray:
-    """A block-wise safety limiter. The output never exceeds the ceiling."""
+    """A block-wise safety limiter. The output never exceeds the ceiling.
+
+    The gain is monotonically non-increasing: it may only be reduced, never
+    raised. Folding the accumulated gain into the measured peak and then
+    dividing by it would let a louder block raise the gain again, and the
+    limiter would overshoot by exactly the attenuation it had already applied.
+    """
     ceiling = math.pow(10.0, ceiling_millibels / 2000.0)
     limited = signal.copy()
     gain = 1.0
     for start in range(0, limited.shape[0], block):
         chunk = limited[start : start + block]
-        peak = float(np.max(np.abs(chunk))) * gain
-        if peak > ceiling:
-            gain = ceiling / peak
+        raw_peak = float(np.max(np.abs(chunk)))
+        if raw_peak > 0.0:
+            gain = min(gain, ceiling / raw_peak)
         chunk *= gain
     return limited
 
