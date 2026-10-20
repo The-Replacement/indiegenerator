@@ -1,0 +1,555 @@
+# BRIEF — `indiegenerator` (v3)
+
+You are the founding engineer of **indiegenerator**: a batch, offline, deterministic
+music generator that produces original indie alternative / krautrock / ambient /
+experimental electronic tracks to feed a private internet radio.
+
+This is not a toy demo and not a DAW. It is a small, sharp instrument: seeds in,
+finished tagged tracks out, every run reproducible, every claim measurable.
+
+The lineage you are building on is **systems music** (Reich, Riley, Oliveros, Eno),
+**krautrock** (Neu!, Can, Harmonia, Cluster, Conny Plank's desk), **dub**
+(Tubby → Basic Channel → DeepChord → Pole), **radiophonic tape music** (Derbyshire,
+Oram), and **indie/dreampop** (Broadcast, Stereolab, Yo La Tengo, Fennesz, Boards of
+Canada). Not "AI music": composed systems, executed by code.
+
+Read this whole brief before writing code. Then reply with the §14 first-response
+format. Then implement in the slices at the end, verifying each one.
+
+---
+
+## 1. The system this feeds (verified facts, do not re-litigate)
+
+The radio lives at `/home/estrocondoso/Work/radio` (separate repo; read-only for you):
+
+- **Liquidsoap** (`liquidsoap/radio.liq`) runs `playlist(mode="randomize",
+  reload_mode="watch", "/music")` and encodes to **MP3 128 kbps / 44.1 kHz / stereo**
+  for **Icecast**. New files dropped in `music/` are picked up automatically; no restart.
+- `music/` is mounted read-only into the container. Accepted formats per
+  `music/LEEME.txt`: anything ffmpeg decodes (mp3, ogg, flac, m4a, wav).
+- File tags are the only metadata source. No sidecar is read by Liquidsoap today.
+- No crossfade, no gapless chaining, no loudness normalization in the chain. Tracks
+  must stand alone: clean starts, composed endings, no clicks.
+- Host: ThinkPad Yoga 260 — **i5-6300U, 2 cores / 4 threads, Intel HD 520, 15 GB RAM,
+  ~101 GB free on /home**. CPU-only. Do not design for CUDA.
+- Python 3.12.14 via mise (system Python is 3.15 and lacks scientific wheels). Target
+  **Python 3.12**. `ffmpeg` is installed; `sox`/`csound`/SuperCollider are not.
+
+Legal frame that makes this project worth doing: music generated here is original,
+contains **no samples and no third-party audio**, so it adds **$0** to the radio's
+SADAIC/CAPIF obligations (see `radio/PLAN-LEGAL-AR.md`). Protect that property.
+Corollary: any "self-sampling" technique (granular, reverse reverb, tape decay) may
+only operate on audio this program itself rendered in the same run. Never on files.
+
+---
+
+## 2. Hard constraints
+
+1. **Offline batch rendering only.** No realtime engine, no audio device, no streaming.
+   Render faster than realtime.
+2. **CPU-only, one process, BLAS threads pinned to 1** (see §8). An 8-minute track
+   renders in **≤ 3 minutes**; 20 tracks in **≤ 60 minutes**. Peak RSS **≤ 1.5 GB**.
+   If a technique misses the budget, degrade it (shorter tail, fewer partials) and
+   write the degradation in the README. Do not add threads, numba, or Cython to hit it.
+3. **Deterministic.** `(preset, seed)` fully determines the Plan on every machine, and
+   the int16 PCM on this machine with the pinned dependencies. No wall-clock, no
+   unseeded RNG, no dict-ordering or locale surprises. The filename is part of this:
+   it contains the seed, never today's date.
+4. **No ML, no models, no cloud, no network at runtime.** This is DSP + composition
+   rules. Weights would be slow, unverifiable, and legally murky.
+5. **No samples, no external audio, no scraped MIDI.** Every sound is synthesized or
+   physically modelled in-repo, or derived from same-run material (§1 corollary).
+6. **Dependency budget:** `numpy`, `scipy`, `soundfile`, `pydantic`, `typer`, `pyyaml`,
+   `mutagen`, `pytest`, `ruff`, `mypy`. Add one only with written justification and a
+   measured cost. No `librosa`, `pedalboard`, `torch`, `tensorflow`.
+7. **No web UI, no database server, no Docker, no plugin, no microservices.**
+   CLI + files. JSON catalog only.
+8. **Never write into `/home/estrocondoso/Work/radio`** except through `install`, and
+   only when asked. `install` never starts or restarts the radio.
+
+---
+
+## 3. Musical brief
+
+One station, five related lanes. The default is a **blend**, not five unrelated toys:
+
+| Lane | Weight | Tempo | Feel |
+|---|---|---|---|
+| `motorik` | 30% | 110–140 | one-chord drive, 16th pulse, hypnotic, Neu!/Harmonia energy |
+| `kosmische` | 25% | 70–110 | slow harmonic drift, deja-vu arps, tape haze, wide stereo |
+| `ambient` | 20% | none | poly-period loops, drones, Frippertronics, long form |
+| `dub-electronic` | 15% | 100–130 | minor-9 stabs, filtered feedback delays, sub bass, space |
+| `indie-noise` | 10% | 90–135 | KS-guitar haze, songform fragments, feedback, wordless texture |
+
+**Batch composition.** A 20-track batch is not 20 tracks: ~60% full tracks (4–10 min),
+~25% longform (10–15 min), ~15% **interludes** (45–120 s: phasing studies, tape-decay
+loops, formant drones). Radios breathe; interludes are the glue. A batch shares 1–2
+motifs across tracks, like an album.
+
+**The station has a signature, defined in `station.yaml`, not vibes.** Three elements
+appear in every track, whatever the lane:
+
+1. **A recurring motif** — 3–7 notes, one cell, transformed per track but recognisable.
+2. **A signature timbre** — one instrument that is always present (KS guitar through a
+   dotted-eighth delay send, in every lane including the ambient ones).
+3. **A signature motion** — the 1/f drift (T7) on cutoff and pan, present everywhere.
+
+Plus: tempo centre 112–124, one alias, one album, a fixed set of 4–6 instruments
+(pad, bass, drum kit, KS guitar, formant voice, noise). Anything outside that palette
+needs a reason in the README. The point is that a listener who hears three tracks
+consecutively knows it is the same station.
+
+---
+
+## 4. The Technique Library (the part that actually matters)
+
+These are the named systems. Compose-time ones live in `compose/techniques/` and
+return events. Render-time ones live in `synth/` and `fx/` and never see an RNG (§8).
+Do not put them back in one `techniques/` package. Implement, measure, then combine
+per lane. Do not improvise around a spec; if a spec below conflicts with §8, §8 wins.
+
+**T1 — Poly-period loops** *(Eno, Music for Airports 2/1).* N = 3–9 independent
+voices, each looping a short phrase or single held tone with a **different period
+(15–90 s)**. The superpattern is the LCM of the periods: effectively never repeating.
+Voice = soft additive tone (sine/triangle stack) with a slow envelope (attack 2–10 s).
+Harmony rule: all voices from one chord chosen so **at most one pair forms a minor
+2nd** (Eno's recipe: beauty with one grain of spice). Gate: 0.5–2 voices sounding at
+any instant, on average.
+
+**T2 — Phasing** *(Reich, It's Gonna Rain / Piano Phase).* The same motif runs on two
+panned channels at rate `1.0` and `1.002–1.005`. Phase drifts through echo → doubling →
+composite rhythms → back to unison. One 0.8 s cell yields minutes of structure. Use as
+interludes and kosmische textures. Gate: phase relationship at section end must differ
+from section start (log it).
+
+**T3 — Frippertronics** *(Eno/Fripp, Discreet Music).* Long delay (3–7 s) with feedback
+0.6–0.9; each pass is progressively **lowpass-filtered (~200 Hz/pass) and saturated**,
+so layers accumulate, darken, and die. Input: slow melodic fragments. Add tape wow:
+pitch wobble ±0.2–0.8% at 0.3–1 Hz. This is the kosmische/ambient engine.
+
+**T4 — Tape-decay loop** *(Basinski, Disintegration Loops).* Render a 5–20 s loop, then
+iterate it for minutes with per-cycle degradation: descending lowpass cutoff, amplitude
+droop, rising crackle, until near-silence. The entropy **is** the form. Perfect outros
+and interludes.
+
+**T5 — Deja-vu sequencer** *(Mutable Instruments Marbles).* Randomness with memory —
+the single most important anti-random-walk mechanism. Per lane keep a ring buffer of
+the last 16–64 generated values (pitch, velocity, timing). Each event: with probability
+`d`, replay a value from the buffer; else generate new, **quantized to the scale** and
+biased toward the harmonic center (`bias`), within a range (`spread`). `d` morphs per
+section: 0.15 (explore) → 0.85 (locked). A motif emerges and dissolves instead of being
+looped or wandered.
+
+**T6 — Euclidean + conditional rhythms** *(Toussaint 2005, Bjorklund's algorithm;
+Elektron trig conditions).* Percussion/hats from `euclid(k, n)` patterns (implement
+Bjorklund, with rotation). Variation comes from **conditional triggers** (`1:2`, `3:4`,
+`first-of-phrase`, `fill-only`), not from random velocity jitter. Ratchets allowed only
+at section boundaries. Micro-timing 3–12 ms (1/f-distributed, see T7), velocity
+1/f-modulated.
+
+**T7 — 1/f parameter modulation** *(Voss & Clarke, "1/f Noise in Music", JASA 1978).*
+All slow control signals — density, velocity, cutoff, delay mix, pan drift — are
+**pink noise** (Voss-McCartney or filtered white), not white and not LFO sine. White
+sounds nervous, sine sounds mechanical, pink sounds played. Bounded and scaled per
+parameter. This alone kills the "algorithmic" smell.
+
+**T8 — Ring-mod wobble & test-tone synthesis** *(BBC Radiophonic Workshop; Delia
+Derbyshire).* Sine/triangle oscillators ring-modulated at 2–20 Hz (tremolo/wobble),
+glissando test-tone lines, hard tape-splice cuts, and **reversed snippets of the
+track's own stems**. The radiophonic palette for interludes and kosmische color.
+
+**T9 — Reverse reverb** *(classic studio trick, MBV to Broadcast).* Render a phrase,
+reverse it, drench it in reverb, reverse back: swelling pre-echoes before hits.
+Self-sampling only (§1). Use at section transitions in indie-noise and kosmische.
+
+**T10 — Dub chain as an instrument** *(Tubby → Basic Channel; Attack Magazine's
+"Basic Channel-Style Dub Techno" recipe).* Signal: minor/minor-9 chord stabs pitched
+down → **bit-reduce → bandpass (12 dB, cutoff ~450 Hz, slow 1/f drift, not a sine LFO)
+→ dotted-1/8 delay + filter delay → short reverb → sidechain to kick**. The mixer is
+the composer: send levels, delay times, and mutes are section-level decisions in the
+plan, not static settings. Sub bass = 2–3 sine notes. Optional vinyl-style crackle
+bed at low level.
+
+**T11 — Spectral drone stack** *(Cluster/Harmonia; spectralism-lite).* One fundamental;
+partials 1–16 with **independent slow 1/f LFOs on amplitude and ±5–15 cent detune
+drift**. The slow beating of near-unison partials is the movement. Optional
+just-intonation mode per preset (ratios 1:1, 9:8, 5:4, 4:3, 3:2).
+
+**T12 — Granular clouds** *(Fennesz; microsound).* Granulate the track's **own rendered
+pads**: grains 30–200 ms, density 5–40 grains/s, position jitter, pitch ±1 octave.
+Transitions, swells, ambient beds. Self-sampling only.
+
+**T13 — Karplus–Strong guitars** *(physical modelling).* Tuned plucks, feedback
+0.996–0.999, detuned pairs for chorus, occasional strummed clusters; through
+spring-ish reverb. The indie guitar without a single sample.
+
+**T14 — The Director** *(Eno's Oblique Strategies, mechanized).* On a pulsed lane, every
+8–32 bars the Director draws one transformation from the preset's **strategy deck** and
+applies it to the running section plan. On a lane with no pulse, it fires every 60–180 s.
+Examples: *drop the drums for 8 bars; transpose motif up a 4th; half-time feel; swap
+delay to triplets; remove the bass root; solo the texture; reharmonize to the relative
+mode; reverse the motif; thin to two voices.* Each strategy is a pure function over the
+plan; every draw is logged. The Director is what makes 10 minutes evolve instead of persist.
+
+**T15 — Formant choir** *(Music for Airports' wordless voices).* Formant synthesis
+(2–4 bandpass formants per vowel, slow crossfades between vowel targets) on chord
+tones. Wordless "aah/ooh" only, low in the mix, ambient and indie lanes only. Never a
+lead; never fake lyrics.
+
+**T16 — Harmonic rhythm via modal shift.** Harmonic center moves every 16–64 bars
+(motorik may hold one chord for 64+) among related modes (Dorian↔Mixolydian↔Aeolian on
+the same or neighboring roots). Shifts are section events, planned, never mid-bar.
+
+---
+
+## 5. Per-lane production recipes (starting specs, measured, then tuned)
+
+**motorik.** Kick on quarters (round, soft transient), snare/clap on 2 & 4, 16th hats
+via `euclid` + conditional trigs + ghost notes. Bass: 8th-note root with octave jumps,
+fifth passes at phrase ends. One chord for 32–64 bars, then T16 shift. KS stabs or
+deja-vu arp on top with dotted-eighth delay. Development = layer add/remove + Director,
+never a filter sweep.
+
+**kosmische.** T5 deja-vu arp (8–16 steps, 8th/16th rate) over T11 drone; T3
+Frippertronics send; two-oscillator detuned lead enters at section 3+. Modal center
+drifts per T16.
+
+**ambient.** T1 + T11 base; T4 or T15 as feature; T14 Director only for evolution.
+No drums, no pulse. 6–15 min.
+
+**dub-electronic.** T10 recipe verbatim at 100–130 BPM: 4/4 kick, offbeat hats
+(`euclid` variations), layered snare+clap (bit-reduced), minor-9 stabs through the
+dub chain, 2–3-note sub, sidechain everything ambient to kick, crackle bed −30 dB.
+
+**indie-noise.** T13 guitar clusters + controlled feedback swells (high-Q resonant
+bandpass pushed to self-oscillation, tamed by limiter), songform fragments (A B A C),
+T9 transitions, T12 clouds, occasional T15 cameo. Noise walls crest then cut to
+near-silence. Dynamics are the point.
+
+---
+
+## 6. Structure, harmony, melody, mix — standing rules
+
+**Structure.** 4–8 sections per track (ambient 2–4), each with a function (intro /
+build / plateau / break / return / outro), lengths in 4-bar multiples when a pulse
+exists. A tension/energy curve is planned before rendering and asserted afterwards.
+Each section differs from the previous in ≥ 2 of: instrumentation, harmonic center,
+rhythmic pattern, density, texture/space. Repetition only as **transformed reprise**.
+Endings composed (cold stop, tape runout, T4 decay, reverb tail); default fade-out
+forbidden. Audible content by 2 s (ambient: level by 6 s).
+
+**Harmony.** Modal/drone; Dorian, Phrygian, Mixolydian, Aeolian, whole-tone,
+octatonic; pedal tones, quartal/quintal stacks, add9 color. No I–V–vi–IV, no pop
+cadences. Dissonance deliberate (T1's one minor-2nd; indie-noise clusters), never
+accidental.
+
+**Melody.** 3–7 note cells, transformed (transpose/invert/retrograde/augment/
+fragment). 1–3 motifs per track; ≥ 1 motif must recur ≥ 3 times in transformed form
+(asserted from the plan, not the audio). No random walks — T5 deja-vu is the generator.
+
+**Mix/master.** −16 LUFS integrated, true peak ≤ −1.5 dBTP, LRA 4–12 (ambient lower,
+documented). Mono below ~120 Hz. Headroom by gain staging; limiter as safety only.
+**Codec awareness:** the radio re-encodes to MP3 128, so keep essential content below
+14 kHz, avoid extreme stereo widening and dense uncontrolled high-frequency noise.
+
+---
+
+## 7. Anti-slop rules (non-negotiable)
+
+Reject any render that:
+
+- is a 4/8-bar loop with a filter sweep as its only development;
+- has an EDM drop or build-up;
+- uses white noise as the entire ambient content;
+- has a melody that is a random walk (T5 violated) or a scale exercise;
+- humanizes with uniform white jitter instead of 1/f (T7 violated);
+- repeats a section verbatim (transformed reprise only);
+- pumps pads with sidechain outside the dub lane;
+- sounds like stock generative slop: generic pad + soft piano + tame beat, no identity.
+
+If the arranger produces any of the above, fix the arranger, not the symptom.
+
+---
+
+## 8. Architecture
+
+**One rule.** The Plan is data. Audio is a pure function of the Plan. Randomness ends when the Plan is frozen.
+
+This is the MUSIC-N split (Max Mathews: an *orchestra* knows how to make a sound, a *score* says what plays and when) and it is how SuperCollider non-realtime works: a Score is a list of timed commands prepared in advance; the renderer has no clock, no network, and is not allowed to ask its own output a question. If a technique needs to "listen and decide", it decides during compose, or it is a named second pass over a finished stem. It never decides inside the sample loop.
+
+**Pipeline. One direction. No callbacks.**
+
+```
+preset.yaml + seed
+    compose()      the only place an RNG exists
+    Plan           frozen pydantic, canonical JSON, integer fields only
+    director()     pure Plan -> Plan; every move appended to plan.director_log
+    schedule()     Plan -> list[Event], sample indices, stable sort
+    render()       Events + explicit DSP state -> stem blocks on disk
+    mix()          stem blocks -> stereo blocks
+    master()       gain, safety limiter, seeded TPDF dither -> int16
+    write()        temp file, fsync, os.replace
+```
+
+`explain` stops after `director()` and prints the Plan. `render --from-plan plan.json` starts at `schedule()` and must not roll anything. If those two commands cannot exist, the architecture is wrong. Fix that before adding a technique.
+
+**No floats in the Plan.** MIDI note integers, cents as integers, gains as millibels (int), times as sample indices (int) or bar/beat as a pair of ints. Probabilities are parts per million (int). Rates and feedback are rational pairs `(numerator, denominator)`, e.g. playback `1002/1000`, KS feedback `999/1000`. The renderer is the only place those become floats. The dither seed is an int field on the Plan, derived in `compose()`. `master()` consumes it. `master()` does not construct an RNG. Canonical JSON via `model_dump(mode="json")` with sorted keys. SHA-256 of those bytes is `plan_sha256`. Python's `hash()` is salted per process — never use it for identity. YAML key order is not a seed.
+
+**Two promises, stated honestly.**
+
+- `plan_sha256` is bit-identical on every machine. This is the contract that tests pin.
+- `pcm_sha256` is the SHA-256 of interleaved int16. Bit-identical on **this machine** with the pinned dependencies and single-threaded BLAS. Cross-machine PCM identity is not promised: libm and BLAS differ. Do not spend a week chasing it, and do not loosen the Plan contract to compensate.
+
+**Why the numeric code is single-threaded.** Float summation is not associative. Threaded OpenBLAS or OpenMP changes reduction order and therefore the PCM hash. At process start, in code, set `OPENBLAS_NUM_THREADS=1`, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`, `NUMEXPR_NUM_THREADS=1`. No process pool. Four threads that buy a different file every run are not a speedup.
+
+**DSP state is a value, not a global.** Block size is the constant 8192. A filter or delay is a small object: coefficients plus state in, audio plus new state out. Biquads go through `scipy.signal.sosfilt` with `zi` carried across the block boundary. No module-level buffers, no singletons, no "the reverb remembers because it lives on the renderer". A block is rendered once.
+
+**Two kinds of object. Do not merge them.**
+
+- A **Technique** is compose-time: `(SectionPlan, numpy.random.Generator) -> list[NoteEvent]`. It may roll dice. It returns data. It does not import `synth` or `fx`.
+- An **Instrument** is render-time: `(NoteEvent, block, State) -> (ndarray, State)`. It has no RNG parameter. Variation it needs is already an integer field on the event.
+
+A Technique that renders audio is a bug. An Instrument that calls `random` is a bug.
+
+**Two passes, not a graph.** Self-sampling (T4 tape-decay, T9 reverse reverb, T12 granular) is declared on the Plan as `passes: ["dry", "reverse_reverb"]`. Pass 2 reads a finished stem from disk and writes another. There is no third pass, no node graph, no bus-graph DSL, no plugin entry points. Adding a pass is a code change with a test, not a config trick.
+
+**The write path, because Liquidsoap is watching.** Render to `out/.tmp/<name>.flac`, fsync, `os.replace` into `out/`. `install` runs `validate` first, then the same atomic rename into `radio/music/`. A half-written FLAC in a watched directory gets played. That is a production bug.
+
+**Errors are data.**
+
+- `PlanError` — bad preset, broken invariant, raised before any audio, names preset and seed.
+- `RenderError` — NaN, disk, names preset, seed, and block index.
+- `GateFailure` — a list of `{gate, measured, limit}`, exit code 2, not an exception used for control flow.
+
+No bare `except`. No `print` in library code; log to stderr.
+
+**Tests follow the split, or they are slow and useless.**
+
+- Composition tests freeze a Plan as JSON and diff it. No audio. Motif recurrence, Director moves, deja-vu morph, section counts: all caught here.
+- Instrument tests feed hand-built events. Assert spectra, timing, tuning, and that state carries across a block boundary (render block N twice from the same state; outputs match).
+- One `slow` test per lane renders a short piece and checks the int16 hash against a committed golden. A hash change requires the commit message to say what moved. Do not commit a golden from a run that had BLAS threads above 1.
+- Gate tests use synthetic signals (sine, impulse, DC), not full tracks.
+
+**Stack. This is how Python tools already ship on this machine.** hatchling, `src/` layout, package `indiegen`, console script `indiegen` (the repo is `indiegenerator`; the CLI is `indiegen`; do not "fix" that), `[project.scripts] indiegen = "indiegen.cli:main"`, pydantic v2 models frozen with `extra="forbid"`, typer, **exact version pins** in `pyproject.toml` (the pin list is the lockfile; ranges are how a Tuesday rebuild changes the hash), ruff `select = ["E", "F", "I", "N", "W", "UP", "B"]`, line-length 120, `mypy --strict` on `src/`, pytest with a `slow` marker. `requires-python = ">=3.12,<3.13"`. Author: Juan Manuel Daza `<juanmanueldaza@gmail.com>`. Apache-2.0. Conventional commits, one slice per commit, no AI attribution, no `Co-Authored-By`. No `TODO` without an issue number.
+
+**Do not build.** An ABC forest, a plugin registry, entry-point discovery, a DI container, an event bus, asyncio, a process pool, a node graph, MIDI export, a project database, a web UI, a second config language. If a feature cannot be a field on the Plan or a function in the pipeline above, it does not belong.
+
+---
+
+## 9. What to build
+
+```
+indiegenerator/
+├── AGENTS.md                 conventional commits, no AI attribution, verify claims
+├── README.md                 what it is, honest limits, quickstart, measured numbers
+├── LICENSE                   Apache-2.0 (code)
+├── MUSIC-LICENSE             CC0-1.0 dedication for generated audio
+├── pyproject.toml            hatchling, Python 3.12, pinned deps, ruff+mypy+pytest
+├── presets/
+│   ├── station.yaml          default blend: alias, palette, motif bank, strategy deck
+│   ├── motorik.yaml
+│   ├── kosmische.yaml
+│   ├── ambient.yaml
+│   ├── dub-electronic.yaml
+│   └── indie-noise.yaml
+├── src/indiegen/
+│   ├── cli.py
+│   ├── config.py             pydantic models for presets/seeds
+│   ├── theory/               scales, chords, euclid/bjorklund, motif ops
+│   ├── plan.py               frozen Plan, Event, NoteEvent. integer fields only
+│   ├── compose/              section planner, tension curve, Director, techniques
+│   ├── synth/                instruments: osc, filter, env, drums, KS, formant. no RNG
+│   ├── fx/                   dub delays, FDN/Schroeder reverb, chorus, saturation,
+│   │                         tape (wow/flutter), granulator, ring mod
+│   ├── mix/                  buses, panning, EQ, compression, sidechain, limiter
+│   ├── master/               BS.1770-4 LUFS, true peak, codec roundtrip check
+│   ├── render.py             schedule + block renderer. no RNG
+│   ├── metadata.py           tags + deterministic titles
+│   ├── catalog.py            JSON catalog: seed, plan_sha256, pcm_sha256, LUFS
+│   └── validate.py           the gates in §11
+└── tests/
+```
+
+**CLI (keep it small):**
+
+```bash
+indiegen render  --preset station --seed 1042 --minutes 7 --out out/
+indiegen batch   --preset station --count 20 --seed-base 1000 --out out/
+indiegen validate out/track.flac
+indiegen explain --preset motorik --seed 1042   # plan: key, tempo, sections, motifs,
+                                                # Director log, technique stack
+indiegen catalog --dir out/
+indiegen install --dir out/ --to ~/Work/radio/music
+```
+
+`render` emits a `.json` sidecar (plan + Director log + measurements) and prints:
+path, duration, LUFS, true peak, section count, techniques used, render seconds.
+
+**Preset model (pydantic, YAML):** lane weights, tempo/meter ranges, scale pool,
+instrument palette, FX sends, technique stack + parameters, strategy deck, section
+ranges, duration ranges, density targets, motif bank, title word bank, station
+alias/album. No magic numbers in code.
+
+---
+
+## 10. Output contract for the radio
+
+- **Master:** FLAC, 44.1 kHz, 16-bit, stereo, tagged → `music/`. Optional `--mp3`
+  delivery via ffmpeg (libmp3lame 320 CBR) only if asked.
+- Tags (mutagen): `TITLE`, `ARTIST` (station alias), `ALBUM`, `DATE` (YYYY), `GENRE`
+  (lane + "generative"), `COMMENT` (`seed=…; preset=…; v…`), `TRACKNUMBER`. No fake
+  human names; no real artist names anywhere.
+- Filename: `<lane>_<slug>_s<seed>.flac`, lowercase ASCII. No date. The seed is the identity; today's date would make the same seed produce a different file tomorrow.
+- `ARTIST` is one fictional alias, chosen once in `station.yaml` during S0 and never changed. Not a real person, not a pun on a real band.
+- No accidental leading/trailing silence; no click at t=0 or at the end (≥ 250 ms
+  planned fade unless a designed hard cut with tail).
+- **Catalog:** `catalog.json` keyed by decoded-PCM SHA-256; seed, preset, duration,
+  LUFS, TP, section plan, Director log, techniques, path. Batches refuse duplicate
+  seeds and report hash duplicates. Library budget 20 GB; catalog reports total size.
+
+---
+
+## 11. Measurable gates (implement in `validate.py`; run in tests and in `render`)
+
+Fail the render, do not warn, if:
+
+1. Integrated loudness outside **−16 ± 1 LUFS**; true peak **> −1.5 dBTP**.
+2. Any sample ≥ 0 dBFS, NaN/Inf, DC offset > 0.001.
+3. Duration outside the preset's declared range.
+4. Planned section count not realized; < 4 sections (ambient < 2).
+5. Energy trajectory correlation with the planned curve < 0.5 (per-second RMS, Pearson). The plan is the reference. A section the plan marked static must not be failed for being static.
+6. Timbre trajectory disagrees with the plan: if the plan predicted movement, spectral-centroid correlation with that curve < 0.4. If the plan declared a static timbre, low variance is a pass. Do not add a filter sweep to satisfy this gate. That fails §7.
+7. Novelty, defined so you do not invent a detector: spectral flux on 1 s frames, peaks above mean + 2σ, peaks closer than 4 s merged. Count of peaks < planned sections − 1.
+8. Leading silence > 1 s (ambient > 4 s) or trailing silence > 3 s.
+9. Energy below 200 Hz: mono sum more than 3 dB below the stereo sum. Full-band L/R correlation < 0.2. Wide mids are allowed; a decorrelated dub delay must not fail this gate.
+10. Same seed → different decoded-PCM hash on re-run.
+11. Internal LUFS vs `ffmpeg -af ebur128` disagree by > 0.2 LU on test signals.
+12. **Codec gate (dev/test, ffmpeg):** FLAC → MP3 128 → decode: LUFS delta > 0.5,
+    any new clipping, or correlation collapse < 0.2. (Design rule in §6, measured here.)
+13. Plan-level: motif recurrence < 3 transformed appearances; Director fired < 1 time
+    per 32 bars on average in pulsed lanes; deja-vu `d` never moved.
+
+DSP unit tests: biquad vs analytic response, delay timing, reverb decay time, envelope
+monotonicity, oscillator aliasing (THD at high fundamentals), KS tuning error < 3 cents,
+euclid correctness vs known patterns, pink-noise slope ≈ −10 dB/decade, limiter never
+overshoots.
+
+---
+
+## 12. Legal / licensing
+
+- Code: **Apache-2.0**. Generated audio: **CC0-1.0** (`MUSIC-LICENSE` + README).
+- README states plainly: no samples, no third-party audio, no model weights, no
+  training on copyrighted recordings; self-sampling only from same-run renders.
+- References above name real artists to specify *techniques*, never to imitate
+  identifiable compositions. That line goes in the README too.
+- No claim this replaces a composer; no legal advice.
+
+---
+
+## 13. Engineering standards
+
+§8 is binding. Do not restate it in code comments and then drift from it. Additions only:
+
+- No per-sample Python loops in a hot path. If a render is slower than the §2 budget, profile before adding threads.
+- README documents measured render times, LUFS, and peak from this machine. Not aspirations.
+
+---
+
+## 14. First response format
+
+1. Restate the §8 pipeline in your own words, including where the RNG dies and why PCM identity is same-machine only.
+2. A 10-line plan and the file tree.
+3. Dependency list and why each one exists.
+4. The Plan schema: which fields are ints, and the one field you were tempted to make a float.
+5. The signal path for one motorik track and one dub-electronic track, bus by bus.
+6. Which of T1–T16 you implement in S1–S4, and why that order.
+7. The three risks most likely to make this sound generic, and the countermeasure for each.
+8. The S0 commands you will run.
+
+Then implement S0 without waiting for approval.
+
+---
+
+## 15. Build order
+
+A finished S2 is a successful first session. Do not start S3 in the same session if S2 is red. A complete S2 beats a half-built S6.
+
+Gates come into force per slice. A gate not yet in force is not implemented, and it does not fail the render. Implementing all of §11 in S1 is how this project dies in the loudness meter.
+
+**S0 — skeleton.** `git init` if needed. pyproject, CLI, preset loading, one fictional alias locked in `station.yaml`, a 10 s valid tagged FLAC. Prove I/O and that two runs give the same `plan_sha256`. No musical gates. Do not modify or delete `BRIEF.md`; it is the spec, not a source file.
+
+**S1 — ambient lane.** Synth core + T1 + T11 + a short reverb. One 90 s piece. Gates in force: 2, 8. No drums. Loudness is printed, not enforced.
+
+**S2 — motorik lane.** Drums, T6, T7, T5. One 3-minute piece. Gates in force: 2, 4, 7, 8.
+
+**S3 — arranger.** Section graph, tension curve, motif transforms, T14, T16, kosmische + dub (T3, T10), 6–8 min. Gates in force: add 5, 6, 13. Stop and ask.
+
+**S4 — mix/master.** Buses, sidechain, limiter, LUFS, true peak, codec roundtrip. Gates in force: all of §11.
+
+**S5 — batch/station.** Catalog, titles, duplicate refusal, `install`. If the radio stack is not running, copy the files and stop. Do not start Docker. Do not restart a service. If it is running, confirm pickup from logs only.
+
+**S6 — taste pass.** Render 3 tracks (motorik, kosmische, ambient), stop, ask for listening notes with timestamps. Fix the earliest structural cause of each note. Then a 10-track EP: 6 full, 2 longform, 2 interludes.
+
+**Checkpoint rule:** after S3 and after S6, stop and ask. Between slices, do not ask.
+
+**The listening protocol (S6).** You cannot hear. The human can, so ask precisely, or
+you get "sounds cool" and learn nothing. When you present 3 tracks, ask for, per track:
+
+- **Timestamp + what happened** ("at 2:14 the bass disappears and nothing replaces it").
+- **Groove / timbre / structure / space / fatigue**, each 1–5.
+- **One thing to keep** and **one thing to cut**.
+- **Would you leave it on as background radio?** yes/no.
+
+Then: fix the earliest *structural* cause, not the loudest complaint. If the complaint
+is "the middle is boring", the fix is a section plan or a Director deck, not a filter
+sweep. Re-render and ask again. Do not silently re-tune three times.
+
+---
+
+## 16. Definition of done
+
+- `pip install -e .` on Python 3.12 from a clean venv; `indiegen --help` is clear.
+- `indiegen batch --preset station --count 10 --seed-base 2000` → 10 distinct tagged
+  FLACs < 30 min, all passing `validate` including the codec gate.
+- The 10 tracks on shuffle for an hour: no repeated section, no urge to skip. Human
+  gate, not a metric.
+- `install` lands files where Liquidsoap watches; stream picks them up, no restart.
+- README: real render times, LUFS, peaks, technique list, known limitations.
+
+## 17. Non-goals (say no out loud)
+
+Realtime • DAW/UI/plugin • vocals/lyrics • cover art • cloud • distributed workers •
+model training • sample libraries • a web player (the radio has one) • "sound exactly
+like <artist>".
+
+## 18. Reference shelf (design specs, not vibes)
+
+Architecture:
+
+- Max Mathews, MUSIC-N: orchestra (how a sound is made) vs score (what plays, when). Csound inherited it. This is §8.
+- SuperCollider *Non-Realtime Synthesis*: a Score is timed OSC prepared in advance; the renderer has no network and cannot query its own output. doc.sccode.org/Guides/Non-Realtime-Synthesis.html
+- Float summation is not associative. Threaded BLAS changes results. Hence the thread caps in §8, set in code.
+
+Music:
+
+- Tero Parviainen, *JavaScript Systems Music* (Reich/Eno rebuilds):
+  teropa.info/blog/2016/07/28/javascript-systems-music.html
+- Alex Bainter, *Introduction to Generative Music* + generative.fm writeups (Medium)
+- Godfried Toussaint, *The Euclidean Algorithm Generates Traditional Musical Rhythms*
+  (2005), cgm.cs.mcgill.ca/~godfried/publications/banff.pdf
+- Voss & Clarke, *1/f Noise in Music*, JASA 63 (1978)
+- Mutable Instruments Marbles manual (deja-vu/bias/spread):
+  pichenettes.github.io/mutable-instruments-documentation/modules/marbles/manual/
+- Attack Magazine, *Basic Channel-Style Dub Techno* (the T10 recipe):
+  attackmagazine.com/technique/beat-dissected/basic-channel-style-dub-techno/
+- Steve Reich, *Music as a Gradual Process* (1968)
+- Brian Eno, *Generative Music* (1996 essay) + Oblique Strategies
+- Sound on Sound, *The Story of the BBC Radiophonic Workshop*
+- Listen (the human, not the agent): Neu! *Hallogallo*; Harmonia *Deluxe*; Cluster
+  *'71*; Eno *Discreet Music*, *Music for Airports 2/1*; Basinski *Disintegration
+  Loops*; Basic Channel *Quadrant Dub*; Deepchord; Pole *1–3*; Oval *94diskont*;
+  Boards of Canada *MHTRTC*; Broadcast *Tender Buttons*; Stereolab *Dots and Loops*;
+  Yo La Tengo *And Then Nothing Turned Itself Inside-Out*; Fennesz *Endless Summer*;
+  KLF *Chill Out*; Terry Riley *Shri Camel*; Laurie Spiegel *The Expanding Universe*;
+  Pauline Oliveros *Deep Listening*; generative.fm; SomaFM Drone Zone.
