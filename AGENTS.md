@@ -3,7 +3,39 @@
 
 ## Project Stack
 
-**Stack**: python## Rules
+**Stack**: python
+## Detected Frameworks
+
+
+- **mypy** (typechecking)
+
+- **pytest** (testing)
+
+- **ruff** (linting)
+
+
+## Project Structure
+
+- `src/` — Source code
+- `tests/` — Test suite
+
+
+
+### Entry Points
+
+- `indiegen`
+
+
+
+### Additional Directories
+
+- `out/`
+- `out2/`
+- `out3/`
+- `presets/`
+
+
+## Rules
 
 - Never add "Co-Authored-By" or AI attribution to commits. Use conventional commits only.
 - Never build after changes.
@@ -78,6 +110,32 @@ The table below shows triggers and file paths for quick reference.
 See `.n3rv/skill-registry.md` for models, hub skill IDs, and detailed descriptions.
 
 ---
+
+## Framework-Specific Guidance
+
+### mypy
+
+mypy conventions:
+- Run `mypy src/` for type checking
+- Configure in `pyproject.toml` under `[tool.mypy]`
+- Use `# type: ignore[code]` with specific error codes
+
+### pytest
+
+pytest patterns:
+- Use `conftest.py` for shared fixtures
+- Use `@pytest.mark.parametrize` for table-driven tests
+- Use `tmp_path` fixture for temporary file system
+- Use `monkeypatch` fixture for mocking
+- Name test files `test_*.py` and functions `test_*`
+
+### ruff
+
+ruff conventions:
+- Run `ruff check .` for linting, `ruff format .` for formatting
+- Configure rules in `pyproject.toml` under `[tool.ruff]`
+- Use `# noqa: RULE` for inline suppressions, not blanket disable
+
 
 ---
 

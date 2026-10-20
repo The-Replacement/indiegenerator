@@ -53,6 +53,7 @@ from typing_extensions import Annotated
 
 app = typer.Typer()
 
+
 @app.command()
 def main(
     name: Annotated[str, typer.Argument(help="Your name")],
@@ -62,6 +63,7 @@ def main(
     msg = f"Hello, {name}!"
     print(msg.upper() if loud else msg)
 
+
 if __name__ == "__main__":
     app()
 ```
@@ -69,6 +71,7 @@ if __name__ == "__main__":
 ### Models (Pydantic v2)
 ```python
 from pydantic import BaseModel, Field
+
 
 class SatelliteConfig(BaseModel):
     name: str = Field(..., description="Satellite name")
@@ -82,10 +85,12 @@ from mcp.server.mcpserver import MCPServer
 
 mcp = MCPServer("my-satellite")
 
+
 @mcp.tool()
 def my_tool(query: str) -> str:
     """Process a query."""
     return f"Processed: {query}"
+
 
 def main() -> None:
     mcp.run()
