@@ -70,7 +70,7 @@ def test_walker_accepts_ints_and_strings() -> None:
 
 
 def test_plan_declares_no_clock_field(reference_plan: Plan) -> None:
-    for name in reference_plan.model_fields:
+    for name in type(reference_plan).model_fields:
         assert not re.search(r"date|time|clock|today|now|timestamp", name, re.IGNORECASE)
 
 
