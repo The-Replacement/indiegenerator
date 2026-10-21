@@ -47,7 +47,12 @@ def dc_block_state(
 
 
 def note_envelope(event: EventBase) -> np.ndarray:
-    """The note's attack and release, linear, exactly zero at the very edges."""
+    """The note's attack and release, linear, exactly zero at the very edges.
+
+    The edges are zero even when the attack and the release are empty: a
+    note that starts or stops at full level is a click, and a plucked string
+    has neither an attack nor a release of its own.
+    """
     count = event.duration_frames
     gain = np.ones(count, dtype=np.float64)
     if event.attack_frames > 0:
@@ -56,6 +61,9 @@ def note_envelope(event: EventBase) -> np.ndarray:
     if event.release_frames > 0:
         ramp = np.arange(count - 1, -1, -1, dtype=np.float64) / event.release_frames
         gain *= np.minimum(1.0, ramp)
+    if count > 0:
+        gain[0] = 0.0
+        gain[-1] = 0.0
     return gain
 
 

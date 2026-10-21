@@ -21,6 +21,9 @@ def _transpose(events: list[Event], move: DirectorMove) -> list[Event]:
     result: list[Event] = []
     half = move.crossfade_frames // 2
     for event in events:
+        if event.kind not in move.applies_to:
+            result.append(event)
+            continue
         end = event.start_frame + event.duration_frames
         if event.start_frame >= move.sample or end <= move.sample:
             result.append(event)
