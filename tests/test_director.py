@@ -30,6 +30,57 @@ def test_strategy_deck_holds_exactly_one_entry(composed_plan: Plan) -> None:
     assert len(composed_plan.strategy_deck) == 1
 
 
+def test_a_move_applies_only_to_the_kinds_it_lists(composed_plan: Plan) -> None:
+    """A move that lists the pad must not touch a pluck."""
+    from indiegen.plan import PluckEvent, Rational
+
+    pluck = PluckEvent(
+        kind="pluck",
+        instrument="ks",
+        start_frame=0,
+        duration_frames=44100,
+        midi=38,
+        pan_permille=0,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        feedback=Rational(numerator=998, denominator=1000),
+        brightness=Rational(numerator=1, denominator=2),
+        pluck_position_permille=300,
+        detune_cents=0,
+        excitation_seed=1,
+    )
+    padded = composed_plan.model_copy(update={"events": [*composed_plan.events, pluck]})
+    directed = director(padded)
+    plucks = [event for event in directed.events if event.kind == "pluck"]
+    assert len(plucks) == 1
+    assert plucks[0].midi == 38
+
+
+def test_a_move_that_matched_nothing_is_not_logged(composed_plan: Plan) -> None:
+    from indiegen.plan import PluckEvent, Rational
+
+    only_pluck = PluckEvent(
+        kind="pluck",
+        instrument="ks",
+        start_frame=0,
+        duration_frames=44100,
+        midi=38,
+        pan_permille=0,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        feedback=Rational(numerator=998, denominator=1000),
+        brightness=Rational(numerator=1, denominator=2),
+        pluck_position_permille=300,
+        detune_cents=0,
+        excitation_seed=1,
+    )
+    padded = composed_plan.model_copy(update={"events": [only_pluck]})
+    directed = director(padded)
+    assert directed.director_log == []
+
+
 def test_the_move_transposes_the_material(composed_plan: Plan) -> None:
     plan = director(composed_plan)
     pads = [event for event in plan.events if event.kind == "pad"]

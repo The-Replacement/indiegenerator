@@ -14,7 +14,7 @@ RATE: int = 44100
 SPEC = ReverbSpec(
     comb_delays_frames=[1557, 1617, 1491, 1422, 1277, 1356, 1397, 1129],
     comb_feedback=Rational(numerator=84, denominator=100),
-    damping=Rational(numerator=1, denominator=1),
+    damping=Rational(numerator=2, denominator=100),
     allpass_delays_frames=[556, 441, 341, 225],
     allpass_feedback=Rational(numerator=5, denominator=10),
     stereo_spread_frames=23,
@@ -28,6 +28,7 @@ def test_the_reverb_has_eight_combs_and_four_allpasses() -> None:
 
 
 def test_the_state_is_a_value_and_a_block_render_matches_a_single_shot() -> None:
+    """The shipped configuration, damping included: the state is carried."""
     generator = np.random.default_rng(3)
     signal = generator.standard_normal((RATE, 2))
     whole, _ = render_reverb(signal, reverb_state(SPEC), SPEC, RATE)

@@ -98,7 +98,7 @@ def test_the_pluck_position_shapes_the_excitation() -> None:
     burst = uniform_stream(99, 0, 0, 500) * 2.0
     position = 125
     expected = burst - np.concatenate([np.zeros(position), burst[: 500 - position]])
-    assert np.allclose(excitation, expected * np.exp(-np.arange(500) / (0.5 * 500)))
+    assert np.allclose(excitation, expected)
     # a different position gives a different excitation
     assert not np.array_equal(excitation, pluck_excitation(500, 100, 99))
 

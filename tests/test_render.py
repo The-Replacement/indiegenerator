@@ -97,6 +97,33 @@ def test_the_fundamental_is_coherent_across_the_channels(presets_dir: Path) -> N
     assert abs(difference) <= 1.0
 
 
+def test_the_guitar_is_heard_only_through_the_delay(presets_dir: Path) -> None:
+    """The KS bus's dry is never summed: the delay is the instrument's voice.
+
+    On a plan with nothing but the guitar, and with no fade at the head, the
+    first D frames of the render are exactly zero, because a true delay has
+    no zero-delay path.
+    """
+    from indiegen.compose import compose, director
+    from indiegen.config import load_preset
+
+    plan = director(compose(load_preset("ambient", presets_dir=presets_dir), 1042, 10 * 44100))
+    assert plan.delay_sends
+    delay_frames = plan.delay_sends[0].delay_frames
+    plucks = [event for event in plan.events if event.kind == "pluck"]
+    assert plucks
+    guitar_only = plan.model_copy(
+        update={
+            "events": plucks,
+            "fade_in_frames": 0,
+            "fade_out_frames": 0,
+        }
+    )
+    stereo = render_plan(guitar_only)
+    assert np.all(stereo[:delay_frames, :] == 0.0)
+    assert np.any(stereo[delay_frames:, :] != 0.0)
+
+
 def test_the_gate_module_exists_and_the_failure_type_is_not_an_exception() -> None:
     """S1 brings gates 2 and 8 into force, so validate.py and GateFailure exist."""
     from indiegen.validate import GATES_IN_FORCE, GateFailure

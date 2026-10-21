@@ -170,6 +170,18 @@ def test_the_dotted_eighth_delay_is_resolved_at_compose_time(ambient_plan: Plan)
     assert send.delay_frames == 3 * ambient_plan.frames_per_beat // 4
 
 
+def test_the_voices_take_a_prefix_of_the_chord_intervals(ambient_plan: Plan, presets_dir: object) -> None:
+    """The offsets are a prefix of the declared list, not a cycle of it."""
+    lane = load_preset("ambient", presets_dir=presets_dir).lanes[0].parameters
+    card = next(item for item in lane.techniques if item.kind == "poly_period")
+    assert isinstance(card, PolyPeriodCard)
+    for event in ambient_plan.events:
+        if event.kind != "poly_period":
+            continue
+        offsets = [voice.midi - event.midi for voice in event.voices]
+        assert offsets == card.chord_intervals[: len(offsets)]
+
+
 def test_the_ambient_director_log_is_empty(ambient_plan: Plan) -> None:
     """The station's move declares the pad, and the ambient lane has none."""
     assert ambient_plan.director_log == []

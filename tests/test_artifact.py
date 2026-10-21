@@ -118,7 +118,6 @@ def test_two_processes_agree_on_both_hashes(tmp_path: Path) -> None:
 @pytest.mark.slow
 def test_the_ambient_piece_matches_its_golden(tmp_path: Path) -> None:
     """The 90 s ambient piece is pinned by its decoded PCM hash."""
-    from indiegen.writer import pcm_sha256, read_pcm
 
     result = subprocess.run(
         [
