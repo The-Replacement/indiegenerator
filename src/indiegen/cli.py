@@ -134,7 +134,7 @@ def _render(
     pcm = master(plan, mix, BLOCK_SIZE)
     render_seconds = time.perf_counter() - started
 
-    failure = run_gates(mix, pcm, plan.lane, plan.sample_rate)
+    failure = run_gates(plan, mix, pcm)
     if failure is not None:
         for result in failure.failures:
             typer.echo(
