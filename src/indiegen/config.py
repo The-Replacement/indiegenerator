@@ -16,7 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from indiegen.errors import PlanError
-from indiegen.plan import DirectorMove, FxSend, LaneWeight, Rational, SectionProfile
+from indiegen.plan import FxSend, LaneWeight, Rational, SectionProfile
 
 LANE_NAMES: tuple[str, ...] = ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise")
 
@@ -44,6 +44,7 @@ class PadCard(BaseModel):
     lfo_rate: Rational
     lfo_depth_cents: int
     amplitude_millibels: int
+    min_density: int
 
 
 class PolyPeriodCard(BaseModel):
@@ -58,6 +59,7 @@ class PolyPeriodCard(BaseModel):
     attack_seconds_range: RangeInt
     chord_intervals: list[int]
     partial_ratios: list[Rational]
+    min_density: int
 
 
 class DroneCard(BaseModel):
@@ -73,6 +75,42 @@ class DroneCard(BaseModel):
     amplitude_lfo_rate: Rational
     amplitude_lfo_depth_millibels: int
     ratios: list[Rational]
+    min_density: int
+
+
+class FrippertronicsCard(BaseModel):
+    """T3: the Frippertronics send of the kosmische and ambient lanes."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["frippertronics"]
+    delay_seconds: RangeInt
+    feedback_permille: RangeInt
+    cutoff_start_hz: int
+    cutoff_step_hz: int
+    cutoff_floor_hz: int
+    saturation_permille: int
+    wow_depth_permille: int
+    wow_rate_hz: RangeInt
+    send_millibels: int
+    min_density: int
+
+
+class DubChainCard(BaseModel):
+    """T10: the dub chain, and the sidechain to the kick."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["dub_chain"]
+    bit_depth: int
+    bandpass_hz: int
+    bandpass_q_num: int
+    bandpass_q_den: int
+    drift_depth_hz: int
+    send_millibels: int
+    sidechain_depth_millibels: int
+    sidechain_release_frames: int
+    min_density: int
 
 
 class PluckCard(BaseModel):
@@ -205,9 +243,41 @@ TechniqueCard = Annotated[
     | HatCard
     | BassCard
     | PinkCard
-    | DejaVuCard,
+    | DejaVuCard
+    | FrippertronicsCard
+    | DubChainCard,
     Field(discriminator="kind"),
 ]
+
+
+class StrategyCard(BaseModel):
+    """One transformation in the Director's deck.
+
+    The deck is a pool, not a list of moves: the arranger draws from it,
+    and the draw is the only randomness the Director ever has.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    strategy: str
+    detail: str
+    parameter_min: int
+    parameter_max: int
+    applies_to: list[str]
+    crossfade_frames: int = Field(ge=0)
+    span_bars: int = Field(ge=0)
+
+
+class DirectorCard(BaseModel):
+    """How often the Director fires, and what it can do."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    bars_min: int = Field(ge=1)
+    bars_max: int = Field(ge=1)
+    seconds_min: int = Field(ge=1)
+    seconds_max: int = Field(ge=1)
+    strategies: list[StrategyCard]
 
 
 class DelayCard(BaseModel):
@@ -248,6 +318,9 @@ class LanePreset(BaseModel):
     tempo_range_bpm: list[int]
     meter: list[int]
     scale_midi: list[int]
+    mode_pool: list[str]
+    pulse: Literal["bars", "seconds"]
+    timbre: dict[str, int]
     fx_sends: list[FxSend]
     techniques: list[TechniqueCard]
     section_count_range: list[int]
@@ -276,9 +349,10 @@ class StationPreset(BaseModel):
     lane_weights: list[LaneWeight]
     palette: list[str]
     motif_bank: list[list[int]]
+    motif_rhythm: list[int]
     title_words: list[str]
-    section_profiles: list[SectionProfile]
-    strategy_deck: list[DirectorMove]
+    section_graph: list[SectionProfile]
+    director: DirectorCard
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int

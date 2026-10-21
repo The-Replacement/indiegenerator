@@ -73,13 +73,24 @@ class FxSend(BaseModel):
 
 
 class SectionProfile(BaseModel):
-    """The shape of one section: its function, its density target and its level."""
+    """One node of the station's section graph.
+
+    A node declares what it is (the function), where it can go (the
+    successors), how loud and how dense it is (the tension curve), how long
+    it lasts (the bars) and, when it reprises an earlier section, which one
+    and under which transform.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     function: str
+    next: list[str]
     density: int = Field(ge=0, le=100)
     level_millibels: int
+    bars: int = Field(gt=0)
+    reprise_of: str
+    transform: str
+    texture: str
 
 
 class DirectorMove(BaseModel):
@@ -318,7 +329,14 @@ class ReverbSpec(BaseModel):
 
 
 class SectionPlan(BaseModel):
-    """One section of the arrangement."""
+    """One section of the arrangement.
+
+    The section carries the five dimensions BRIEF 6 asks a section to differ
+    in: the instrumentation (which event kinds play in it), the harmonic
+    center (the mode and the root), the rhythmic pattern, the density and
+    the texture. The centroid is the timbre the composer predicted for the
+    section, and gate 6 compares the delivered audio with it.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
@@ -329,8 +347,85 @@ class SectionPlan(BaseModel):
     bars: int
     density: int
     level_millibels: int
-    motif: list[int]
     techniques: list[str]
+    instrumentation: list[str]
+    mode: str
+    root_midi: int
+    texture: str
+    reprise_of: int
+    transform: str
+    centroid_hz: int = Field(gt=0)
+
+
+class MotifNote(BaseModel):
+    """One note of the motif cell: its pitch and how long it lasts."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    midi: int
+    duration_frames: int = Field(gt=0)
+
+
+class MotifCell(BaseModel):
+    """The motif: three to seven notes, one cell."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    notes: list[MotifNote]
+
+
+class MotifAppearance(BaseModel):
+    """One appearance of the motif, and the transform it wears.
+
+    The appearance is what gate 13 counts: the motif has to come back at
+    least three times in a transformed form.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    section_index: int = Field(ge=0)
+    transform: str
+    parameter: int
+    start_frame: int = Field(ge=0)
+    notes: list[int]
+    durations: list[int]
+
+
+class FrippertronicsSpec(BaseModel):
+    """T3: a long feedback delay whose passes darken and die.
+
+    The number of passes a sample has made is exact, not an approximation:
+    the render path keeps a counter beside the audio line, so the cutoff
+    really does fall by the declared step on every pass.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    delay_frames: int = Field(gt=0)
+    feedback_permille: int = Field(ge=0, le=1000)
+    cutoff_start_hz: int = Field(gt=0)
+    cutoff_step_hz: int = Field(ge=0)
+    cutoff_floor_hz: int = Field(gt=0)
+    saturation_permille: int = Field(ge=0, le=1000)
+    wow_depth_permille: int = Field(ge=0)
+    wow_rate: Rational
+    send_millibels: int
+
+
+class DubChainSpec(BaseModel):
+    """T10: the dub chain, from the bit reduction to the sidechain."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    bit_depth: int = Field(ge=1, le=16)
+    bandpass_hz: int = Field(gt=0)
+    bandpass_q_num: int = Field(gt=0)
+    bandpass_q_den: int = Field(gt=0)
+    drift_depth_hz: int = Field(ge=0)
+    drift_seed: int
+    send_millibels: int
+    sidechain_depth_millibels: int
+    sidechain_release_frames: int = Field(gt=0)
 
 
 class Plan(BaseModel):
@@ -359,6 +454,7 @@ class Plan(BaseModel):
     frames_per_beat: int
     meter_numerator: int
     meter_denominator: int
+    pulse: Literal["bars", "seconds"]
     scale_midi: list[int]
     palette: list[str]
     fx_sends: list[FxSend]
@@ -367,7 +463,9 @@ class Plan(BaseModel):
     section_count_range: list[int]
     section_count: int
     sections: list[SectionPlan]
-    motif: list[int]
+    motif: MotifCell
+    motif_appearances: list[MotifAppearance]
+    deja_vu_replay_permille: list[int]
     title_words: list[str]
     lane_weights: list[LaneWeight]
     dither_seed: int
@@ -380,6 +478,8 @@ class Plan(BaseModel):
     track_number: int
     delay_sends: list[DelaySend]
     reverb: ReverbSpec | None
+    frippertronics: FrippertronicsSpec | None
+    dub_chain: DubChainSpec | None
     events: list[Event]
     director_log: list[DirectorMove]
 
