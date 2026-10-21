@@ -7,6 +7,11 @@ Frippertronics, the dub chain, and gates 5, 6 and 13.
 Read this before the next session. Everything below was measured on this
 machine on 2026-10-21, not assumed.
 
+**The verdict: APPROVED, with one criterion open (AC-19, the dub lane's
+novelty over four seeds, which was open when the slice started).** The
+independent review is in `sdd-s3-arranger-judgment`; the criteria table is in
+`sdd-s3-arranger-verify`.
+
 ---
 
 ## 1. What the slice is
@@ -22,8 +27,10 @@ The acceptance criteria are the twenty in the memory record
 
 ## 2. The state of the repo
 
-`master`, clean tree at the `chore: n3rv refresh` commit. 357 tests pass.
-`ruff check`, `ruff format --check` and `mypy --strict` on `src/` are clean.
+`master`, clean tree at the `chore: refresh the n3rv project metadata` commit
+(the n3rv refresh ran and changed nothing, so the commit is empty). 343 tests
+pass. `ruff check`, `ruff format --check` and `mypy --strict` on `src/` are
+clean.
 
 **There is no git remote.** The project is local only. There is no GitHub
 repository, so no issue can be created and no SDD phase can be tracked on the
@@ -119,25 +126,41 @@ measuring and not by reasoning:
 
 ## 6. The defects found and fixed in this slice
 
-- **The tape wow was 100× too deep.** The span of the read position's travel
-  was computed as `delay * depth_permille // 1000`, which is 50 % of the
-  delay for a 500 per mille depth: the wow was a ±50 % pitch sweep, and it
-  turned the kosmische's drone into broadband noise (the measured centroid
-  went from 1308 Hz to 5952 Hz). The formula is
-  `delay * depth_permille // 100_000`: 500 per mille is half a per cent of
-  the delay, which is the pitch wobble BRIEF T3 asks for. The regression test
-  measures the pitch of the tail.
+The judgment-day review (an independent reviewer, blind to the
+orchestrator's own findings) found six real defects, and the seven-minute
+measurement found a seventh. All seven are fixed, in the commit
+`fix(s3): the arranger's moves compose, and the ending keeps its material`.
+
+- **The Director applied only its last move.** Every move was applied to the
+  *original* plan and the result overwrote the previous one, so a track that
+  logged eight moves held the effect of one. The moves now apply to the
+  running plan, one after the other.
+- **Gate 13 was tautological.** It counted the *drawn* moves, and the draw's
+  interval is at most 32 bars, so the inequality held by construction. It
+  counts the *applied* moves now, and a move is not drawn where its
+  instruments do not play.
+- **The ending could be emptied.** A drop that ran into the last bars took
+  the drums away and left twelve seconds of silence: the seven-minute dub
+  render failed gate 8. The last three seconds of a track keep their
+  material now.
+- **The tape wow was a length ratio and not a pitch ratio**, so the wobble
+  grew with the wow's rate: 2.5 % at 0.8 Hz against the brief's 0.8 %. The
+  travel of the read position is now scaled by the rate.
 - **The Director inverted the motif around the wrong axis** — the first
   section's root instead of the section the appearance is in — so the plan's
   appearance and the plucks that play it disagreed.
 - **The gate 13 bar count was four times too high**: the meter is a count of
   beats over a note value, so 4/4 is four quarter-note beats to the bar, not
   one.
+- **The modal shift could be held for 150 bars**, and the sections were
+  longer than the 64 bars the brief allows a mode to be held for. Both are
+  fixed, and a reprise now really takes the relative mode of the section it
+  reprises.
+- **The dub chain's Q and its send level were never read.** Both are read
+  now.
 - **The section lengths could go negative** on a short track: the snapping
   to four-bar multiples can overshoot the track, and the last section took
   the remainder.
-- **The Frippertronics' feedback path and the delay's state** were checked
-  for the block-wise identity; both hold.
 
 ## 7. The open items, in the order they matter
 
@@ -153,9 +176,11 @@ measuring and not by reasoning:
    tracks with timestamps.
 3. **The S1 verify still owes a second pair of eyes.** The S1 remediation
    table was re-audited by the orchestrator, because the `sdd-verifier`
-   subagent died four times under load. The S3 review is in
-   `sdd-s3-arranger-impl` and the independent opinion is in the judgment-day
-   record.
+   subagent died four times under load. S3's review was done for real: an
+   independent reviewer found six defects (the Director's cumulative
+   application, the tautological gate, the empty ending, the dead dub
+   fields, the wow's ratio and the unrealised reprise), and they are all
+   fixed. The table is in `sdd-s3-arranger-judgment`.
 4. **The board does not track this project** (see §2).
 5. **S4** is the mix and master: the limiter as a mastering stage, the
    loudness gates, the sub-bass balance, the codec gate, all of §11. **S5**
@@ -163,21 +188,22 @@ measuring and not by reasoning:
 
 ## 8. The measurements this slice is judged by
 
-Rendered on this machine (ThinkPad Yoga 260, 2 cores, Python 3.15.0,
-single-threaded BLAS), seven-minute pieces, seed 1042:
+Seven-minute pieces, seed 1042, one process each (the README's table has the
+same numbers with the hashes):
 
 | Lane | Render time | Peak RSS | Loudness | Peak | True peak |
 |---|---|---|---|---|---|
-| `motorik` | 17.1 s | 1047 MB | −34.095 LUFS | −18.003 dBFS | −17.925 dBTP |
-| `kosmische` | 65.9 s | 1098 MB | see the README | | |
-| `dub-electronic` | 29.1 s | 1099 MB | see the README | | |
-| `ambient` (8 min) | 51.9 s | 1275 MB | see the README | | |
+| `motorik` | 18.6 s | 1045 MB | −31.610 LUFS | −18.003 dBFS | −17.758 dBTP |
+| `kosmische` | 71.5 s | 1113 MB | −31.979 LUFS | −18.001 dBFS | −17.995 dBTP |
+| `dub-electronic` | 30.7 s | 1113 MB | −33.071 LUFS | −18.001 dBFS | −17.995 dBTP |
+| `indie-noise` | 9.1 s | 1113 MB | −44.568 LUFS | −18.001 dBFS | −17.995 dBTP |
+| `ambient` (8 min) | 52.5 s | 1180 MB | −34.845 LUFS | −18.001 dBFS | −17.995 dBTP |
 
 Budget: an 8-minute track in ≤ 3 minutes, peak RSS ≤ 1.5 GB. Both hold, with
-the kosmische the slowest lane: the Frippertronics' line is walked one
-sample at a time in Python, at about 0.18 s per second of stereo.
+the kosmische the slowest lane: the Frippertronics' line is walked one sample
+at a time in Python, at about 0.18 s per second of stereo. It is 60 % of the
+kosmische's render time, and it is the first thing to optimise if S4 needs
+the headroom.
 
-The Frippertronics is the one place in the render path that is not
-vectorised. It is the price of a delay whose read position moves every
-sample, and it is 8 % of the kosmische's render time — but it is the first
-thing to optimise if S4 needs the headroom.
+The `indie-noise` lane is 13 LUFS quieter than the others. It is a noise
+wall with a guitar over it, and the loudness gate is S4's business.

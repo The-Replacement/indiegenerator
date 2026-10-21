@@ -60,22 +60,32 @@ cannot compose, so it cannot invent a different track.
 Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
 520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS. The times are the
 best of three runs on an otherwise idle host; the host is shared, and under
-load the 180 s render has been observed to take up to 98 s.
+load a render has been observed to take three times as long.
 
-| Measurement | 60 s motorik | 180 s ambient | 900 s ambient |
-|---|---|---|---|
-| Render time (audio only) | 2.57 s | 19.09 s | 111 s |
-| Faster than realtime | 23× | 9.4× | 8.1× |
-| Wall clock, including interpreter start | 5.96 s | 26.34 s | 140 s |
-| Peak RSS | 253 MB | 558 MB | 890 MB (budget 1500 MB) |
-| Integrated loudness | −30.884 LUFS | −32.829 LUFS | −33.03 LUFS |
-| Sample peak | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS |
-| True peak (4× oversampled) | −17.897 dBTP | −17.995 dBTP | −17.995 dBTP |
-| Frames | 2 646 000 | 7 938 000 | 39 690 000 |
-| `plan_sha256` stable across runs | yes | yes | yes |
-| `pcm_sha256` stable across runs | yes | yes | yes |
+Seven-minute pieces, seed 1042, one process each:
 
-Loudness and peak are **printed, not enforced** except by the two gates below.
+| Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient (8 min) |
+|---|---|---|---|---|---|
+| Render time (audio only) | 18.6 s | 71.5 s | 30.7 s | 9.1 s | 52.5 s |
+| Faster than realtime | 22× | 10× | 14× | 46× | 9.1× |
+| Peak RSS | 1045 MB | 1113 MB | 1113 MB | 1113 MB | 1180 MB (budget 1500 MB) |
+| Integrated loudness | −31.610 LUFS | −31.979 LUFS | −33.071 LUFS | −44.568 LUFS | −34.845 LUFS |
+| Sample peak | −18.003 dBFS | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS |
+| True peak (4× oversampled) | −17.758 dBTP | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP |
+| Sections | 5 | 6 | 4 | 4 | 3 |
+| Frames | 18 522 000 | 18 522 000 | 18 522 000 | 18 522 000 | 21 168 000 |
+| `plan_sha256` stable across runs | yes | yes | yes | yes | yes |
+| `pcm_sha256` stable across runs | yes | yes | yes | yes | yes |
+
+The budget is an eight-minute track in three minutes and 1.5 GB of RSS. The
+kosmische is the slowest lane and the ambient the biggest: the Frippertronics'
+line is walked one sample at a time in Python, at about 0.18 s per second of
+stereo, and the mix itself is the one array that still spans the whole track
+(605 MB at fifteen minutes).
+
+Loudness and peak are **printed, not enforced** except by the gates below.
+The `indie-noise` lane is 13 LUFS quieter than the others: it is a noise wall
+with a guitar over it, and the loudness gate is S4's business.
 
 ### The gates in force
 
