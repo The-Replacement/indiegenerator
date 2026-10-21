@@ -19,6 +19,7 @@ from indiegen.master.loudness import measure
 from indiegen.metadata import build_tags, filename_for
 from indiegen.plan import SAMPLE_RATE, Plan, canonical_json, plan_sha256
 from indiegen.render import BLOCK_SIZE, render_plan
+from indiegen.validate import run_gates
 from indiegen.writer import pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
 
 app = typer.Typer(add_completion=False, name="indiegen", no_args_is_help=True)
@@ -129,9 +130,18 @@ def _render(
         plan = director(compose(loaded, seed, frames))
 
     started = time.perf_counter()
-    stereo = render_plan(plan)
-    pcm = master(plan, stereo, BLOCK_SIZE)
+    mix = render_plan(plan)
+    pcm = master(plan, mix, BLOCK_SIZE)
     render_seconds = time.perf_counter() - started
+
+    failure = run_gates(mix, pcm, plan.lane, plan.sample_rate)
+    if failure is not None:
+        for result in failure.failures:
+            typer.echo(
+                f"gate {result.gate}: {result.check}: measured {result.measured:.6f} limit {result.limit:.6f}",
+                err=True,
+            )
+        raise typer.Exit(code=2)
 
     filename = filename_for(plan)
     tags = build_tags(plan)
@@ -170,7 +180,7 @@ def _render(
     typer.echo(f"true_peak: {measurements['true_peak_dbtp']:.3f} dBTP")
     typer.echo(f"loudness: {measurements['integrated_lufs']:.3f} LUFS")
     typer.echo(f"sections: {plan.section_count}")
-    typer.echo(f"techniques: {','.join(card.name for card in plan.techniques)}")
+    typer.echo(f"techniques: {','.join(plan.techniques)}")
     typer.echo(f"plan_sha256: {plan_sha256(plan)}")
     typer.echo(f"pcm_sha256: {digest}")
     typer.echo(f"render_seconds: {render_seconds:.3f}")
