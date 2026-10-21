@@ -18,7 +18,7 @@ REPO_ROOT: Path = Path(__file__).resolve().parents[1]
 PRESETS_DIR: Path = REPO_ROOT / "presets"
 GOLDEN_DIR: Path = Path(__file__).resolve().parent / "golden"
 SEED: int = 1042
-SECONDS: int = 10
+SECONDS: int = 60
 
 
 @pytest.fixture(scope="session")
@@ -42,13 +42,13 @@ def cli_runner() -> CliRunner:
 @pytest.fixture(scope="session")
 def composed_plan() -> Any:
     """The plan before the Director runs."""
-    return compose(load_preset("station"), SEED, SECONDS * 44100)
+    return compose(load_preset("motorik"), SEED, SECONDS * 44100)
 
 
 @pytest.fixture(scope="session")
 def reference_plan() -> Any:
     """The composed and directed plan for the canonical preset and seed."""
-    return director(compose(load_preset("station"), SEED, SECONDS * 44100))
+    return director(compose(load_preset("motorik"), SEED, SECONDS * 44100))
 
 
 @pytest.fixture(scope="session")
@@ -62,7 +62,7 @@ def rendered(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
             "indiegen.cli",
             "render",
             "--preset",
-            "station",
+            "motorik",
             "--seed",
             str(SEED),
             "--seconds",

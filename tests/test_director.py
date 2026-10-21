@@ -50,7 +50,8 @@ def test_a_move_applies_only_to_the_kinds_it_lists(composed_plan: Plan) -> None:
         detune_cents=0,
         excitation_seed=1,
     )
-    padded = composed_plan.model_copy(update={"events": [*composed_plan.events, pluck]})
+    without_plucks = [event for event in composed_plan.events if event.kind != "pluck"]
+    padded = composed_plan.model_copy(update={"events": [*without_plucks, pluck]})
     directed = director(padded)
     plucks = [event for event in directed.events if event.kind == "pluck"]
     assert len(plucks) == 1

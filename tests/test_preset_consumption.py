@@ -26,6 +26,9 @@ SKIPPED_KEYS: frozenset[str] = frozenset({"kind", "lane", "strategy"})
 KEY_MUTATIONS: dict[str, Any] = {
     "chord_intervals": lambda value: [*value[:-1], value[-1] + 1],
     "motif_bank": lambda value: [[*cell[:-1], cell[-1] + 1] for cell in value],
+    # A named condition is a literal: the sweep cannot change it without
+    # making the preset unreadable, so it is left alone.
+    "condition": lambda value: value,
 }
 
 

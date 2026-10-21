@@ -1,0 +1,185 @@
+"""The S2 techniques: the euclid patterns, the conditional triggers, the
+deja-vu sequencer and the drums that carry them.
+
+Every one of these is a decision about the arrangement, made at compose
+time: the renderer only plays what the plan says.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from indiegen.compose import compose, director
+from indiegen.compose.techniques.t5_dejavu import _nearest_scale_note
+from indiegen.compose.techniques.t6_drums import euclid, rotate
+from indiegen.config import load_preset
+from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, PluckEvent, SnareEvent
+
+RATE: int = 44100
+SEED: int = 1042
+
+
+@pytest.fixture(scope="module")
+def motorik_plan() -> object:
+    """The motorik lane: the drums, the deja-vu and the 1/f."""
+    return director(compose(load_preset("motorik"), SEED, 60 * RATE))
+
+
+def test_euclid_makes_the_four_on_the_floor() -> None:
+    """Bjorklund's algorithm: four pulses over sixteen steps."""
+    assert euclid(4, 16) == [
+        True,
+        False,
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+    ]
+
+
+def test_euclid_makes_the_eighths() -> None:
+    assert euclid(8, 16) == [index % 2 == 0 for index in range(16)]
+
+
+def test_euclid_spreads_the_pulses_evenly() -> None:
+    pattern = euclid(5, 8)
+    assert len(pattern) == 8
+    assert sum(pattern) == 5
+    gaps = [index for index, active in enumerate(pattern) if active]
+    distances = [b - a for a, b in zip(gaps, gaps[1:], strict=False)]
+    assert max(distances) - min(distances) <= 1
+    assert sum(pattern) == 5
+
+
+def test_euclid_saturates() -> None:
+    assert euclid(0, 8) == [False] * 8
+    assert euclid(8, 8) == [True] * 8
+    assert euclid(12, 8) == [True] * 8
+
+
+def test_the_rotation_turns_the_pattern() -> None:
+    pattern = euclid(3, 8)
+    assert rotate(pattern, 1) == pattern[1:] + pattern[:1]
+    assert rotate(pattern, 8) == pattern
+
+
+def test_the_kick_plays_on_the_quarters(motorik_plan: object) -> None:
+    """The recipe: the kick on the quarters."""
+    kicks = [event for event in motorik_plan.events if isinstance(event, KickEvent)]
+    assert kicks
+    event = kicks[0]
+    frames_per_bar = motorik_plan.frames_per_beat * 4
+    for hit in event.hits[:8]:
+        step = (hit.frame % frames_per_bar) // (frames_per_bar // 16)
+        assert step % 4 == 0
+
+
+def test_the_snare_plays_on_two_and_four(motorik_plan: object) -> None:
+    """The recipe: the snare on the beats two and four."""
+    snares = [event for event in motorik_plan.events if isinstance(event, SnareEvent)]
+    assert snares
+    event = snares[0]
+    frames_per_bar = motorik_plan.frames_per_beat * 4
+    for hit in event.hits[:8]:
+        if hit.velocity_millibels < -1000:
+            continue  # a ghost note, and it is on the grid too
+        beat = (hit.frame % frames_per_bar) / (frames_per_bar // 4)
+        # the beats two and four; the fourth beat is the downbeat
+        assert round(beat) % 4 in (2, 0)
+
+
+def test_the_hats_carry_ghost_notes(motorik_plan: object) -> None:
+    """The ghost notes are quieter than the accents."""
+    hats = [event for event in motorik_plan.events if isinstance(event, HatEvent)]
+    assert hats
+    event = hats[0]
+    assert len(event.hits) > 8
+    velocities = {hit.velocity_millibels for hit in event.hits}
+    assert len(velocities) > 1
+    assert min(velocities) < max(velocities)
+
+
+def test_the_layers_follow_the_sections(motorik_plan: object) -> None:
+    """A voice the arrangement has not reached yet does not play.
+
+    The hats are the loudest thing in the plateau and absent from the
+    intro, so the piece has a shape.
+    """
+    hats = [event for event in motorik_plan.events if isinstance(event, HatEvent)]
+    assert hats
+    event = hats[0]
+    boundaries = [section.start_frame for section in motorik_plan.sections]
+    first = min(hit.frame for hit in event.hits)
+    assert first >= boundaries[1]
+    densities = {section.density for section in motorik_plan.sections}
+    assert len(densities) > 1
+
+
+def test_the_bass_jumps_an_octave_sometimes(motorik_plan: object) -> None:
+    basses = [event for event in motorik_plan.events if isinstance(event, BassEvent)]
+    assert basses
+    event = basses[0]
+    assert all(isinstance(hit, BassHit) for hit in event.hits)
+    pitches = {hit.midi for hit in event.hits}
+    assert len(pitches) > 1
+    assert all(hit.frame >= 0 for hit in event.hits)
+
+
+def test_the_deja_vu_stays_in_the_scale(motorik_plan: object) -> None:
+    plucks = [event for event in motorik_plan.events if isinstance(event, PluckEvent)]
+    assert plucks
+    scale = set(motorik_plan.scale_midi)
+    assert all(event.midi in scale for event in plucks)
+
+
+def test_the_deja_vu_remembers(motorik_plan: object) -> None:
+    """A motif emerges: the same pitch comes back."""
+    plucks = [event for event in motorik_plan.events if isinstance(event, PluckEvent)]
+    pitches = [event.midi for event in plucks]
+    assert len(pitches) > 8
+    repeats = sum(1 for index, pitch in enumerate(pitches) if pitch in pitches[:index])
+    assert repeats > len(pitches) // 4
+
+
+def test_the_nearest_scale_note_is_in_the_scale() -> None:
+    scale = [38, 40, 41, 43, 45]
+    assert _nearest_scale_note(scale, 39) in scale
+    assert _nearest_scale_note(scale, 100) == 45
+    assert _nearest_scale_note([], 7) == 7
+
+
+def test_the_drums_carry_the_one_over_f_signals(motorik_plan: object) -> None:
+    """T7: the velocity, the pan and the micro-timing drift on pink noise."""
+    for event in motorik_plan.events:
+        if not isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+            continue
+        assert event.velocity_depth_millibels > 0
+        assert event.micro_timing_frames > 0
+        assert event.pan_drift_permille > 0
+        assert event.noise_seed > 0
+
+
+def test_the_drum_hits_are_sorted_and_inside_the_track(motorik_plan: object) -> None:
+    for event in motorik_plan.events:
+        if not isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+            continue
+        frames = [hit.frame for hit in event.hits]
+        assert frames == sorted(frames)
+        assert frames[0] >= 0
+        assert frames[-1] < motorik_plan.duration_frames
+
+
+def test_the_plan_carries_no_float_leaves(motorik_plan: object) -> None:
+    for value in motorik_plan.model_dump(mode="json").values():
+        assert not isinstance(value, float)

@@ -147,8 +147,11 @@ def test_a_density_outside_the_band_raises_a_plan_error(presets_dir: object) -> 
         sample_rate=44100,
         duration_frames=90 * 44100,
         frames_per_beat=22000,
+        frames_per_bar=88000,
         attack_frames=13230,
         release_frames=13230,
+        section_boundaries=[0, 90 * 44100],
+        section_densities=[50],
     )
     with pytest.raises(PlanError):
         plan_poly_period(impossible, SplitMix64(7), context)

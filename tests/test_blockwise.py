@@ -32,7 +32,7 @@ def ambient_plan() -> object:
 @pytest.fixture(scope="module")
 def station_plan() -> object:
     """A short station plan: the pad."""
-    return director(compose(load_preset("station"), SEED, 20 * RATE))
+    return director(compose(load_preset("motorik"), SEED, 20 * RATE))
 
 
 @pytest.fixture(scope="module")

@@ -34,8 +34,8 @@ def test_hashes_are_functions_not_fields(reference_plan: Plan) -> None:
 
 
 def test_golden_canonical_bytes(reference_plan: Plan) -> None:
-    golden = GOLDEN_DIR / "plan_station_1042.json"
-    digest_file = GOLDEN_DIR / "plan_station_1042.sha256"
+    golden = GOLDEN_DIR / "plan_motorik_1042.json"
+    digest_file = GOLDEN_DIR / "plan_motorik_1042.sha256"
     assert golden.is_file()
     assert digest_file.is_file()
     assert canonical_json(reference_plan) == golden.read_bytes()

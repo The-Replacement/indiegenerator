@@ -52,7 +52,7 @@ def test_unregistered_commands_do_not_exist(cli_runner: CliRunner, command: str)
 def test_render_prints_exactly_twelve_lines(cli_runner: CliRunner, tmp_path: Path) -> None:
     result = cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert result.exit_code == 0
     lines = result.stdout.strip().splitlines()
@@ -66,10 +66,10 @@ def test_render_prints_exactly_twelve_lines(cli_runner: CliRunner, tmp_path: Pat
 def test_render_accepts_fractional_minutes(cli_runner: CliRunner, tmp_path: Path) -> None:
     result = cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--minutes", "0.16666666666666666", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--minutes", "1.0", "--out", str(tmp_path)],
     )
     assert result.exit_code == 0
-    assert "duration: 10.000000" in result.stdout
+    assert "duration: 60.000000" in result.stdout
 
 
 def test_seconds_win_over_minutes(cli_runner: CliRunner, tmp_path: Path) -> None:
@@ -78,23 +78,23 @@ def test_seconds_win_over_minutes(cli_runner: CliRunner, tmp_path: Path) -> None
         [
             "render",
             "--preset",
-            "station",
+            "motorik",
             "--seed",
             "1042",
             "--minutes",
             "5",
             "--seconds",
-            "10",
+            "60",
             "--out",
             str(tmp_path),
         ],
     )
     assert result.exit_code == 0
-    assert "duration: 10.000000" in result.stdout
+    assert "duration: 60.000000" in result.stdout
 
 
 def test_explain_writes_the_plan_to_stdout_and_the_hash_to_stderr(cli_runner: CliRunner) -> None:
-    result = cli_runner.invoke(app, ["explain", "--preset", "station", "--seed", "1042", "--seconds", "10"])
+    result = cli_runner.invoke(app, ["explain", "--preset", "motorik", "--seed", "1042", "--seconds", "60"])
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     plan = Plan.model_validate(payload)
@@ -105,10 +105,10 @@ def test_explain_writes_the_plan_to_stdout_and_the_hash_to_stderr(cli_runner: Cl
 
 
 def test_explain_matches_the_rendered_plan(cli_runner: CliRunner, tmp_path: Path) -> None:
-    explained = cli_runner.invoke(app, ["explain", "--preset", "station", "--seed", "1042", "--seconds", "10"])
+    explained = cli_runner.invoke(app, ["explain", "--preset", "motorik", "--seed", "1042", "--seconds", "60"])
     rendered = cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert explained.exit_code == 0
     assert rendered.exit_code == 0
@@ -123,7 +123,7 @@ def test_from_plan_rolls_nothing(cli_runner: CliRunner, tmp_path: Path, monkeypa
 
     first = cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert first.exit_code == 0
     sidecar = next(tmp_path.glob("*.json"))
@@ -140,7 +140,7 @@ def test_from_plan_rolls_nothing(cli_runner: CliRunner, tmp_path: Path, monkeypa
 def test_from_plan_with_a_disagreeing_seed_fails(cli_runner: CliRunner, tmp_path: Path) -> None:
     cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     sidecar = next(tmp_path.glob("*.json"))
     result = cli_runner.invoke(app, ["render", "--from-plan", str(sidecar), "--seed", "999", "--out", str(tmp_path)])
@@ -152,7 +152,7 @@ def test_from_plan_with_a_disagreeing_seed_fails(cli_runner: CliRunner, tmp_path
 def test_unknown_preset_names_the_preset_and_the_seed(cli_runner: CliRunner, tmp_path: Path) -> None:
     result = cli_runner.invoke(
         app,
-        ["render", "--preset", "nope", "--seed", "4242", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "nope", "--seed", "4242", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert result.exit_code == 1
     assert "nope" in result.output
@@ -175,7 +175,7 @@ def test_a_gate_failure_exits_two_and_writes_nothing(
     monkeypatch.setattr(cli_module, "run_gates", failing)
     result = cli_runner.invoke(
         app,
-        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+        ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert result.exit_code == 2
     assert result.stdout.strip() == ""
@@ -185,7 +185,7 @@ def test_a_gate_failure_exits_two_and_writes_nothing(
 
 
 def test_a_missing_seed_is_a_plain_error(cli_runner: CliRunner, tmp_path: Path) -> None:
-    result = cli_runner.invoke(app, ["render", "--preset", "station", "--seconds", "10", "--out", str(tmp_path)])
+    result = cli_runner.invoke(app, ["render", "--preset", "motorik", "--seconds", "60", "--out", str(tmp_path)])
     assert result.exit_code == 1
     assert "Traceback (most recent call last)" not in result.output
 
