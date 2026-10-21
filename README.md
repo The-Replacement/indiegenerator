@@ -6,10 +6,10 @@ A seed goes in; a finished, tagged track comes out. Every run of the same
 `(preset, seed)` produces the same plan, and on the same machine the same
 audio, byte for byte.
 
-> **Status: slice S1 (`s1-ambient-lane`).** The pipeline, the first lane and
-> the first gates. The ambient lane has a three-partial spectral drone, a
-> bank of poly-period loops and a Karplus–Strong guitar through a dotted
-> eighth delay. It is not finished music yet. See
+> **Status: slice S3 (`s3-arranger`).** The arranger, the section graph, the
+> tension curve, the motif and its transforms, the Director as an arranger,
+> the modal shifts, the Frippertronics and the dub chain, and the three gates
+> that measure them. Seven minutes of music per lane. See
 > [What is not built yet](#what-is-not-built-yet).
 
 ---
@@ -79,15 +79,24 @@ Loudness and peak are **printed, not enforced** except by the two gates below.
 
 ### The gates in force
 
-`src/indiegen/validate.py` implements **gates 2, 4, 7 and 8 only**, and
-declares that with `GATES_IN_FORCE = (2, 4, 7, 8)`. A gate that is not in
-force is not implemented and does not fail the render.
+`src/indiegen/validate.py` implements **gates 2, 4, 5, 6, 7, 8 and 13 only**,
+and declares that with `GATES_IN_FORCE = (2, 4, 5, 6, 7, 8, 13)`. A gate that
+is not in force is not implemented and does not fail the render.
 
 - **Gate 2** — no non-finite sample in the mix, no DC offset in the delivered
   master (≤ 0.001 of full scale), and nothing at the digital rails.
 - **Gate 4** — the planned section count is realized: at least the lane's
   minimum (4, or 2 for the ambient), the sections tile the track, and every
   one of them holds something.
+- **Gate 5** — the energy trajectory follows the planned one: the Pearson
+  correlation between the delivered per-second RMS and the plan's section
+  level curve has to be at least 0.5. The plan is the reference, and a plan
+  that planned a flat curve is not failed for being flat.
+- **Gate 6** — the timbre trajectory follows the planned one: the delivered
+  spectral centroid, measured per section, has to correlate with the plan's
+  predicted centroids at 0.4 or better. A plan that declared a static timbre
+  is measured by its variance instead (≤ 0.25 relative), and a filter sweep
+  added to pass this gate is exactly the slop it exists to catch.
 - **Gate 7** — the piece is novel enough: the brief's own detector (the
   spectral flux on the one second frames, the peaks above the mean plus two
   sigma, the peaks closer than four seconds merged) must find at least
@@ -96,6 +105,10 @@ force is not implemented and does not fail the render.
   above the peaks it is looking for.
 - **Gate 8** — no leading silence (≤ 4 s for the ambient lane, ≤ 1 s
   otherwise) and no trailing silence (≤ 3 s).
+- **Gate 13** — three plan-level checks, none of which looks at the audio:
+  the motif has to come back in at least three transformed forms, the
+  Director has to fire at least once every 32 bars in a pulsed lane, and the
+  deja-vu's replay probability has to move across the sections.
 
 A failing render exits **2**, prints the failures to stderr, and writes
 **nothing** to the output directory: the radio is watching, and a file that
@@ -117,17 +130,27 @@ preset.yaml + seed ──compose()──▶ Plan ──director()──▶ Plan 
   up front and emits a frozen, integer-only pydantic `Plan`. Everything
   downstream is a pure function of that Plan.
 - **The Plan is a discriminated union of events** — `pad`, `poly_period`,
-  `drone`, `pluck` — over a shared frozen base. Each technique carries only
-  the parameters it uses.
-- **The Director** is a pure `Plan -> Plan` function. A move declares which
-  event kinds it applies to, and it is logged only if it changed something:
-  the station's transpose-up-a-fourth acts on the pad, and the ambient lane's
-  material is left alone.
+  `drone`, `pluck`, `kick`, `snare`, `hat`, `bass` — over a shared frozen
+  base. Each technique carries only the parameters it uses.
+- **The arrangement is a walk over the station's section graph.** The graph's
+  nodes declare their successors, their density, their level (the tension
+  curve) and the section they reprise. The composer walks it, and no two
+  sections in a row may be the same arrangement: they have to differ in at
+  least two of instrumentation, harmonic center, rhythm, density and texture.
+- **The motif is played.** The cell is a Karplus–Strong phrase that comes
+  back every eight bars, transformed — transposed, inverted, reversed,
+  stretched or cut — so the station's signature is heard and not just
+  declared. Every appearance is recorded in the plan.
+- **The Director draws, the Director applies.** `compose()` draws the
+  Director's moves from the station's strategy pool (every 8 to 32 bars in a
+  pulsed lane, every 60 to 180 s in a lane with no pulse), and `director()`
+  applies them as a pure `Plan -> Plan` transform. A move that changed
+  nothing is not logged.
 - **The renderer is a state machine over blocks.** The voices, the bus
-  lowpass, the delay, the reverb, the master chain and the loudness meter
-  all carry their state across the block boundary as values, and a block is
-  the same audio whatever the block size is. Only the mix itself spans the
-  whole track.
+  lowpass, the delay, the reverb, the Frippertronics, the dub chain, the
+  sidechain, the master chain and the loudness meter all carry their state
+  across the block boundary as values, and a block is the same audio whatever
+  the block size is. Only the mix itself spans the whole track.
 - **The master chain** stages the mix to a declared target peak, applies a
   safety limiter and a seeded TPDF dither, and quantises to int16.
 - **The write path** is `out/.tmp/<name>.flac` → `fsync` → `os.replace` into
@@ -138,14 +161,18 @@ preset.yaml + seed ──compose()──▶ Plan ──director()──▶ Plan 
 
 ```
 pad / poly_period / drone ──▶ MAIN BUS (stereo, the pan law)
-pluck ──▶ KS BUS ──▶ dotted-eighth delay ──▶ wet ──▶ MAIN BUS
+pluck ──▶ KS BUS ──▶ [dub chain] ──▶ dotted-eighth delay ──▶ wet ──▶ MAIN BUS
 
-MAIN BUS ──▶ bus lowpass ──▶ [reverb tap] ──▶ reverb ──▶ wet ──┐
-                │                                                 │
-                └──────────────◀──────────────────────────────────┘
-                │
-                ▼
-        section_gain × fade_gain ──▶ master() ──▶ int16
+MAIN BUS ──▶ bus lowpass ──▶ [Frippertronics send] ──▶ wet ──┐
+                │                                            │
+                ├──▶ [reverb tap] ──▶ reverb ──▶ wet ──┐    │
+                │                                     │    │
+                │     ┌───────────────────────────────┘    │
+                ▼     ▼                                    │
+        [sidechain: ducked by the kick] ◀── kick bus        │
+                │                                           │
+                ▼                                           │
+        section_gain × fade_gain ──▶ master() ──▶ int16 ◀──┘
 ```
 
 The KS bus's dry output is never summed: the delay *is* the instrument's
@@ -215,36 +242,35 @@ palette, one 1/f drift, one strategy deck, one tempo centre — not by the tag.
 
 ## What is not built yet
 
-This slice is the first lane, not the last one. Everything below is
+This slice is the arranger, not the last one. Everything below is
 **absent**, and none of it is implemented "sort of":
 
-- **The techniques are partial.** T1 (poly-period loops), T5 (deja-vu), T6
-  (euclidean rhythms with conditional triggers), T7 (the 1/f control
-  signals), T11 (spectral drone stack) and T13 (Karplus–Strong) exist. T2,
-  T3, T4, T8, T9, T10, T12, T15 and T16 do not.
-- **No gates beyond 2, 4, 7 and 8.** Loudness, duration, the energy and
-  timbre trajectories, the sub-bass balance, the meter agreement, the
-  reproducibility check and the codec round trip are all unmeasured, and
-  none of them fails a render.
+- **The techniques are still partial.** T1 (poly-period loops), T3
+  (Frippertronics), T5 (deja-vu), T6 (euclidean rhythms with conditional
+  triggers), T7 (the 1/f control signals), T10 (the dub chain and the
+  sidechain), T11 (spectral drone stack), T13 (Karplus–Strong), T14 (the
+  Director) and T16 (the modal shifts) exist. T2, T4, T8, T9, T12 and T15 do
+  not.
+- **No gates beyond 2, 4, 5, 6, 7, 8 and 13.** Loudness, duration, the
+  sub-bass balance, the meter agreement, the reproducibility check and the
+  codec round trip are all unmeasured, and none of them fails a render.
 - **No `batch`, no `catalog`, no `install`, no `validate` command.** The gate
   functions exist and are enforced inside `render`; there is no command that
   validates a file on disk.
-- **The lanes are one recipe each, and the arranger is not built.** Every
-  lane has real material now, but the development is layer add/remove by
-  section density, not the section graph, the tension curve or the motif
-  transforms that S3 brings.
-- **The ambient piece is 180 seconds, not the 6–15 minutes** the recipe asks
-  for. The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
-  budget, at 887 MB. What still grows with the track is the mix itself —
-  one stereo float64 array, 605 MB at fifteen minutes — because the master
-  chain needs the peak of the whole mix before it can stage it.
-- **No mix buses beyond the two**, no sidechain, no limiter as a mastering
-  stage, no loudness normalisation.
-- **No `theory/` module**: the chord and scale rules live in the composer
-  for now.
+- **The mix is still two buses and a master.** There is no limiter as a
+  mastering stage, no loudness normalisation, no sub-bass control, and the
+  codec gate is S4's job.
+- **The lanes are 6–8 minutes, not the 6–15 the ambient recipe asks for.**
+  The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
+  budget. What still grows with the track is the mix itself — one stereo
+  float64 array, 605 MB at fifteen minutes — because the master chain needs
+  the peak of the whole mix before it can stage it.
+- **Nobody has listened to it.** The gates measure the shape of the
+  arrangement, not whether it is any good. That is S6's job, and it needs
+  human ears.
 
-The next slices are `s3-arranger` (gates 5, 6, 13), `s4-mix-master`
-(all of §11), `s5-batch-station`, `s6-taste-pass`.
+The next slices are `s4-mix-master` (all of §11), `s5-batch-station`,
+`s6-taste-pass`.
 
 ---
 
@@ -306,8 +332,9 @@ src/indiegen/
 ├── validate.py     the gates, and only the gates in force
 ├── mixing.py       the integer mixer both the PRNG and the dither use
 ├── compose/        the PRNG, compose(), the Director, the techniques
+├── theory/         the modes, the scales and the motif transforms
 ├── synth/          oscillators, envelopes, biquads, noise, the KS string
-├── fx/             the reverb, the dotted-eighth delay, the delay lines
-├── mix/            the bus
+├── fx/             the reverb, the delays, the Frippertronics, the dub chain
+├── mix/            the bus, the pan law, the sidechain
 └── master/         loudness, true peak, dither, the master chain
 ```

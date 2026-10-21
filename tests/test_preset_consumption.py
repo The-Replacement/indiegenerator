@@ -20,6 +20,18 @@ from indiegen.plan import canonical_json
 
 SKIPPED_KEYS: frozenset[str] = frozenset({"kind", "lane", "strategy"})
 
+
+def _mutate_section_graph(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The graph with its numbers moved and its names left alone."""
+    mutated: list[dict[str, Any]] = []
+    for node in value:
+        entry = dict(node)
+        entry["density"] = int(node["density"]) + 1
+        entry["level_millibels"] = int(node["level_millibels"]) - 1
+        mutated.append(entry)
+    return mutated
+
+
 # Two groups need a gentler touch: a chord's intervals cannot all be moved
 # at once without leaving the scale, and a motif bank is consumed by drawing
 # one cell, so every cell has to move for the draw to change.
@@ -29,6 +41,12 @@ KEY_MUTATIONS: dict[str, Any] = {
     # A named condition is a literal: the sweep cannot change it without
     # making the preset unreadable, so it is left alone.
     "condition": lambda value: value,
+    # The mode names are literals too, and the graph's node names are the
+    # edges the arranger walks: both have to stay readable, so the sweep
+    # moves the numbers around them instead.
+    "mode_pool": lambda value: list(reversed(value)),
+    "pulse": lambda value: "seconds" if value == "bars" else "bars",
+    "section_graph": _mutate_section_graph,
 }
 
 
@@ -83,7 +101,7 @@ def _cases(presets_dir: Path) -> list[tuple[str, str]]:
         for key, value in raw.items():
             if key in SKIPPED_KEYS:
                 continue
-            if _mutate(value) is None:
+            if _mutate(value, key) is None:
                 continue
             cases.append((path.name, key))
     return cases
@@ -114,7 +132,7 @@ def test_mutating_one_declared_value_changes_the_plan(
         (tmp_path / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
     target = tmp_path / filename
     raw = yaml.safe_load(target.read_text(encoding="utf-8"))
-    raw[key] = _mutate(raw[key])
+    raw[key] = _mutate(raw[key], key)
     target.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
 
     name = _preset_name_for(target)

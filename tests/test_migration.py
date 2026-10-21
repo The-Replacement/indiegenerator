@@ -1,6 +1,6 @@
 """AC-52, AC-53: the frozen S0 artifact must survive the S1 pipeline.
 
-S0's committed canonical plan bytes are migrated field by field into the S1
+S0's committed canonical plan bytes are migrated field by field into the S3
 model without changing a single value the renderer reads, and the result must
 render to S0's ``pcm_sha256`` exactly. If the migration changed anything the
 renderer looks at, this test fails.
@@ -22,12 +22,13 @@ S0_PCM_SHA256: str = "892cb06a76244f43c97336295574d24910bc188d318ed29cd9ba696544
 
 
 def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
-    """Migrate S0's committed plan into the S1 model.
+    """Migrate S0's committed plan into the S3 model.
 
     The migration adds the event discriminator, drops the field the renderer
     never read, turns the technique cards into names, adds the empty bus
-    specifications and the Director's applicability, and changes the version.
-    It changes no value the renderer reads.
+    specifications and the Director's applicability, and gives the sections
+    the fields the arranger now writes. It changes no value the renderer
+    reads.
     """
     migrated = json.loads(json.dumps(payload))
     events: list[dict[str, Any]] = []
@@ -43,7 +44,22 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
         move["applies_to"] = ["pad"]
     migrated["delay_sends"] = []
     migrated["reverb"] = None
-    migrated["version"] = 2
+    migrated["frippertronics"] = None
+    migrated["dub_chain"] = None
+    migrated["pulse"] = "bars"
+    migrated["motif_appearances"] = []
+    migrated["deja_vu_replay_permille"] = []
+    migrated["motif"] = {"notes": [{"midi": note, "duration_frames": 1} for note in migrated["motif"]]}
+    for section in migrated["sections"]:
+        section.pop("motif", None)
+        section["instrumentation"] = ["pad"]
+        section["mode"] = "dorian"
+        section["root_midi"] = 38
+        section["texture"] = "sparse"
+        section["reprise_of"] = -1
+        section["transform"] = "identity"
+        section["centroid_hz"] = 700
+    migrated["version"] = 3
     return Plan.model_validate(migrated)
 
 

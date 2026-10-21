@@ -7,14 +7,13 @@ time: the renderer only plays what the plan says.
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 from indiegen.compose import compose, director
 from indiegen.compose.techniques.t5_dejavu import _nearest_scale_note
 from indiegen.compose.techniques.t6_drums import euclid, rotate
 from indiegen.config import load_preset
-from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, PluckEvent, SnareEvent
+from indiegen.plan import BassEvent, BassHit, HatEvent, KickEvent, PluckEvent, SnareEvent
 
 RATE: int = 44100
 SEED: int = 1042
@@ -137,10 +136,19 @@ def test_the_bass_jumps_an_octave_sometimes(motorik_plan: object) -> None:
 
 
 def test_the_deja_vu_stays_in_the_scale(motorik_plan: object) -> None:
-    plucks = [event for event in motorik_plan.events if isinstance(event, PluckEvent)]
+    """The stabs are quantized to the scale of the section they are in.
+
+    The scale of a section is the lane's mode over the section's root, so
+    a modal shift is heard in the notes themselves.
+    """
+    from indiegen.theory.scales import mode_scale
+
+    plucks = [event for event in motorik_plan.events if isinstance(event, PluckEvent) and event.instrument == "pluck"]
     assert plucks
-    scale = set(motorik_plan.scale_midi)
-    assert all(event.midi in scale for event in plucks)
+    for section in motorik_plan.sections:
+        scale = set(mode_scale(section.mode, section.root_midi, 2))
+        inside = [event for event in plucks if section.start_frame <= event.start_frame < section.end_frame]
+        assert all(event.midi in scale for event in inside)
 
 
 def test_the_deja_vu_remembers(motorik_plan: object) -> None:

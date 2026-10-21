@@ -89,12 +89,18 @@ def test_at_most_one_pair_forms_a_minor_second(ambient_plan: Plan) -> None:
 
 
 def test_the_gate_eight_safety_rule(ambient_plan: Plan) -> None:
-    """The drone starts at frame zero, and the first voice is present at once."""
+    """The drones tile the track, and the first voice is present at once.
+
+    The drone is scheduled per section now, so the safety is that the
+    sections cover the track without a gap: the first drone starts at
+    frame zero and the last one ends with the track.
+    """
     drones = [event for event in ambient_plan.events if event.kind == "drone"]
     assert drones
-    for drone in drones:
-        assert drone.start_frame == 0
-        assert drone.start_frame + drone.duration_frames == ambient_plan.duration_frames
+    assert drones[0].start_frame == 0
+    assert drones[-1].start_frame + drones[-1].duration_frames == ambient_plan.duration_frames
+    for previous, following in zip(drones, drones[1:], strict=False):
+        assert previous.start_frame + previous.duration_frames == following.start_frame
     for event in ambient_plan.events:
         if event.kind != "poly_period":
             continue
@@ -122,11 +128,15 @@ def test_the_poly_period_voice_is_a_tone(ambient_plan: Plan) -> None:
     # Not a constant: the envelope's shape is the only thing that was left.
     assert float(np.std(window)) > 0.05
 
-    # And a tone at the voice's own pitch.
+    # And a tone at the voice's own pitch. The window is three seconds
+    # long and the voices overlap, so the peak is looked for in the
+    # neighbourhood of the voice's own pitch and not everywhere.
     spectrum = np.abs(np.fft.rfft(window * np.hanning(window.size)))
-    peak = int(np.argmax(spectrum))
-    measured = peak * 44100 / window.size
+    freqs = np.fft.rfftfreq(window.size, 1 / 44100)
     expected = midi_to_hz(entry.midi)
+    near = np.nonzero((freqs > expected * 0.94) & (freqs < expected * 1.06))[0]
+    assert near.size
+    measured = freqs[near[int(np.argmax(spectrum[near]))]]
     assert abs(1200.0 * math.log2(measured / expected)) < 10.0
 
 
@@ -152,6 +162,9 @@ def test_a_density_outside_the_band_raises_a_plan_error(presets_dir: object) -> 
         release_frames=13230,
         section_boundaries=[0, 90 * 44100],
         section_densities=[50],
+        section_scales=[list(lane.scale_midi)],
+        section_roots=[lane.scale_midi[0]],
+        section_functions=["plateau"],
     )
     with pytest.raises(PlanError):
         plan_poly_period(impossible, SplitMix64(7), context)
@@ -188,7 +201,7 @@ def test_the_pluck_feedback_is_in_the_declared_band(ambient_plan: Plan) -> None:
 
 
 def test_the_chorus_is_a_detuned_pair(ambient_plan: Plan) -> None:
-    plucks = [event for event in ambient_plan.events if event.kind == "pluck"]
+    plucks = [event for event in ambient_plan.events if event.kind == "pluck" and event.instrument == "ks"]
     pairs: dict[tuple[int, int], list[PluckEvent]] = {}
     for pluck in plucks:
         pairs.setdefault((pluck.start_frame, pluck.midi), []).append(pluck)
@@ -223,6 +236,9 @@ def test_the_ambient_director_log_is_empty(ambient_plan: Plan) -> None:
 
 
 def test_the_drone_spans_the_track(ambient_plan: Plan) -> None:
-    for event in ambient_plan.events:
-        if isinstance(event, DroneEvent):
-            assert event.duration_frames == ambient_plan.duration_frames
+    """The drone covers the track, section by section."""
+    drones = [event for event in ambient_plan.events if isinstance(event, DroneEvent)]
+    assert drones
+    covered = sum(event.duration_frames for event in drones)
+    assert covered == ambient_plan.duration_frames
+    assert drones[0].start_frame == 0

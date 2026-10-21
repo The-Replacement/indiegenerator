@@ -125,11 +125,11 @@ def test_the_guitar_is_heard_only_through_the_delay(presets_dir: Path) -> None:
 
 
 def test_the_gate_module_exists_and_the_failure_type_is_not_an_exception() -> None:
-    """S1 brings gates 2 and 8 into force, so validate.py and GateFailure exist."""
+    """S3 brings gates 5, 6 and 13 into force, so validate.py and GateFailure exist."""
     from indiegen.validate import GATES_IN_FORCE, GateFailure
 
     assert (PACKAGE / "validate.py").exists()
-    assert GATES_IN_FORCE == (2, 4, 7, 8)
+    assert GATES_IN_FORCE == (2, 4, 5, 6, 7, 8, 13)
     assert not issubclass(GateFailure, BaseException)
 
 
