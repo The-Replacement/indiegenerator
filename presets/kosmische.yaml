@@ -15,15 +15,46 @@ fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 6000, q_num: 1, q_den: 1}
 
 techniques:
-  - kind: pad
-    partials: {min: 3, max: 3}
-    detune_min_cents: -5
-    detune_max_cents: 5
-    lfo_rate: {numerator: 1, denominator: 10}
-    lfo_depth_cents: 5
-    amplitude_millibels: -300
+  # T7: the 1/f control signals. The drift is what makes the drone played
+  # rather than programmed.
+  - kind: pink
+    velocity_depth_millibels: 600
+    micro_timing_frames: 10
+    pan_drift_permille: 200
+
+  # T11: the drone. The bed the whole lane sits on.
+  - kind: drone
+    partial_count: {min: 5, max: 7}
+    detune_cents_range: {min: -8, max: 8}
+    detune_lfo_rate: {numerator: 1, denominator: 9}
+    detune_lfo_depth_cents: 12
+    amplitude_lfo_rate: {numerator: 1, denominator: 14}
+    amplitude_lfo_depth_millibels: 400
+    ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 9, denominator: 8}
+      - {numerator: 5, denominator: 4}
+      - {numerator: 4, denominator: 3}
+      - {numerator: 3, denominator: 2}
+
+  # T5: the deja-vu arp over the drone. It enters with the build and goes
+  # with the outro, so the lane has a shape.
+  - kind: deja_vu
+    step_beats: 1
+    buffer_size: 48
+    min_density: 40
+    replay_min_permille: 150
+    replay_max_permille: 850
+    bias: 12
+    spread: 10
+    note_frames: 11000
+    feedback_num: 998
+    feedback_den: 1000
+    brightness: {numerator: 3, denominator: 10}
+    pluck_position_permille: 250
+    detune_cents: 0
 
 section_count_range: [4, 4]
-duration_range_seconds: [10, 10]
+duration_range_seconds: [180, 180]
 attack_frames: 22050
 release_frames: 22050

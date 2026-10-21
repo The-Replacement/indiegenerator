@@ -15,6 +15,74 @@ fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 12000, q_num: 1, q_den: 1}
 
 techniques:
+  # T7: the 1/f control signals of the lane. The velocity drifts, the pan
+  # drifts and the micro-timing drifts, and none of it is an LFO.
+  - kind: pink
+    velocity_depth_millibels: 500
+    micro_timing_frames: 12
+    pan_drift_permille: 150
+
+  # T6: the drums. The kick on the quarters, the snare on two and four,
+  # the hats on the sixteenths with their ghost notes.
+  - kind: kick
+    pattern:
+      steps_per_bar: 16
+      euclid_k: 4
+      euclid_n: 16
+      rotation: 0
+      condition: always
+      condition_period: 1
+      min_density: 0
+      ghost_permille: 0
+      velocity_millibels: 0
+    body_hz: 110
+    drop_hz: 44
+    drop_frames: 900
+    decay_frames: 13000
+  - kind: snare
+    pattern:
+      steps_per_bar: 8
+      euclid_k: 2
+      euclid_n: 8
+      rotation: 4
+      condition: always
+      condition_period: 1
+      min_density: 40
+      ghost_permille: 120
+      velocity_millibels: -200
+    body_hz: 190
+    body_decay_frames: 3500
+    noise_decay_frames: 9000
+  - kind: hat
+    pattern:
+      steps_per_bar: 16
+      euclid_k: 8
+      euclid_n: 16
+      rotation: 0
+      condition: always
+      condition_period: 1
+      min_density: 70
+      ghost_permille: 260
+      velocity_millibels: -900
+    cutoff_hz: 7000
+    decay_frames: 2600
+  - kind: bass
+    pattern:
+      steps_per_bar: 8
+      euclid_k: 8
+      euclid_n: 8
+      rotation: 0
+      condition: always
+      condition_period: 1
+      min_density: 40
+      ghost_permille: 0
+      velocity_millibels: -300
+    cutoff_hz: 420
+    decay_frames: 7000
+    octave_jump_permille: 120
+    fifth_permille: 0
+
+  # The chord bed.
   - kind: pad
     partials: {min: 3, max: 3}
     detune_min_cents: -5
@@ -23,7 +91,23 @@ techniques:
     lfo_depth_cents: 3
     amplitude_millibels: -300
 
+  # T5: the deja-vu stabs over the Karplus-Strong.
+  - kind: deja_vu
+    step_beats: 2
+    buffer_size: 32
+    min_density: 40
+    replay_min_permille: 150
+    replay_max_permille: 850
+    bias: 0
+    spread: 7
+    note_frames: 5000
+    feedback_num: 997
+    feedback_den: 1000
+    brightness: {numerator: 1, denominator: 2}
+    pluck_position_permille: 320
+    detune_cents: 0
+
 section_count_range: [4, 4]
-duration_range_seconds: [10, 10]
+duration_range_seconds: [180, 180]
 attack_frames: 8820
 release_frames: 13230

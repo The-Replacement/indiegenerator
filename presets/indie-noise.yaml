@@ -15,15 +15,44 @@ fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}
 
 techniques:
-  - kind: pad
-    partials: {min: 3, max: 3}
-    detune_min_cents: -5
-    detune_max_cents: 5
-    lfo_rate: {numerator: 1, denominator: 5}
-    lfo_depth_cents: 5
-    amplitude_millibels: -300
+  # T7: the 1/f control signals.
+  - kind: pink
+    velocity_depth_millibels: 700
+    micro_timing_frames: 14
+    pan_drift_permille: 260
+
+  # T13: the guitar clusters. The deja-vu sequencer picks the notes, so the
+  # clusters emerge and dissolve instead of being looped.
+  - kind: deja_vu
+    step_beats: 1
+    buffer_size: 24
+    min_density: 20
+    replay_min_permille: 250
+    replay_max_permille: 900
+    bias: 0
+    spread: 14
+    note_frames: 13000
+    feedback_num: 999
+    feedback_den: 1000
+    brightness: {numerator: 7, denominator: 10}
+    pluck_position_permille: 180
+    detune_cents: 0
+
+  # T6: the noise wall. It crests in the plateau and cuts to near silence
+  # with the outro: the dynamics are the point of this lane.
+  - kind: hat
+    pattern:
+      steps_per_bar: 16
+      euclid_k: 16
+      euclid_n: 16
+      rotation: 0
+      condition: always
+      condition_period: 1
+      min_density: 70
+      ghost_permille: 340
+      velocity_millibels: -1200
+    cutoff_hz: 5200
+    decay_frames: 3400
 
 section_count_range: [4, 4]
-duration_range_seconds: [10, 10]
-attack_frames: 13230
-release_frames: 13230
+duration_range_seconds: [180, 180]

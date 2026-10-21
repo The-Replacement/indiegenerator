@@ -47,6 +47,7 @@ techniques:
   # T13: the station's signature timbre.
   - kind: pluck
     count: {min: 3, max: 6}
+    min_density: 0
     feedback_num_min: 996
     feedback_num_max: 999
     feedback_den: 1000
@@ -57,7 +58,7 @@ techniques:
     spacing_seconds: {min: 4, max: 12}
 
 section_count_range: [4, 4]
-duration_range_seconds: [90, 90]
+duration_range_seconds: [180, 180]
 attack_frames: 13230
 release_frames: 13230
 
