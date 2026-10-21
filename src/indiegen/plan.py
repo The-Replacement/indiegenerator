@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from decimal import Decimal
-from typing import Any, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -72,20 +72,6 @@ class FxSend(BaseModel):
     q_den: int = Field(gt=0)
 
 
-class TechniqueCard(BaseModel):
-    """A technique's declared parameters, as they land in the Plan."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
-    name: str
-    partials: int = Field(ge=1)
-    detune_min_cents: int
-    detune_max_cents: int
-    lfo_rate: Rational
-    lfo_depth_cents: int
-    amplitude_millibels: int
-
-
 class SectionProfile(BaseModel):
     """The shape of one section: its function, its density target and its level."""
 
@@ -106,10 +92,48 @@ class DirectorMove(BaseModel):
     detail: str
     parameter: int
     crossfade_frames: int = Field(ge=0)
+    applies_to: list[str]
 
 
-class NoteEvent(BaseModel):
-    """One scheduled note. Integer fields only; the renderer makes them floats."""
+class Partial(BaseModel):
+    """One partial of an additive voice, with its exact ratio."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    ratio: Rational
+    amplitude_millibels: int
+    detune_cents: int
+
+
+class DetuneLfo(BaseModel):
+    """The slow drift of a partial's detune, in cents."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    rate: Rational
+    depth_cents: int = Field(ge=0)
+
+
+class AmplitudeLfo(BaseModel):
+    """The slow drift of a partial's amplitude, in millibels."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    rate: Rational
+    depth_millibels: int = Field(ge=0)
+
+
+class DriftingPartial(Partial):
+    """A partial with its own independent drift on detune and on amplitude."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    detune_lfo: DetuneLfo
+    amplitude_lfo: AmplitudeLfo
+
+
+class EventBase(BaseModel):
+    """What every scheduled event carries, whatever instrument plays it."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
@@ -117,15 +141,98 @@ class NoteEvent(BaseModel):
     start_frame: int = Field(ge=0)
     duration_frames: int = Field(gt=0)
     midi: int
-    velocity_millibels: int
+    pan_permille: int
+    amplitude_millibels: int
+    attack_frames: int = Field(ge=0)
+    release_frames: int = Field(ge=0)
+
+
+class PadEvent(EventBase):
+    """A sustained additive pad. The S0 instrument, unchanged."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["pad"]
     partials: int = Field(ge=1)
     partial_detune_cents: list[int]
     lfo_rate: Rational
     lfo_depth_cents: int
-    amplitude_millibels: int
-    pan_permille: int
-    attack_frames: int = Field(ge=0)
-    release_frames: int = Field(ge=0)
+
+
+class PolyPeriodVoice(BaseModel):
+    """One voice of a poly-period loop: its own period, on-window and pitch."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    period_frames: int = Field(gt=0)
+    on_frames: int = Field(gt=0)
+    phase_frames: int = Field(ge=0)
+    midi: int
+
+
+class PolyPeriodEvent(EventBase):
+    """A poly-period loop: several voices, each on its own distinct period."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["poly_period"]
+    voices: list[PolyPeriodVoice]
+    partials: list[Partial]
+
+
+class DroneEvent(EventBase):
+    """A spectral drone stack: near-unison partials drifting against each other."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["drone"]
+    partials: list[DriftingPartial]
+    noise_seed: int
+
+
+class PluckEvent(EventBase):
+    """A plucked string. The station's signature timbre."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["pluck"]
+    feedback: Rational
+    brightness: Rational
+    pluck_position_permille: int
+    detune_cents: int
+    excitation_seed: int
+
+
+Event = Annotated[
+    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent,
+    Field(discriminator="kind"),
+]
+
+
+class DelaySend(BaseModel):
+    """A delay send: the station's dotted-eighth delay lives here."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    name: str
+    delay_frames: int = Field(gt=0)
+    feedback: Rational
+    damping: Rational
+    send_millibels: int
+
+
+class ReverbSpec(BaseModel):
+    """A short Schroeder reverb: parallel combs into series allpasses."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    comb_delays_frames: list[int]
+    comb_feedback: Rational
+    damping: Rational
+    allpass_delays_frames: list[int]
+    allpass_feedback: Rational
+    stereo_spread_frames: int = Field(ge=0)
+    send_millibels: int
 
 
 class SectionPlan(BaseModel):
@@ -173,7 +280,7 @@ class Plan(BaseModel):
     scale_midi: list[int]
     palette: list[str]
     fx_sends: list[FxSend]
-    techniques: list[TechniqueCard]
+    techniques: list[str]
     strategy_deck: list[DirectorMove]
     section_count_range: list[int]
     section_count: int
@@ -189,7 +296,9 @@ class Plan(BaseModel):
     fade_out_frames: int
     section_crossfade_frames: int
     track_number: int
-    events: list[NoteEvent]
+    delay_sends: list[DelaySend]
+    reverb: ReverbSpec | None
+    events: list[Event]
     director_log: list[DirectorMove]
 
     @model_validator(mode="after")
