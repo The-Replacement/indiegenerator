@@ -7,7 +7,10 @@ boundary as a value.
 The bus graph:
 
     pad / poly_period / drone --> MAIN BUS (stereo, the pan law)
-    pluck ---------------------> KS BUS --> dotted-eighth delay --> wet --> MAIN BUS
+    pluck ---------------------> KS BUS --> [dub chain] --> dotted-eighth delay --> wet --> MAIN BUS
+    MAIN BUS --> [Frippertronics send] --> wet --> MAIN BUS
+    MAIN BUS --> [reverb tap] --> reverb --> wet --> MAIN BUS
+    MAIN BUS --> [sidechain: ducked by the kick] --> + kick
 
 The KS bus's dry output is never summed: the delay *is* the instrument's
 voice, which is what makes the signature a per-instrument fact. The reverb
@@ -33,8 +36,11 @@ import numpy as np
 
 from indiegen.errors import PlanError, RenderError
 from indiegen.fx.delay import DelayState, delay_state, render_delay
+from indiegen.fx.dub import DubChainState, dub_chain_state, render_dub_chain
+from indiegen.fx.frippertronics import FrippertronicsState, frippertronics_state, render_frippertronics
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
 from indiegen.mix.bus import pan_gains
+from indiegen.mix.sidechain import SidechainState, render_sidechain, sidechain_state
 from indiegen.plan import (
     BassEvent,
     DroneEvent,
@@ -73,6 +79,9 @@ class BusState:
     delay: DelayState | None
     filter: np.ndarray | None
     reverb: ReverbState | None
+    frippertronics: FrippertronicsState | None
+    dub: DubChainState | None
+    sidechain: SidechainState | None
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -138,7 +147,22 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
     reverb: ReverbState | None = None
     if plan.reverb is not None:
         reverb = reverb_state(plan.reverb)
-    return BusState(delay=delay, filter=filter_state, reverb=reverb)
+    frippertronics: FrippertronicsState | None = None
+    if plan.frippertronics is not None:
+        frippertronics = frippertronics_state(plan.frippertronics)
+    dub: DubChainState | None = None
+    sidechain: SidechainState | None = None
+    if plan.dub_chain is not None:
+        dub = dub_chain_state(plan.dub_chain, plan.sample_rate)
+        sidechain = sidechain_state()
+    return BusState(
+        delay=delay,
+        filter=filter_state,
+        reverb=reverb,
+        frippertronics=frippertronics,
+        dub=dub,
+        sidechain=sidechain,
+    )
 
 
 def _render_block(
@@ -148,10 +172,12 @@ def _render_block(
     bus: BusState,
     start: int,
     stop: int,
+    kick_hits: list[int],
 ) -> tuple[np.ndarray, BusState]:
     """One block of the bus graph."""
     count = stop - start
     main = np.zeros((count, plan.channels), dtype=np.float64)
+    kick_bus = np.zeros((count, plan.channels), dtype=np.float64)
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
 
     for index, event in enumerate(events):
@@ -159,7 +185,12 @@ def _render_block(
             # A drum pattern plays itself: the hits carry their own pan, so
             # the block is already stereo.
             stereo, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
-            main += stereo
+            if isinstance(event, KickEvent):
+                # The kick is kept apart: the sidechain ducks everything
+                # else, and the kick is what ducks it.
+                kick_bus += stereo
+            else:
+                main += stereo
             continue
         event_start = event.start_frame
         event_stop = event_start + event.duration_frames
@@ -184,6 +215,13 @@ def _render_block(
     delay = bus.delay
     filter_state = bus.filter
     reverb = bus.reverb
+    frippertronics = bus.frippertronics
+    dub = bus.dub
+    sidechain = bus.sidechain
+
+    if dub is not None and plan.dub_chain is not None:
+        # T10: the stabs are bit-reduced and bandpassed before the delay.
+        ks_bus, dub = render_dub_chain(ks_bus, dub, plan.dub_chain, plan.sample_rate)
 
     if delay is not None and plan.delay_sends:
         wet, delay = render_delay(ks_bus, delay, plan.delay_sends[0])
@@ -203,12 +241,38 @@ def _render_block(
         level = float(np.power(10.0, send.send_millibels / 2000.0))
         main = main + (filtered - main) * level
 
+    if frippertronics is not None and plan.frippertronics is not None:
+        # T3: the long feedback delay, summed back into the main bus.
+        wet, frippertronics = render_frippertronics(main, frippertronics, plan.frippertronics, plan.sample_rate)
+        level = float(np.power(10.0, plan.frippertronics.send_millibels / 2000.0))
+        main = main + wet * level
+
     if reverb is not None and plan.reverb is not None:
         wet, reverb = render_reverb(main, reverb, plan.reverb, plan.sample_rate)
         main = main + wet
 
+    if sidechain is not None and plan.dub_chain is not None:
+        # T10: everything but the kick is ducked by the kick.
+        gain, sidechain = render_sidechain(
+            start,
+            count,
+            kick_hits,
+            sidechain,
+            plan.dub_chain.sidechain_release_frames,
+            plan.dub_chain.sidechain_depth_millibels,
+        )
+        main = main * gain[:, np.newaxis]
+        main += kick_bus
+
     gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
-    return main * gain[:, np.newaxis], BusState(delay=delay, filter=filter_state, reverb=reverb)
+    return main * gain[:, np.newaxis], BusState(
+        delay=delay,
+        filter=filter_state,
+        reverb=reverb,
+        frippertronics=frippertronics,
+        dub=dub,
+        sidechain=sidechain,
+    )
 
 
 def render_plan(plan: Plan) -> np.ndarray:
@@ -217,9 +281,10 @@ def render_plan(plan: Plan) -> np.ndarray:
     events = schedule(plan)
     voices = [_voice_state(event, plan.sample_rate) for event in events]
     bus = _bus_state(plan, events)
+    kick_hits = [hit.frame for event in events if isinstance(event, KickEvent) for hit in event.hits]
     mix = np.zeros((frames, plan.channels), dtype=np.float64)
     for start in range(0, frames, RENDER_BLOCK):
         stop = min(frames, start + RENDER_BLOCK)
-        block, bus = _render_block(plan, events, voices, bus, start, stop)
+        block, bus = _render_block(plan, events, voices, bus, start, stop, kick_hits)
         mix[start:stop] = block
     return mix
