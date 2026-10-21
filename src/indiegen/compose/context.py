@@ -22,5 +22,8 @@ class TechniqueContext(BaseModel):
     sample_rate: int
     duration_frames: int
     frames_per_beat: int
+    frames_per_bar: int
     attack_frames: int
     release_frames: int
+    section_boundaries: list[int]
+    section_densities: list[int]

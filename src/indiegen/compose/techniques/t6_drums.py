@@ -1,0 +1,236 @@
+"""T6 - euclidean rhythms with conditional triggers.
+
+The percussion comes from euclid(k, n) patterns: Bjorklund's algorithm
+spreads k pulses as evenly as possible over n steps. The variation comes
+from the conditional triggers, not from random velocity jitter: a voice
+that plays "one in two" or "only in a fill" is a decision about the
+arrangement, and the same seed always makes the same one.
+
+The hits are resolved here, at compose time. The renderer plays what the
+plan says.
+"""
+
+from __future__ import annotations
+
+from indiegen.compose.context import TechniqueContext
+from indiegen.compose.rng import SplitMix64
+from indiegen.config import BassCard, HatCard, KickCard, PatternCard, PinkCard, SnareCard
+from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, SnareEvent
+
+FILL_BARS: int = 1
+
+
+def euclid(k: int, n: int) -> list[bool]:
+    """Bjorklund's algorithm: k pulses spread over n steps.
+
+    The pulses are as evenly spaced as the circle allows, which is the
+    family Bjorklund's algorithm generates: the gaps between the pulses
+    differ by at most one step. The i-th pulse sits at the i-th multiple
+    of n/k, so (4, 16) is the four on the floor and (8, 16) is the eighths.
+    """
+    if n <= 0:
+        return []
+    if k <= 0:
+        return [False] * n
+    if k >= n:
+        return [True] * n
+    pattern = [False] * n
+    for index in range(k):
+        pattern[(index * n) // k] = True
+    return pattern
+
+
+def rotate(pattern: list[bool], rotation: int) -> list[bool]:
+    """The pattern, turned by ``rotation`` steps."""
+    if not pattern:
+        return pattern
+    shift = rotation % len(pattern)
+    return pattern[shift:] + pattern[:shift]
+
+
+def _condition_holds(
+    condition: str,
+    period: int,
+    occurrence: int,
+    step_in_bar: int,
+    bar_in_section: int,
+    bars_in_section: int,
+) -> bool:
+    """Whether the conditional trigger lets this hit through."""
+    if condition == "always":
+        return True
+    if condition == "one_in_two":
+        return occurrence % max(1, period) == 0
+    if condition == "three_in_four":
+        span = max(2, period)
+        return occurrence % span != span - 1
+    if condition == "first_of_phrase":
+        return step_in_bar == 0
+    if condition == "fill_only":
+        return bar_in_section >= bars_in_section - FILL_BARS
+    return True
+
+
+def _hit_frames(
+    card: PatternCard,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    section_start: int,
+    section_end: int,
+) -> list[tuple[int, int]]:
+    """The hits of one voice: (frame, velocity millibels) in section order."""
+    pattern = rotate(euclid(card.euclid_k, card.euclid_n), card.rotation)
+    frames_per_bar = ctx.frames_per_bar
+    step_frames = max(1, frames_per_bar // card.steps_per_bar)
+    first_bar = section_start // frames_per_bar if frames_per_bar else 0
+    last_bar = section_end // frames_per_bar if frames_per_bar else 0
+    hits: list[tuple[int, int]] = []
+    occurrence = 0
+    densities = ctx.section_densities
+    boundaries = ctx.section_boundaries
+    for bar in range(first_bar, last_bar + 1):
+        bar_start = bar * frames_per_bar
+        bar_in_section = bar - first_bar
+        bars_in_section = max(1, last_bar - first_bar + 1)
+        # The layers come and go with the sections: a voice that the
+        # arrangement has not reached yet does not play.
+        section = 0
+        for index, boundary in enumerate(boundaries):
+            if bar_start >= boundary:
+                section = index
+        if densities and densities[min(section, len(densities) - 1)] < card.min_density:
+            continue
+        for step, active in enumerate(pattern):
+            if not active:
+                if card.ghost_permille and rng.below(1000) < card.ghost_permille:
+                    frame = bar_start + step * step_frames
+                    if section_start <= frame < section_end:
+                        hits.append((frame, card.velocity_millibels - 1200))
+                continue
+            if not _condition_holds(
+                card.condition,
+                card.condition_period,
+                occurrence,
+                step,
+                bar_in_section,
+                bars_in_section,
+            ):
+                occurrence += 1
+                continue
+            occurrence += 1
+            frame = bar_start + step * step_frames
+            if section_start <= frame < section_end:
+                hits.append((frame, card.velocity_millibels))
+    return hits
+
+
+def _pink(card: PinkCard | None) -> PinkCard:
+    """The lane's 1/f control signals, or a silent default."""
+    if card is not None:
+        return card
+    return PinkCard(kind="pink", velocity_depth_millibels=0, micro_timing_frames=0, pan_drift_permille=0)
+
+
+def plan_kick(card: KickCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> KickEvent:
+    """The kick drum's hits."""
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    return KickEvent(
+        kind="kick",
+        instrument="kick",
+        start_frame=0,
+        duration_frames=ctx.duration_frames,
+        midi=ctx.root_midi,
+        pan_permille=0,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        hits=[DrumHit(frame=frame, velocity_millibels=velocity) for frame, velocity in hits],
+        noise_seed=rng.next_u64(),
+        velocity_depth_millibels=_pink(pink).velocity_depth_millibels,
+        micro_timing_frames=_pink(pink).micro_timing_frames,
+        pan_drift_permille=_pink(pink).pan_drift_permille,
+        body_hz=card.body_hz,
+        drop_hz=card.drop_hz,
+        drop_frames=card.drop_frames,
+        decay_frames=card.decay_frames,
+    )
+
+
+def plan_snare(card: SnareCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> SnareEvent:
+    """The snare drum's hits."""
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    return SnareEvent(
+        kind="snare",
+        instrument="snare",
+        start_frame=0,
+        duration_frames=ctx.duration_frames,
+        midi=ctx.root_midi,
+        pan_permille=0,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        hits=[DrumHit(frame=frame, velocity_millibels=velocity) for frame, velocity in hits],
+        noise_seed=rng.next_u64(),
+        velocity_depth_millibels=_pink(pink).velocity_depth_millibels,
+        micro_timing_frames=_pink(pink).micro_timing_frames,
+        pan_drift_permille=_pink(pink).pan_drift_permille,
+        body_hz=card.body_hz,
+        body_decay_frames=card.body_decay_frames,
+        noise_decay_frames=card.noise_decay_frames,
+    )
+
+
+def plan_hat(card: HatCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> HatEvent:
+    """The hat's hits."""
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    return HatEvent(
+        kind="hat",
+        instrument="hat",
+        start_frame=0,
+        duration_frames=ctx.duration_frames,
+        midi=ctx.root_midi,
+        pan_permille=200,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        hits=[DrumHit(frame=frame, velocity_millibels=velocity) for frame, velocity in hits],
+        noise_seed=rng.next_u64(),
+        velocity_depth_millibels=_pink(pink).velocity_depth_millibels,
+        micro_timing_frames=_pink(pink).micro_timing_frames,
+        pan_drift_permille=_pink(pink).pan_drift_permille,
+        cutoff_hz=card.cutoff_hz,
+        decay_frames=card.decay_frames,
+    )
+
+
+def plan_bass(card: BassCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> BassEvent:
+    """The bass line: an eighth-note root with the occasional octave jump.
+
+    The root comes from the lane's scale, so the bass is in the chord; the
+    jumps are the only surprise, and they are rare.
+    """
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    bass: list[BassHit] = []
+    for frame, velocity in hits:
+        midi = ctx.root_midi - 12
+        if rng.below(1000) < card.octave_jump_permille:
+            midi += 12
+        bass.append(BassHit(frame=frame, velocity_millibels=velocity, midi=midi))
+    return BassEvent(
+        kind="bass",
+        instrument="bass",
+        start_frame=0,
+        duration_frames=ctx.duration_frames,
+        midi=ctx.root_midi,
+        pan_permille=0,
+        amplitude_millibels=0,
+        attack_frames=0,
+        release_frames=0,
+        hits=bass,
+        noise_seed=rng.next_u64(),
+        velocity_depth_millibels=_pink(pink).velocity_depth_millibels,
+        micro_timing_frames=_pink(pink).micro_timing_frames,
+        pan_drift_permille=_pink(pink).pan_drift_permille,
+        cutoff_hz=card.cutoff_hz,
+        decay_frames=card.decay_frames,
+    )

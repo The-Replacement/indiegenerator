@@ -82,6 +82,7 @@ class PluckCard(BaseModel):
 
     kind: Literal["pluck"]
     count: RangeInt
+    min_density: int
     feedback_num_min: int
     feedback_num_max: int
     feedback_den: int
@@ -92,8 +93,119 @@ class PluckCard(BaseModel):
     spacing_seconds: RangeInt
 
 
+class PatternCard(BaseModel):
+    """How one drum voice's hits are laid out on the grid.
+
+    The euclid pattern is the pulse count and the step count, rotated. The
+    condition is what lets a voice in: always, every other step, three in
+    four, the first step of a phrase, or only in a fill.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    steps_per_bar: int
+    euclid_k: int
+    euclid_n: int
+    rotation: int
+    condition: Literal["always", "one_in_two", "three_in_four", "first_of_phrase", "fill_only"]
+    condition_period: int
+    min_density: int
+    ghost_permille: int
+    velocity_millibels: int
+
+
+class KickCard(BaseModel):
+    """T6: the kick drum."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["kick"]
+    pattern: PatternCard
+    body_hz: int
+    drop_hz: int
+    drop_frames: int
+    decay_frames: int
+
+
+class SnareCard(BaseModel):
+    """T6: the snare drum."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["snare"]
+    pattern: PatternCard
+    body_hz: int
+    body_decay_frames: int
+    noise_decay_frames: int
+
+
+class HatCard(BaseModel):
+    """T6: the closed hat."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["hat"]
+    pattern: PatternCard
+    cutoff_hz: int
+    decay_frames: int
+
+
+class BassCard(BaseModel):
+    """T6: the bass line, an eighth-note root with octave jumps."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["bass"]
+    pattern: PatternCard
+    cutoff_hz: int
+    decay_frames: int
+    octave_jump_permille: int
+    fifth_permille: int
+
+
+class PinkCard(BaseModel):
+    """T7: the 1/f control signals of the lane."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["pink"]
+    velocity_depth_millibels: int
+    micro_timing_frames: int
+    pan_drift_permille: int
+
+
+class DejaVuCard(BaseModel):
+    """T5: the deja-vu sequencer, over the Karplus-Strong stabs."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["deja_vu"]
+    step_beats: int
+    buffer_size: int
+    min_density: int
+    replay_min_permille: int
+    replay_max_permille: int
+    bias: int
+    spread: int
+    note_frames: int
+    feedback_num: int
+    feedback_den: int
+    brightness: Rational
+    pluck_position_permille: int
+    detune_cents: int
+
+
 TechniqueCard = Annotated[
-    PadCard | PolyPeriodCard | DroneCard | PluckCard,
+    PadCard
+    | PolyPeriodCard
+    | DroneCard
+    | PluckCard
+    | KickCard
+    | SnareCard
+    | HatCard
+    | BassCard
+    | PinkCard
+    | DejaVuCard,
     Field(discriminator="kind"),
 ]
 
@@ -140,8 +252,8 @@ class LanePreset(BaseModel):
     techniques: list[TechniqueCard]
     section_count_range: list[int]
     duration_range_seconds: list[int]
-    attack_frames: int
-    release_frames: int
+    attack_frames: int | None = None
+    release_frames: int | None = None
     reverb: ReverbCard | None = None
 
 

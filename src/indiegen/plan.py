@@ -203,8 +203,90 @@ class PluckEvent(EventBase):
     excitation_seed: int
 
 
+class HitBase(BaseModel):
+    """What every hit carries: where it lands and how hard it is."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    frame: int = Field(ge=0)
+    velocity_millibels: int
+
+
+class DrumHit(HitBase):
+    """One hit of a drum pattern: where it lands and how hard it is."""
+
+
+class BassHit(HitBase):
+    """One hit of a bass line: where it lands, how hard it is and its pitch."""
+
+    midi: int
+
+
+class RhythmEvent(EventBase):
+    """The 1/f control signals every drum pattern carries.
+
+    The hits themselves are resolved at compose time. The euclid pattern, its
+    rotation and the conditional triggers are decisions about the
+    arrangement, and the renderer only plays what the plan says.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    noise_seed: int
+    velocity_depth_millibels: int
+    micro_timing_frames: int
+    pan_drift_permille: int
+
+
+class KickEvent(RhythmEvent):
+    """A kick drum: a round body with a fast pitch drop and a soft transient."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["kick"]
+    hits: list[DrumHit]
+    body_hz: int
+    drop_hz: int
+    drop_frames: int
+    decay_frames: int
+
+
+class SnareEvent(RhythmEvent):
+    """A snare drum: a body tone and a noise burst, decaying apart."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["snare"]
+    hits: list[DrumHit]
+    body_hz: int
+    body_decay_frames: int
+    noise_decay_frames: int
+
+
+class HatEvent(RhythmEvent):
+    """A closed hat: a short burst of high-passed noise."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["hat"]
+    hits: list[DrumHit]
+    cutoff_hz: int
+    decay_frames: int
+
+
+class BassEvent(RhythmEvent):
+    """A bass line: a filtered saw on the lane's root, with octave jumps."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["bass"]
+    hits: list[BassHit]
+    cutoff_hz: int
+    decay_frames: int
+
+
 Event = Annotated[
-    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent,
+    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent | KickEvent | SnareEvent | HatEvent | BassEvent,
     Field(discriminator="kind"),
 ]
 
