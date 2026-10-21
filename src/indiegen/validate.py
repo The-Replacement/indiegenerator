@@ -1,8 +1,8 @@
 """The gates, and only the gates that are in force.
 
 BRIEF §15 is explicit: "A gate not yet in force is not implemented, and it
-does not fail the render." So this module measures gates 2, 4, 7 and 8 and
-nothing else - no loudness, no duration, no trajectory, no codec.
+does not fail the render." So this module measures gates 2, 4, 5, 6, 7, 8
+and 13 and nothing else - no loudness, no duration, no codec.
 ``GATES_IN_FORCE`` is the registry that keeps it that way.
 
 ``GateFailure`` is a data holder, not an exception: BRIEF §8 asks for a list
@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict
 
 from indiegen.plan import Plan
 
-GATES_IN_FORCE: tuple[int, ...] = (2, 4, 7, 8)
+GATES_IN_FORCE: tuple[int, ...] = (2, 4, 5, 6, 7, 8, 13)
 SILENCE_FLOOR_LSB: int = 33
 DC_OFFSET_LIMIT: float = 0.001
 TRAILING_SILENCE_LIMIT_S: float = 3.0
@@ -31,6 +31,25 @@ NOVELTY_MERGE_SECONDS: float = 4.0
 MAD_TO_SIGMA: float = 1.4826
 INT16_MAX: int = 32767
 INT16_MIN: int = -32768
+
+# Gate 5: the delivered energy trajectory has to follow the planned one.
+ENERGY_CORRELATION_LIMIT: float = 0.5
+
+# Gate 6: the delivered timbre trajectory has to follow the planned one.
+TIMBRE_CORRELATION_LIMIT: float = 0.4
+
+# A plan whose predicted centroids sit within this fraction of each other
+# is a plan that declared a static timbre, and a static plan is measured
+# by its variance instead of by a correlation.
+STATIC_CENTROID_TOLERANCE: float = 0.05
+
+# The relative standard deviation a static plan allows.
+STATIC_CENTROID_LIMIT: float = 0.25
+
+# Gate 13: the motif has to come back, the Director has to fire, and the
+# deja-vu's replay probability has to move.
+MINIMUM_TRANSFORMED_APPEARANCES: int = 3
+DIRECTOR_BARS_PER_FIRE: int = 32
 
 
 class GateResult(BaseModel):
@@ -296,6 +315,251 @@ def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResu
     return results
 
 
+def per_second_frames(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
+    """A float signal, one row per second, as a mono signal.
+
+    The gates that measure a trajectory measure the pre-master mix, not the
+    delivered PCM: the dither is a +-1 LSB of white noise spread over the
+    whole spectrum, and it is enough to drag a spectral centroid up by
+    kilohertz. The master chain is a gain and a safety limiter, so the mix
+    and the delivered file have the same shape.
+
+    The measurement starts at the first whole second at or after
+    ``start_frame``: the fade-in is silence coming up, and a spectrum
+    measured over a fade is a spectrum of the noise floor.
+    """
+    mono = signal.mean(axis=1) if signal.ndim > 1 else signal
+    frames = sample_rate
+    first = (start_frame // frames) * frames
+    if first >= mono.size:
+        return np.zeros((0, frames), dtype=np.float64)
+    count = (mono.size - first) // frames
+    if count == 0:
+        return np.zeros((0, frames), dtype=np.float64)
+    return mono[first : first + count * frames].reshape(count, frames)
+
+
+def per_second_rms(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
+    """The root mean square of every second of the signal."""
+    chunked = per_second_frames(signal, sample_rate, start_frame)
+    if chunked.size == 0:
+        return np.zeros(0, dtype=np.float64)
+    return np.sqrt(np.mean(chunked**2, axis=1))
+
+
+def per_second_centroid(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
+    """The spectral centroid of every second of the signal.
+
+    The centroid is the frequency the spectrum's mass hangs around, and it
+    is the cheapest honest answer to "did the timbre move".
+    """
+    chunked = per_second_frames(signal, sample_rate, start_frame)
+    if chunked.size == 0:
+        return np.zeros(0, dtype=np.float64)
+    window = np.hanning(chunked.shape[1])
+    freqs = np.fft.rfftfreq(chunked.shape[1], 1.0 / sample_rate)
+    centroids = np.zeros(chunked.shape[0], dtype=np.float64)
+    for index in range(chunked.shape[0]):
+        spectrum = np.abs(np.fft.rfft(chunked[index] * window))
+        total = float(spectrum.sum())
+        if total > 0.0:
+            centroids[index] = float((spectrum * freqs).sum() / total)
+    return centroids
+
+
+def pearson(left: np.ndarray, right: np.ndarray) -> float:
+    """The Pearson correlation of two curves, or 0.0 when there is none.
+
+    A curve that does not move has no correlation to give: the correlation
+    of a flat curve is a division by zero, and a plan that declared a flat
+    curve is not a failure. The guard is on the spread and not on the exact
+    zero, because a curve that is flat to within a rounding error has no
+    correlation either, and the number the division would produce is
+    noise.
+    """
+    if left.size < 2 or left.size != right.size:
+        return 0.0
+    left_mean = float(left.mean())
+    right_mean = float(right.mean())
+    left_delta = left - left_mean
+    right_delta = right - right_mean
+    left_spread = float(np.sqrt(np.sum(left_delta**2)))
+    right_spread = float(np.sqrt(np.sum(right_delta**2)))
+    if left_spread <= 1e-9 * abs(left_mean) or right_spread <= 1e-9 * abs(right_mean):
+        return 0.0
+    return float(np.sum(left_delta * right_delta) / (left_spread * right_spread))
+
+
+def _planned_per_second(plan: Plan, count: int, values: list[int], start_frame: int) -> np.ndarray:
+    """The plan's own curve, held across each section, one value per second."""
+    curve = np.zeros(count, dtype=np.float64)
+    for index in range(count):
+        frame = start_frame + index * plan.sample_rate
+        section = plan.sections[0] if plan.sections else None
+        for candidate in plan.sections:
+            if candidate.start_frame <= frame < candidate.end_frame:
+                section = candidate
+                break
+        if section is None or not values:
+            curve[index] = float(values[0]) if values else 0.0
+            continue
+        curve[index] = float(values[section.index])
+    return curve
+
+
+def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
+    """Gate 5: the energy trajectory follows the planned curve.
+
+    The plan's section levels are the tension curve, and the delivered
+    per-second RMS is what the listener hears as the shape of the piece.
+    A section the plan marked quiet must be quiet, and a plan that planned
+    a flat curve is not failed for being flat.
+    """
+    results: list[GateResult] = []
+    measured = per_second_rms(mix, plan.sample_rate, plan.fade_in_frames)
+    if measured.size < 2:
+        return results
+    levels = [section.level_millibels for section in plan.sections]
+    planned = _planned_per_second(plan, measured.size, levels, _first_second(plan))
+    if float(np.std(planned)) <= 0.0:
+        return results
+    correlation = pearson(measured, planned)
+    if correlation < ENERGY_CORRELATION_LIMIT:
+        results.append(
+            GateResult(
+                gate=5,
+                measured=correlation,
+                limit=ENERGY_CORRELATION_LIMIT,
+                check="energy trajectory correlation",
+            )
+        )
+    return results
+
+
+def _section_means(plan: Plan, measured: np.ndarray, start_frame: int) -> np.ndarray:
+    """The measured trajectory, one value per section.
+
+    The plan's curve is a curve over the sections, so the measurement has
+    to be one value per section too: the per-second centroid of a section
+    that holds a poly-period loop swings with the loop's on-window, and
+    that swing says nothing about the section's timbre.
+    """
+    means = np.zeros(len(plan.sections), dtype=np.float64)
+    for section in plan.sections:
+        first = max(0, (section.start_frame - start_frame) // plan.sample_rate)
+        last = min(measured.size, (section.end_frame - start_frame) // plan.sample_rate)
+        if last > first:
+            means[section.index] = float(measured[first:last].mean())
+    return means
+
+
+def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
+    """Gate 6: the timbre trajectory follows the planned one.
+
+    If the plan predicted movement, the delivered spectral centroid has to
+    correlate with the planned curve. If the plan declared a static timbre,
+    the delivered one has to be static too. BRIEF 6's warning stands: a
+    filter sweep added to satisfy this gate is exactly the slop the gate
+    exists to catch.
+    """
+    results: list[GateResult] = []
+    measured = per_second_centroid(mix, plan.sample_rate, plan.fade_in_frames)
+    if measured.size < 2 or not plan.sections:
+        return results
+    start = _first_second(plan)
+    per_section = _section_means(plan, measured, start)
+    planned = np.array([float(section.centroid_hz) for section in plan.sections], dtype=np.float64)
+    spread = float(np.max(planned) - np.min(planned))
+    mean = float(np.mean(planned))
+    if mean <= 0.0:
+        return results
+    if spread <= STATIC_CENTROID_TOLERANCE * mean:
+        relative = float(np.std(per_section) / mean)
+        if relative > STATIC_CENTROID_LIMIT:
+            results.append(
+                GateResult(
+                    gate=6,
+                    measured=relative,
+                    limit=STATIC_CENTROID_LIMIT,
+                    check="timbre variance against a static plan",
+                )
+            )
+        return results
+    correlation = pearson(per_section, planned)
+    if correlation < TIMBRE_CORRELATION_LIMIT:
+        results.append(
+            GateResult(
+                gate=6,
+                measured=correlation,
+                limit=TIMBRE_CORRELATION_LIMIT,
+                check="timbre trajectory correlation",
+            )
+        )
+    return results
+
+
+def _first_second(plan: Plan) -> int:
+    """The first whole second of the track, after the fade-in."""
+    rate = plan.sample_rate
+    return ((plan.fade_in_frames + rate - 1) // rate) * rate
+
+
+def check_gate_13(plan: Plan) -> list[GateResult]:
+    """Gate 13: the plan-level checks.
+
+    Three of them, and none of them looks at the audio: the motif has to
+    come back in a transformed form, the Director has to fire often enough
+    in a pulsed lane, and the deja-vu's replay probability has to move.
+    """
+    results: list[GateResult] = []
+    transformed = [appearance for appearance in plan.motif_appearances if appearance.transform != "identity"]
+    if len(transformed) < MINIMUM_TRANSFORMED_APPEARANCES:
+        results.append(
+            GateResult(
+                gate=13,
+                measured=float(len(transformed)),
+                limit=float(MINIMUM_TRANSFORMED_APPEARANCES),
+                check="transformed motif appearances",
+            )
+        )
+    if plan.pulse == "bars" and plan.frames_per_beat > 0:
+        beats = plan.duration_frames / plan.frames_per_beat
+        # The meter is a count of beats over a note value: 4/4 is four
+        # quarter-note beats to the bar, which is what the composer counts.
+        bars = beats * plan.meter_denominator / (4 * plan.meter_numerator)
+        # The Director fires when it draws a move; the log says which of
+        # the moves found something to change.
+        fires = float(len(plan.strategy_deck))
+        if fires * DIRECTOR_BARS_PER_FIRE < bars:
+            results.append(
+                GateResult(
+                    gate=13,
+                    measured=fires,
+                    limit=bars / DIRECTOR_BARS_PER_FIRE,
+                    check="director fires per 32 bars",
+                )
+            )
+        if fires > 0 and not plan.director_log:
+            results.append(
+                GateResult(
+                    gate=13,
+                    measured=0.0,
+                    limit=1.0,
+                    check="the director changed nothing",
+                )
+            )
+    if plan.deja_vu_replay_permille and len(set(plan.deja_vu_replay_permille)) <= 1:
+        results.append(
+            GateResult(
+                gate=13,
+                measured=float(plan.deja_vu_replay_permille[0]),
+                limit=float(plan.deja_vu_replay_permille[0]),
+                check="the deja-vu replay probability never moved",
+            )
+        )
+    return results
+
+
 def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | None:
     """Run the gates that are in force. ``None`` means the render passed."""
     results: list[GateResult] = []
@@ -303,10 +567,16 @@ def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | Non
         results.extend(check_gate_2(mix, pcm))
     if 4 in GATES_IN_FORCE:
         results.extend(check_gate_4(plan, pcm))
+    if 5 in GATES_IN_FORCE:
+        results.extend(check_gate_5(plan, mix))
+    if 6 in GATES_IN_FORCE:
+        results.extend(check_gate_6(plan, mix))
     if 7 in GATES_IN_FORCE:
         results.extend(check_gate_7(plan, pcm, plan.sample_rate))
     if 8 in GATES_IN_FORCE:
         results.extend(check_gate_8(pcm, plan.lane, plan.sample_rate))
+    if 13 in GATES_IN_FORCE:
+        results.extend(check_gate_13(plan))
     if not results:
         return None
     return GateFailure(failures=results)
