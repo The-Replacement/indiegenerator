@@ -18,25 +18,48 @@ create trailing silence.
 When a lane declares no KS events, no delay send or no reverb, those stages
 are skipped entirely - not "added as zeros" - so the signal never passes
 through them.
+
+The graph is walked a block at a time. The mix itself is the one array that
+still spans the whole track, because the master chain needs its peak before
+it can stage it; everything else - the voices, the delay, the filter, the
+reverb, the gains - carries its state from one block to the next.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from indiegen.errors import PlanError, RenderError
-from indiegen.fx.delay import delay_state, render_delay
-from indiegen.fx.reverb import render_reverb, reverb_state
+from indiegen.fx.delay import DelayState, delay_state, render_delay
+from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import DroneEvent, Event, Plan, PluckEvent, PolyPeriodEvent
-from indiegen.synth.drone import render_drone
-from indiegen.synth.env import fade_gain, note_envelope, section_gain
+from indiegen.synth.drone import DroneState, drone_state, render_drone_block
+from indiegen.synth.env import fade_gain, note_envelope_block, section_gain
 from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos
-from indiegen.synth.ks import render_pluck
-from indiegen.synth.pad import render_pad
-from indiegen.synth.poly_period import render_poly_period
+from indiegen.synth.ks import PluckState, pluck_state, render_pluck_block
+from indiegen.synth.pad import PadState, pad_state, render_pad_block
+from indiegen.synth.poly_period import PolyPeriodState, poly_period_state, render_poly_period_block
 
 BLOCK_SIZE: int = 8192
+RENDER_BLOCK: int = 131072
+
+VoiceState = PadState | PolyPeriodState | DroneState | PluckState
+
+
+@dataclass(frozen=True)
+class BusState:
+    """The state of the bus stages, carried from one block to the next.
+
+    A stage that the plan does not use has no state at all, and is skipped
+    rather than run over zeros.
+    """
+
+    delay: DelayState | None
+    filter: np.ndarray | None
+    reverb: ReverbState | None
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -50,81 +73,128 @@ def schedule(plan: Plan) -> list[Event]:
     return events
 
 
-def _voice(event: Event, sample_rate: int) -> np.ndarray:
-    """The mono voice of one event."""
+def _voice_state(event: Event, sample_rate: int) -> VoiceState:
+    """The zero state of one event's voice."""
     if isinstance(event, PluckEvent):
-        return render_pluck(event, sample_rate)
+        return pluck_state(event, sample_rate)
     if isinstance(event, PolyPeriodEvent):
-        return render_poly_period(event, sample_rate)
+        return poly_period_state(event)
     if isinstance(event, DroneEvent):
-        return render_drone(event, sample_rate)
-    return render_pad(event, sample_rate)
+        return drone_state(event)
+    return pad_state(event)
 
 
-def _filter_bus(plan: Plan, stereo: np.ndarray) -> np.ndarray:
-    """The bus lowpass, applied in blocks with the state threaded across them."""
-    if not plan.fx_sends:
-        return stereo
-    send = plan.fx_sends[0]
-    sos = lowpass_sos(send.cutoff_hz, send.q_num, send.q_den, plan.sample_rate)
-    state = initial_state(sos, plan.channels)
-    wet = np.empty_like(stereo)
-    for index, start in enumerate(range(0, stereo.shape[0], BLOCK_SIZE)):
-        stop = min(stereo.shape[0], start + BLOCK_SIZE)
-        filtered, state = apply_biquad(sos, stereo[start:stop], state)
+def _voice_block(
+    event: Event,
+    sample_rate: int,
+    start: int,
+    stop: int,
+    state: VoiceState,
+) -> tuple[np.ndarray, VoiceState]:
+    """The mono voice of one event, over its own frames ``[start, stop)``."""
+    if isinstance(event, PluckEvent):
+        assert isinstance(state, PluckState)
+        return render_pluck_block(event, sample_rate, start, stop, state)
+    if isinstance(event, PolyPeriodEvent):
+        assert isinstance(state, PolyPeriodState)
+        return render_poly_period_block(event, sample_rate, start, stop, state)
+    if isinstance(event, DroneEvent):
+        assert isinstance(state, DroneState)
+        return render_drone_block(event, sample_rate, start, stop, state)
+    assert isinstance(state, PadState)
+    return render_pad_block(event, sample_rate, start, stop, state)
+
+
+def _bus_state(plan: Plan, events: list[Event]) -> BusState:
+    """The zero state of the bus stages the plan actually uses."""
+    has_ks = any(isinstance(event, PluckEvent) for event in events)
+    delay: DelayState | None = None
+    if has_ks and plan.delay_sends:
+        delay = delay_state(plan.delay_sends[0])
+    filter_state: np.ndarray | None = None
+    if plan.fx_sends:
+        send = plan.fx_sends[0]
+        sos = lowpass_sos(send.cutoff_hz, send.q_num, send.q_den, plan.sample_rate)
+        filter_state = initial_state(sos, plan.channels)
+    reverb: ReverbState | None = None
+    if plan.reverb is not None:
+        reverb = reverb_state(plan.reverb)
+    return BusState(delay=delay, filter=filter_state, reverb=reverb)
+
+
+def _render_block(
+    plan: Plan,
+    events: list[Event],
+    voices: list[VoiceState],
+    bus: BusState,
+    start: int,
+    stop: int,
+) -> tuple[np.ndarray, BusState]:
+    """One block of the bus graph."""
+    count = stop - start
+    main = np.zeros((count, plan.channels), dtype=np.float64)
+    ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
+
+    for index, event in enumerate(events):
+        event_start = event.start_frame
+        event_stop = event_start + event.duration_frames
+        overlap_start = max(start, event_start)
+        overlap_stop = min(stop, event_stop)
+        if overlap_stop <= overlap_start:
+            continue
+        local_start = overlap_start - event_start
+        local_stop = overlap_stop - event_start
+        voice, voices[index] = _voice_block(event, plan.sample_rate, local_start, local_stop, voices[index])
+        voice = voice * note_envelope_block(event, local_start, local_stop)
+        left, right = pan_gains(event.pan_permille)
+        offset = overlap_start - start
+        end = offset + voice.size
+        if isinstance(event, PluckEvent):
+            ks_bus[offset:end, 0] += voice * left
+            ks_bus[offset:end, 1] += voice * right
+        else:
+            main[offset:end, 0] += voice * left
+            main[offset:end, 1] += voice * right
+
+    delay = bus.delay
+    filter_state = bus.filter
+    reverb = bus.reverb
+
+    if delay is not None and plan.delay_sends:
+        wet, delay = render_delay(ks_bus, delay, plan.delay_sends[0])
+        main += wet
+
+    if filter_state is not None and plan.fx_sends:
+        send = plan.fx_sends[0]
+        sos = lowpass_sos(send.cutoff_hz, send.q_num, send.q_den, plan.sample_rate)
+        filtered, filter_state = apply_biquad(sos, main, filter_state)
         if not bool(np.all(np.isfinite(filtered))):
             raise RenderError(
                 "non-finite sample after filtering",
                 preset=plan.preset,
                 seed=plan.seed,
-                block_index=index,
+                block_index=start // BLOCK_SIZE,
             )
-        wet[start:stop] = filtered
-    level = float(np.power(10.0, send.send_millibels / 2000.0))
-    blended: np.ndarray = stereo + (wet - stereo) * level
-    return blended
+        level = float(np.power(10.0, send.send_millibels / 2000.0))
+        main = main + (filtered - main) * level
+
+    if reverb is not None and plan.reverb is not None:
+        wet, reverb = render_reverb(main, reverb, plan.reverb, plan.sample_rate)
+        main = main + wet
+
+    gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
+    return main * gain[:, np.newaxis], BusState(delay=delay, filter=filter_state, reverb=reverb)
 
 
 def render_plan(plan: Plan) -> np.ndarray:
     """Render the plan into a stereo float64 buffer."""
     frames = plan.duration_frames
-    main = np.zeros((frames, plan.channels), dtype=np.float64)
-    ks_bus = np.zeros((frames, plan.channels), dtype=np.float64)
-    has_ks = False
-
-    for event in schedule(plan):
-        voice = _voice(event, plan.sample_rate) * note_envelope(event)
-        left, right = pan_gains(event.pan_permille)
-        start = event.start_frame
-        stop = start + voice.size
-        if isinstance(event, PluckEvent):
-            has_ks = True
-            ks_bus[start:stop, 0] += voice * left
-            ks_bus[start:stop, 1] += voice * right
-        else:
-            main[start:stop, 0] += voice * left
-            main[start:stop, 1] += voice * right
-
-    if has_ks and plan.delay_sends:
-        send = plan.delay_sends[0]
-        delay_line = delay_state(send)
-        for start in range(0, frames, BLOCK_SIZE):
-            stop = min(frames, start + BLOCK_SIZE)
-            wet, delay_line = render_delay(ks_bus[start:stop], delay_line, send)
-            main[start:stop] += wet
-
-    filtered = _filter_bus(plan, main)
-
-    if plan.reverb is not None:
-        spec = plan.reverb
-        reverb_line = reverb_state(spec)
-        wet = np.empty_like(filtered)
-        for start in range(0, frames, BLOCK_SIZE):
-            stop = min(frames, start + BLOCK_SIZE)
-            block, reverb_line = render_reverb(filtered[start:stop], reverb_line, spec, plan.sample_rate)
-            wet[start:stop] = block
-        filtered = filtered + wet
-
-    gain = section_gain(plan, 0, frames) * fade_gain(plan, 0, frames)
-    out: np.ndarray = filtered * gain[:, np.newaxis]
-    return out
+    events = schedule(plan)
+    voices = [_voice_state(event, plan.sample_rate) for event in events]
+    bus = _bus_state(plan, events)
+    mix = np.zeros((frames, plan.channels), dtype=np.float64)
+    for start in range(0, frames, RENDER_BLOCK):
+        stop = min(frames, start + RENDER_BLOCK)
+        block, bus = _render_block(plan, events, voices, bus, start, stop)
+        mix[start:stop] = block
+    return mix
