@@ -6,11 +6,11 @@ import math
 
 import numpy as np
 
-from indiegen.plan import NoteEvent
+from indiegen.plan import PadEvent
 from indiegen.synth.osc import midi_to_hz
 
 
-def render_pad(event: NoteEvent, sample_rate: int) -> np.ndarray:
+def render_pad(event: PadEvent, sample_rate: int) -> np.ndarray:
     """The pad: a fundamental from the lane's scale plus partials 2..N.
 
     Each partial carries its own integer cent detune, and a slow rational LFO

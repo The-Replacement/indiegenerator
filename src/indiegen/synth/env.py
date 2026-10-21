@@ -2,12 +2,51 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
+from scipy.signal import lfilter
 
-from indiegen.plan import NoteEvent, Plan
+from indiegen.plan import EventBase, Plan
+
+DC_BLOCKER_HZ: float = 20.0
 
 
-def note_envelope(event: NoteEvent) -> np.ndarray:
+def dc_block(signal: np.ndarray, sample_rate: int) -> np.ndarray:
+    """Remove the DC offset with a one-pole high pass.
+
+    A voice with an envelope correlates with its carrier, and a plucked string
+    whose tail is cut leaves a small offset behind. Both are tiny in level
+    and enormous in a reverb, whose combs have a DC gain of 1/(1-g) each.
+    The block lives with the instruments rather than in the master chain, so
+    the sustained pad - and with it the committed S0 artifact - is untouched.
+
+    The transfer function is (1 - z^-1) / (1 - r z^-1): zero at DC, and a
+    high pass above the corner.
+    """
+    coefficient = math.exp(-2.0 * math.pi * DC_BLOCKER_HZ / sample_rate)
+    blocked: np.ndarray = lfilter([1.0, -1.0], [1.0, -coefficient], signal)
+    return blocked
+
+
+def dc_block_state(
+    signal: np.ndarray,
+    sample_rate: int,
+    state: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """The same block, with its state carried across the blocks.
+
+    A block-wise filter that starts from zero every time leaves a residual
+    behind on every block, and the reverb's comb bank multiplies that
+    residual by fifty.
+    """
+    coefficient = math.exp(-2.0 * math.pi * DC_BLOCKER_HZ / sample_rate)
+    filtered, carry = lfilter([1.0, -1.0], [1.0, -coefficient], signal, zi=state)
+    result: np.ndarray = filtered
+    return result, carry
+
+
+def note_envelope(event: EventBase) -> np.ndarray:
     """The note's attack and release, linear, exactly zero at the very edges."""
     count = event.duration_frames
     gain = np.ones(count, dtype=np.float64)
