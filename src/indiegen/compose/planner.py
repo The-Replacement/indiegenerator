@@ -9,7 +9,7 @@ from __future__ import annotations
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
-from indiegen.config import PadCard, PluckCard, PolyPeriodCard, Preset, canonical_preset_json
+from indiegen.config import PadCard, PluckCard, PolyPeriodCard, Preset
 from indiegen.errors import PlanError
 from indiegen.plan import (
     SAMPLE_RATE,
@@ -86,8 +86,14 @@ def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> lis
 
 
 def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Plan:
-    """Build the frozen Plan from a preset and a seed."""
-    material = canonical_preset_json(preset) + b"\x00" + str(seed).encode("utf-8")
+    """Build the frozen Plan from a preset and a seed.
+
+    The PRNG is seeded from the preset's *identity* and the seed, not from
+    the whole preset file. That keeps the draw sequence stable when a
+    parameter changes, so the mutation sweep can tell a parameter that is
+    consumed from one that is merely declared.
+    """
+    material = f"{preset.name}|{seed}".encode()
     rng = SplitMix64(seed_from_bytes(material))
 
     station = preset.station
@@ -95,7 +101,10 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     lane = next(entry.parameters for entry in preset.lanes if entry.lane == lane_name)
 
     if duration_frames is None:
-        frames = rng.between(lane.duration_range_seconds[0], lane.duration_range_seconds[1]) * SAMPLE_RATE
+        low, high = lane.duration_range_seconds
+        # A lane with a single declared duration does not draw one: the plan
+        # must not depend on whether the caller passed the duration or not.
+        frames = low * SAMPLE_RATE if low == high else rng.between(low, high) * SAMPLE_RATE
     else:
         frames = duration_frames
     if frames <= 0:

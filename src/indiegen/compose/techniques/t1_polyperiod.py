@@ -53,10 +53,29 @@ def _minor_second_pairs(pitches: list[int]) -> int:
 def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContext) -> list[PolyPeriodEvent]:
     """Draw the voices of one poly-period loop.
 
-    The card is a ``PolyPeriodCard``; it is typed as ``object`` here so that
-    this module does not import the preset models, which live one layer up.
+    The card is a ``PolyPeriodCard``. The chord's usable tones come first:
+    the voices take the chord's intervals in order, so the offsets are a
+    prefix of the declared list rather than a cycle of it, and the voice
+    count is capped by how many tones the scale can actually carry.
     """
+    intervals: list[int] = []
+    for interval in card.chord_intervals:
+        if ctx.root_midi + interval in ctx.scale_midi:
+            intervals.append(interval)
+        else:
+            break
+    if not intervals:
+        intervals = [0]
+
     voice_count = rng.between(card.voice_count.min, card.voice_count.max)
+    voice_count = min(voice_count, len(intervals))
+    if voice_count < 3:
+        raise PlanError(
+            f"poly-period chord has only {voice_count} usable tones",
+            preset=ctx.preset,
+            seed=ctx.seed,
+        )
+
     low = card.period_seconds_range.min * ctx.sample_rate
     high = card.period_seconds_range.max * ctx.sample_rate
 
@@ -89,19 +108,11 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
             seed=ctx.seed,
         )
 
-    intervals: list[int] = []
-    for interval in card.chord_intervals:
-        if ctx.root_midi + interval in ctx.scale_midi:
-            intervals.append(interval)
-        else:
-            break
-    if not intervals:
-        intervals = [0]
-
     pitches: list[int] = []
     for index in range(voice_count):
-        interval = intervals[index % len(intervals)]
-        pitches.append(ctx.root_midi + interval)
+        # The voices take the chord's intervals in order, so the offsets are a
+        # prefix of the declared list rather than a cycle of it.
+        pitches.append(ctx.root_midi + intervals[index])
 
     while _minor_second_pairs(pitches) > 1:
         pitches.pop()
