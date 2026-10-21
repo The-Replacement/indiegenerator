@@ -100,7 +100,9 @@ def test_the_gate_eight_safety_rule(ambient_plan: Plan) -> None:
     assert drones[0].start_frame == 0
     assert drones[-1].start_frame + drones[-1].duration_frames == ambient_plan.duration_frames
     for previous, following in zip(drones, drones[1:], strict=False):
-        assert previous.start_frame + previous.duration_frames == following.start_frame
+        # The Director's transposition splits a drone in two and the two
+        # halves overlap by the crossfade, so the sections may overlap.
+        assert previous.start_frame + previous.duration_frames >= following.start_frame
     for event in ambient_plan.events:
         if event.kind != "poly_period":
             continue
@@ -230,9 +232,16 @@ def test_the_voices_take_a_prefix_of_the_chord_intervals(ambient_plan: Plan, pre
         assert offsets == card.chord_intervals[: len(offsets)]
 
 
-def test_the_ambient_director_log_is_empty(ambient_plan: Plan) -> None:
-    """The station's move declares the pad, and the ambient lane has none."""
-    assert ambient_plan.director_log == []
+def test_the_ambient_director_log_only_holds_what_it_did(ambient_plan: Plan) -> None:
+    """The Director's log holds the moves it drew and applied.
+
+    The ambient lane has no drums and no bass, so the strategies that
+    drop them are never drawn: a move that could not change anything
+    would be a move that did not fire.
+    """
+    for move in ambient_plan.director_log:
+        assert move in ambient_plan.strategy_deck
+        assert move.strategy not in ("drop_drums", "drop_kick", "drop_bass", "half_time", "solo_texture")
 
 
 def test_the_drone_spans_the_track(ambient_plan: Plan) -> None:
@@ -240,5 +249,5 @@ def test_the_drone_spans_the_track(ambient_plan: Plan) -> None:
     drones = [event for event in ambient_plan.events if isinstance(event, DroneEvent)]
     assert drones
     covered = sum(event.duration_frames for event in drones)
-    assert covered == ambient_plan.duration_frames
+    assert covered >= ambient_plan.duration_frames
     assert drones[0].start_frame == 0

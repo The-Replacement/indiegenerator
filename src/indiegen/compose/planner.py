@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from indiegen.compose.context import TechniqueContext
+from indiegen.compose.director import ENDING_GUARD_SECONDS
 from indiegen.compose.rng import SplitMix64, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
@@ -26,10 +27,12 @@ from indiegen.config import (
     BassCard,
     DejaVuCard,
     DirectorCard,
+    DroneCard,
     DubChainCard,
     FrippertronicsCard,
     HatCard,
     KickCard,
+    LanePreset,
     PadCard,
     PinkCard,
     PluckCard,
@@ -61,7 +64,7 @@ from indiegen.plan import (
     SectionProfile,
     SnareEvent,
 )
-from indiegen.theory.scales import mode_scale
+from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES, mode_scale
 
 # The dimensions two consecutive sections have to differ in.
 DIMENSIONS: tuple[str, ...] = ("instrumentation", "harmonic_center", "rhythm", "density", "texture")
@@ -160,6 +163,22 @@ def _section_lengths(
         snapped = [max(4, round(share / frames_per_bar / 4) * 4) * frames_per_bar for share in shares]
         if sum(snapped) <= total_frames:
             shares = snapped
+        # No section may be longer than the harmonic center can be held:
+        # BRIEF T16 moves the center every 16 to 64 bars, and a section
+        # longer than that would hold one mode for longer than the brief
+        # allows. The surplus is spread over the sections that have room.
+        cap = MODE_SHIFT_MAX_BARS * frames_per_bar
+        for _ in range(8):
+            over = sum(max(0, share - cap) for share in shares)
+            if over <= 0:
+                break
+            room = [index for index, share in enumerate(shares) if share < cap]
+            if not room:
+                break
+            room_total = sum(cap - shares[index] for index in room)
+            for index in room:
+                shares[index] += over * (cap - shares[index]) // room_total
+            shares = [min(share, cap) for share in shares]
     remainder = total_frames - sum(shares)
     shares[-1] += remainder
     if shares[-1] < 1:
@@ -176,6 +195,7 @@ def _section_lengths(
 
 def _assign_modes(
     mode_pool: list[str],
+    nodes: list[SectionProfile],
     lengths: list[int],
     frames_per_bar: int,
     root_midi: int,
@@ -183,24 +203,43 @@ def _assign_modes(
 ) -> list[tuple[str, int]]:
     """The harmonic center of every section: a mode and a root.
 
-    The shift is a section event, so it never lands mid-bar, and it happens
-    at least every sixteen bars and at most every sixty-four.
+    The shift is a section event, so it never lands mid-bar, and the
+    harmonic center moves at least every sixteen bars and at most every
+    sixty-four: when the next section would carry the mode past that, the
+    shift is forced.
+
+    A section that reprises an earlier one is that section under a
+    transform: the reprise takes the relative mode of the section it
+    reprises, a minor third below, which is a real harmonic change and not
+    a label.
     """
     if not mode_pool:
         raise PlanError("the lane declares no mode to draw from", preset="station")
     assigned: list[tuple[str, int]] = []
     mode = mode_pool[0]
     held_bars = 0
-    for length in lengths:
+    for index, length in enumerate(lengths):
         bars = max(1, length // frames_per_bar) if frames_per_bar else 0
-        if assigned and (
-            held_bars >= MODE_SHIFT_MAX_BARS or (held_bars >= MODE_SHIFT_MIN_BARS and rng.below(1000) < 400)
-        ):
-            choices = [name for name in mode_pool if name != mode]
-            if choices:
-                mode = choices[rng.below(len(choices))]
+        if assigned:
+            forced = held_bars + bars > MODE_SHIFT_MAX_BARS
+            if forced or (held_bars >= MODE_SHIFT_MIN_BARS and rng.below(1000) < 400):
+                choices = [name for name in mode_pool if name != mode]
+                if choices:
+                    mode = choices[rng.below(len(choices))]
+                    held_bars = 0
+        root = root_midi
+        node = nodes[index]
+        if node.reprise_of:
+            original = next(
+                (other for other, item in enumerate(nodes) if item.function == node.reprise_of),
+                -1,
+            )
+            if 0 <= original < len(assigned):
+                original_mode, original_root = assigned[original]
+                mode = RELATIVE_MODES.get(original_mode, original_mode)
+                root = original_root + RELATIVE_INTERVAL
                 held_bars = 0
-        assigned.append((mode, root_midi))
+        assigned.append((mode, root))
         held_bars += bars
     return assigned
 
@@ -315,25 +354,87 @@ def _planned_centroid(timbre: dict[str, int], function: str) -> int:
     return max(1, sum(timbre.values()) // len(timbre))
 
 
+def _card_instrument(card: object) -> str | None:
+    """The instrument a card puts in the plan, or None when it is not one."""
+    if isinstance(card, PadCard):
+        return "pad"
+    if isinstance(card, PolyPeriodCard):
+        return "poly_period"
+    if isinstance(card, DroneCard):
+        return "drone"
+    if isinstance(card, PluckCard):
+        return "ks"
+    if isinstance(card, KickCard):
+        return "kick"
+    if isinstance(card, SnareCard):
+        return "snare"
+    if isinstance(card, HatCard):
+        return "hat"
+    if isinstance(card, BassCard):
+        return "bass"
+    if isinstance(card, DejaVuCard):
+        return "pluck"
+    return None
+
+
+def _card_min_density(card: object) -> int:
+    """The density at which a card's layer starts to play."""
+    if isinstance(card, (KickCard, SnareCard, HatCard, BassCard)):
+        return card.pattern.min_density
+    if isinstance(card, (PadCard, PolyPeriodCard, DroneCard, PluckCard, DejaVuCard)):
+        return card.min_density
+    return 0
+
+
+def _playing_ranges(
+    lane: LanePreset,
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+) -> dict[str, list[tuple[int, int]]]:
+    """The spans of the track in which each instrument plays.
+
+    The layers follow the sections: a voice the arrangement has not
+    reached yet does not play. The Director's moves are drawn inside
+    these spans, so that a move that drops the drums is not drawn in a
+    section where there are no drums.
+    """
+    ranges: dict[str, list[tuple[int, int]]] = {}
+    for card in lane.techniques:
+        name = _card_instrument(card)
+        if name is None:
+            continue
+        spans = [
+            (boundaries[index], boundaries[index + 1])
+            for index in range(len(nodes))
+            if nodes[index].density >= _card_min_density(card)
+        ]
+        if spans:
+            ranges.setdefault(name, []).extend(spans)
+    for name in ranges:
+        ranges[name] = sorted(ranges[name])
+    return ranges
+
+
 def _draw_moves(
     card: DirectorCard,
     frames: int,
     frames_per_bar: int,
     pulsed: bool,
-    boundaries: list[int],
     instruments: set[str],
+    ranges: dict[str, list[tuple[int, int]]],
     rng: SplitMix64,
 ) -> list[DirectorMove]:
     """The Director's moves, drawn at compose time.
 
     The draw is the composition's: the Director itself is a pure Plan to
     Plan transform and rolls nothing. In a pulsed lane the Director fires
-    every 8 to 32 bars, and in a lane with no pulse every 60 to 180
-    seconds, on a section boundary.
+    every 8 to 24 bars, and in a lane with no pulse every 60 to 180
+    seconds.
 
-    A strategy that names instruments the lane does not have is not drawn:
-    a move that could not change anything would be a move that did not
-    fire, and a Director that fires on nothing is not an arranger.
+    A strategy that names instruments the lane does not have is not drawn,
+    and a strategy is not drawn in a stretch where its instruments do not
+    play: a move that could not change anything would be a move that did
+    not fire.
     """
     moves: list[DirectorMove] = []
     choices = [entry for entry in card.strategies if not entry.applies_to or instruments.intersection(entry.applies_to)]
@@ -354,11 +455,23 @@ def _draw_moves(
         if pulsed and frames_per_bar:
             sample = (target // frames_per_bar) * frames_per_bar
         else:
-            sample = next((boundary for boundary in boundaries if boundary >= target), frames)
-        if sample >= frames:
+            # A lane with no pulse has no bar grid, and the Director's
+            # moves are not section events: it fires every 60 to 180
+            # seconds whatever the sections do.
+            sample = (target // SAMPLE_RATE) * SAMPLE_RATE
+        if sample >= frames or sample >= frames - ENDING_GUARD_SECONDS * SAMPLE_RATE:
+            # The ending keeps its material: a move in the last seconds
+            # would have nothing left to move.
             break
-        available = [entry for entry in choices if entry.strategy != previous] or choices
-        choice: StrategyCard = available[rng.below(len(available))]
+        available = [entry for entry in choices if entry.strategy != previous]
+        playing = {name for name, spans in ranges.items() if any(low <= sample < high for low, high in spans)}
+        applicable = [entry for entry in available if not entry.applies_to or playing.intersection(entry.applies_to)]
+        if not applicable:
+            # Nothing but the plan-level moves is possible here.
+            applicable = [entry for entry in available if not entry.applies_to]
+        if not applicable:
+            applicable = available or choices
+        choice: StrategyCard = applicable[rng.below(len(applicable))]
         previous = choice.strategy
         span = choice.span_bars * frames_per_bar if choice.span_bars else choice.crossfade_frames
         moves.append(
@@ -452,7 +565,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
     root_midi = rng.choice(roots if roots else lane.scale_midi)
 
-    modes = _assign_modes(lane.mode_pool, lengths, frames_per_bar, root_midi, rng)
+    modes = _assign_modes(lane.mode_pool, nodes, lengths, frames_per_bar, root_midi, rng)
     section_roots = [root for _, root in modes]
     section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
 
@@ -486,6 +599,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     for card in lane.techniques:
         if isinstance(card, PadCard):
             for index in range(len(nodes)):
+                if nodes[index].density < card.min_density:
+                    continue
                 events.append(_pad_event(card, rng, ctx, boundaries[index], lengths[index], section_roots[index]))
         elif isinstance(card, PolyPeriodCard):
             events.extend(plan_poly_period(card, rng, ctx))
@@ -580,8 +695,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         frames,
         frames_per_bar,
         pulsed,
-        boundaries,
         {event.instrument for event in events},
+        _playing_ranges(lane, nodes, boundaries),
         rng,
     )
     deja_vu = next((card for card in lane.techniques if isinstance(card, DejaVuCard)), None)

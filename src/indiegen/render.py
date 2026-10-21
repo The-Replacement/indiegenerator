@@ -222,6 +222,8 @@ def _render_block(
     if dub is not None and plan.dub_chain is not None:
         # T10: the stabs are bit-reduced and bandpassed before the delay.
         ks_bus, dub = render_dub_chain(ks_bus, dub, plan.dub_chain, plan.sample_rate)
+        level = float(np.power(10.0, plan.dub_chain.send_millibels / 2000.0))
+        ks_bus = ks_bus * level
 
     if delay is not None and plan.delay_sends:
         wet, delay = render_delay(ks_bus, delay, plan.delay_sends[0])

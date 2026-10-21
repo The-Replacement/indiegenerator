@@ -28,6 +28,7 @@ from indiegen.plan import (
     KickEvent,
     MotifAppearance,
     Plan,
+    PluckEvent,
     SectionPlan,
     SnareEvent,
 )
@@ -61,6 +62,11 @@ STRATEGIES: tuple[str, ...] = (
 
 # The instruments the rhythm strategies act on.
 RHYTHM_INSTRUMENTS: tuple[str, ...] = ("kick", "snare", "hat")
+
+# The last three seconds of a track always keep their material. A drop
+# that runs into the ending leaves silence there, and a track that ends
+# in silence is a broken ending and not a drop.
+ENDING_GUARD_SECONDS: int = 3
 
 
 @dataclass(frozen=True)
@@ -139,9 +145,18 @@ def _reshape_motif(
     return new_events, new_appearances
 
 
-def _drop_hits(events: list[Event], move: DirectorMove, instruments: tuple[str, ...]) -> list[Event]:
-    """Remove the hits of the given instruments inside the move's span."""
-    stop = move.sample + move.crossfade_frames
+def _drop_hits(
+    events: list[Event],
+    move: DirectorMove,
+    instruments: tuple[str, ...],
+    ending: int,
+) -> list[Event]:
+    """Remove the hits of the given instruments inside the move's span.
+
+    The ending is never emptied: the last seconds of a track keep their
+    material, or the piece ends in silence.
+    """
+    stop = min(move.sample + move.crossfade_frames, ending)
     result: list[Event] = []
     for event in events:
         if event.instrument not in instruments or not isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
@@ -152,9 +167,9 @@ def _drop_hits(events: list[Event], move: DirectorMove, instruments: tuple[str, 
     return result
 
 
-def _half_time(events: list[Event], move: DirectorMove, frames_per_beat: int) -> list[Event]:
+def _half_time(events: list[Event], move: DirectorMove, frames_per_beat: int, ending: int) -> list[Event]:
     """Keep only the hits that land on a beat."""
-    stop = move.sample + move.crossfade_frames
+    stop = min(move.sample + move.crossfade_frames, ending)
     result: list[Event] = []
     for event in events:
         if event.instrument not in RHYTHM_INSTRUMENTS or not isinstance(
@@ -174,40 +189,45 @@ def _reharmonize(
 ) -> tuple[list[Event], list[SectionPlan]]:
     """Move the harmonic centre of the sections after the move to the relative mode.
 
-    The notes do not move: a relative mode is the same set of pitches with
-    another centre, and the bass follows the new centre, which is what the
-    ear hears.
+    The notes move with the centre: the relative mode is a minor third
+    below, and the notes of the section are transposed by that interval so
+    that the section and the notes still agree.
     """
     new_sections: list[SectionPlan] = []
-    roots: dict[int, int] = {}
+    deltas: dict[int, int] = {}
     for section in sections:
         if section.start_frame < move.sample:
             new_sections.append(section)
             continue
         relative = RELATIVE_MODES.get(section.mode, section.mode)
         root = section.root_midi + RELATIVE_INTERVAL
-        roots[section.index] = root
+        deltas[section.index] = root - section.root_midi
         new_sections.append(section.model_copy(update={"mode": relative, "root_midi": root}))
-    if not roots:
+    if not deltas:
         return events, new_sections
+
+    def delta_at(frame: int) -> int:
+        for section in new_sections:
+            if section.start_frame <= frame < section.end_frame and section.index in deltas:
+                return deltas[section.index]
+        return 0
+
     new_events: list[Event] = []
     for event in events:
-        if not isinstance(event, BassEvent):
-            new_events.append(event)
+        if isinstance(event, PluckEvent):
+            new_events.append(event.model_copy(update={"midi": event.midi + delta_at(event.start_frame)}))
             continue
-        hits = []
-        for hit in event.hits:
-            owner = next(
-                (item for item in new_sections if item.start_frame <= hit.frame < item.end_frame),
-                None,
-            )
-            if owner is None or owner.index not in roots:
-                hits.append(hit)
-                continue
-            offset = hit.midi - (owner.root_midi - RELATIVE_INTERVAL)
-            hits.append(hit.model_copy(update={"midi": owner.root_midi - 12 + offset + 12}))
-        new_events.append(event.model_copy(update={"hits": hits}))
+        if isinstance(event, BassEvent):
+            hits = [hit.model_copy(update={"midi": hit.midi + delta_at(hit.frame)}) for hit in event.hits]
+            new_events.append(event.model_copy(update={"hits": hits}))
+            continue
+        new_events.append(event)
     return new_events, new_sections
+
+
+def _ending(plan: Plan) -> int:
+    """The frame the ending's material starts at."""
+    return max(0, plan.duration_frames - ENDING_GUARD_SECONDS * plan.sample_rate)
 
 
 def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
@@ -254,7 +274,7 @@ def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
         instruments = tuple(move.applies_to)
         if not instruments:
             return None
-        new_events = _drop_hits(events, move, instruments)
+        new_events = _drop_hits(events, move, instruments, _ending(plan))
         if new_events == events:
             return None
         return Arrangement(new_events, appearances, sections, delay_sends)
@@ -262,7 +282,7 @@ def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
     if move.strategy == HALF_TIME:
         if plan.frames_per_beat <= 0:
             return None
-        new_events = _half_time(events, move, plan.frames_per_beat)
+        new_events = _half_time(events, move, plan.frames_per_beat, _ending(plan))
         if new_events == events:
             return None
         return Arrangement(new_events, appearances, sections, delay_sends)
@@ -286,7 +306,13 @@ def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
 
 
 def director(plan: Plan) -> Plan:
-    """Apply the strategy deck to a Plan. The input is never modified."""
+    """Apply the strategy deck to a Plan. The input is never modified.
+
+    The moves are applied to the *running* plan, one after the other, so
+    that the arranger's moves compose: a move that drops the drums and a
+    later move that halves the rhythm are both in the result, and the
+    second one sees what the first one did.
+    """
     events = list(plan.events)
     appearances = list(plan.motif_appearances)
     sections = list(plan.sections)
@@ -295,7 +321,15 @@ def director(plan: Plan) -> Plan:
     for move in plan.strategy_deck:
         if move.sample >= plan.duration_frames:
             continue
-        result = _apply(move, plan)
+        running = plan.model_copy(
+            update={
+                "events": events,
+                "motif_appearances": appearances,
+                "sections": sections,
+                "delay_sends": delay_sends,
+            }
+        )
+        result = _apply(move, running)
         if result is None:
             continue
         events = result.events

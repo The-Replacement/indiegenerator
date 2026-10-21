@@ -74,9 +74,9 @@ section_graph:
 # director()'s, and it is a pure function over the plan.
 director:
   bars_min: 8
-  bars_max: 32
+  bars_max: 16
   seconds_min: 60
-  seconds_max: 180
+  seconds_max: 120
   strategies:
     - {strategy: transpose_up_fourth, detail: transpose the sustained material up a fourth, parameter_min: 5, parameter_max: 5, applies_to: [pad, drone], crossfade_frames: 11025, span_bars: 0}
     - {strategy: transpose_motif, detail: transpose the motif, parameter_min: -5, parameter_max: 5, applies_to: [motif], crossfade_frames: 0, span_bars: 0}

@@ -59,13 +59,20 @@ class FrippertronicsState:
 def wow_span(spec: FrippertronicsSpec) -> int:
     """How far the wow may move the read position, in samples.
 
-    It is a fraction of the delay: BRIEF T3 asks for a pitch wobble of
-    0.2 to 0.8 per cent, and the depth is declared in per mille, so five
-    per mille of wobble on a three-second line moves the read by six
-    hundred and sixty-one samples either way. The span is never zero, so
-    the line always keeps a sample of travel.
+    BRIEF T3 asks for a pitch wobble of 0.2 to 0.8 per cent at 0.3 to 1
+    hertz. The pitch of the recirculating tone is the delay's length read
+    as a rate, so the travel of the read position has to be scaled by the
+    wow's own rate: the faster the wow, the shorter the travel that gives
+    the same wobble. A five-per-mille wobble on a three-second line at
+    0.8 hertz moves the read by about a hundred and thirty samples either
+    way. The span is never zero, so the line always keeps a sample of
+    travel.
     """
-    return max(1, spec.delay_frames * spec.wow_depth_permille // 100_000)
+    rate = spec.wow_rate.numerator / spec.wow_rate.denominator
+    if rate <= 0.0:
+        return max(1, spec.delay_frames * spec.wow_depth_permille // 100_000)
+    travel = spec.delay_frames * spec.wow_depth_permille / 100_000.0 / (2.0 * math.pi * rate)
+    return max(1, int(round(travel)))
 
 
 def loop_size(spec: FrippertronicsSpec) -> int:

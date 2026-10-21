@@ -131,7 +131,7 @@ def drift_signal(spec: DubChainSpec, sample_rate: int, count: int) -> np.ndarray
 def dub_chain_state(spec: DubChainSpec, sample_rate: int) -> DubChainState:
     """The zero state of the dub chain."""
     centre = _centre_hz(spec, float(drift_signal(spec, sample_rate, 1)[0]))
-    sos = _band_sos(centre, sample_rate)
+    sos = _band_sos(centre, sample_rate, _quality(spec))
     zi = initial_state(sos, 1)
     return DubChainState(
         drift=pink_state(),
@@ -179,7 +179,7 @@ def render_dub_chain(
             if offset < 0 or offset >= count:
                 raise ValueError("the dub chain was rendered out of order: the block skips frames")
             centre = _centre_hz(spec, float(drift[offset]))
-            sos = _band_sos(centre, sample_rate)
+            sos = _band_sos(centre, sample_rate, _quality(spec))
         chunk = min(count - cursor, step_start + CONTROL_RATE - frame)
         for channel in range(block.shape[1]):
             filtered, zi[channel] = sosfilt(sos, reduced[cursor : cursor + chunk, channel], zi=zi[channel])
@@ -252,16 +252,24 @@ def _centre_hz(spec: DubChainSpec, drift_value: float) -> float:
     return float(spec.bandpass_hz) + float(spec.drift_depth_hz) * drift_value
 
 
-def _band_sos(centre_hz: float, sample_rate: int) -> np.ndarray:
+def _quality(spec: DubChainSpec) -> float:
+    """The Q of the band, from the plan."""
+    return spec.bandpass_q_num / max(1, spec.bandpass_q_den)
+
+
+def _band_sos(centre_hz: float, sample_rate: int, quality: float) -> np.ndarray:
     """The two bandpass sections of the twelve-decibel band.
 
     Order two of a Butterworth bandpass is two second-order sections in
-    series, twelve decibels an octave. The width is a fixed fraction of the
-    centre, and the centre is clamped so the lower edge stays above zero and
-    the upper edge stays below Nyquist.
+    series, twelve decibels an octave. The width comes from the plan's
+    own Q: the half width is the centre over twice the Q, so a Q of two is
+    a band a quarter of the centre wide. The centre is clamped so the
+    lower edge stays above zero and the upper edge stays below Nyquist.
     """
     highest = MAX_CENTRE_FRACTION * sample_rate
     centre = min(max(centre_hz, MIN_CENTRE_HZ), highest)
-    half = BAND_HALF_WIDTH * centre
-    sections = butter(2, [centre - half, centre + half], btype="band", fs=sample_rate, output="sos")
+    half = centre / (2.0 * max(0.25, quality))
+    low = max(MIN_CENTRE_HZ * 0.5, centre - half)
+    high = min(highest, centre + half)
+    sections = butter(2, [low, high], btype="band", fs=sample_rate, output="sos")
     return np.asarray(sections, dtype=np.float64)

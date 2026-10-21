@@ -330,7 +330,7 @@ def per_second_frames(signal: np.ndarray, sample_rate: int, start_frame: int = 0
     """
     mono = signal.mean(axis=1) if signal.ndim > 1 else signal
     frames = sample_rate
-    first = (start_frame // frames) * frames
+    first = start_frame
     if first >= mono.size:
         return np.zeros((0, frames), dtype=np.float64)
     count = (mono.size - first) // frames
@@ -527,9 +527,9 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
         # The meter is a count of beats over a note value: 4/4 is four
         # quarter-note beats to the bar, which is what the composer counts.
         bars = beats * plan.meter_denominator / (4 * plan.meter_numerator)
-        # The Director fires when it draws a move; the log says which of
-        # the moves found something to change.
-        fires = float(len(plan.strategy_deck))
+        # The Director fires when it applies a move: the log is what it
+        # actually did, and a move that changed nothing is not a firing.
+        fires = float(len(plan.director_log))
         if fires * DIRECTOR_BARS_PER_FIRE < bars:
             results.append(
                 GateResult(
@@ -537,15 +537,6 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
                     measured=fires,
                     limit=bars / DIRECTOR_BARS_PER_FIRE,
                     check="director fires per 32 bars",
-                )
-            )
-        if fires > 0 and not plan.director_log:
-            results.append(
-                GateResult(
-                    gate=13,
-                    measured=0.0,
-                    limit=1.0,
-                    check="the director changed nothing",
                 )
             )
     if plan.deja_vu_replay_permille and len(set(plan.deja_vu_replay_permille)) <= 1:
