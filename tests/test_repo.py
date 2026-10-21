@@ -26,17 +26,21 @@ def _git(repo_root: Path, *args: str) -> str:
 
 
 def test_every_commit_uses_the_conventional_format(repo_root: Path) -> None:
-    log = _git(repo_root, "log", "--format=%B")
-    if not log:
+    subjects = _git(repo_root, "log", "--format=%s")
+    if not subjects:
         return
-    for message in log.split("\n\n"):
-        subject = message.strip().splitlines()[0] if message.strip() else ""
-        if not subject:
+    for subject in subjects.splitlines():
+        if not subject.strip():
             continue
-        assert CONVENTIONAL.match(subject), f"not conventional: {subject!r}"
-        lowered = message.lower()
-        for token in FORBIDDEN:
-            assert token not in lowered, f"{token!r} in a commit message"
+        assert CONVENTIONAL.match(subject.strip()), f"not conventional: {subject!r}"
+
+
+def test_no_commit_carries_ai_attribution(repo_root: Path) -> None:
+    bodies = _git(repo_root, "log", "--format=%B").lower()
+    if not bodies:
+        return
+    for token in FORBIDDEN:
+        assert token not in bodies, f"{token!r} in a commit message"
 
 
 def test_the_brief_was_never_modified(repo_root: Path) -> None:

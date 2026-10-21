@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -157,6 +158,30 @@ def test_unknown_preset_names_the_preset_and_the_seed(cli_runner: CliRunner, tmp
     assert "nope" in result.output
     assert "4242" in result.output
     assert "Traceback (most recent call last)" not in result.output
+
+
+def test_a_gate_failure_exits_two_and_writes_nothing(
+    cli_runner: CliRunner,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The gates are enforced: a failure is exit 2, an empty stdout, no file."""
+    import indiegen.cli as cli_module
+    from indiegen.validate import GateFailure, GateResult
+
+    def failing(*_args: Any, **_kwargs: Any) -> GateFailure:
+        return GateFailure(failures=[GateResult(gate=2, measured=1.0, limit=0.0, check="injected failure")])
+
+    monkeypatch.setattr(cli_module, "run_gates", failing)
+    result = cli_runner.invoke(
+        app,
+        ["render", "--preset", "station", "--seed", "1042", "--seconds", "10", "--out", str(tmp_path)],
+    )
+    assert result.exit_code == 2
+    assert result.stdout.strip() == ""
+    assert "gate 2" in result.stderr
+    assert list(tmp_path.glob("*.flac")) == []
+    assert list(tmp_path.glob("*.json")) == []
 
 
 def test_a_missing_seed_is_a_plain_error(cli_runner: CliRunner, tmp_path: Path) -> None:

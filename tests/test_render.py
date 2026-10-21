@@ -63,7 +63,9 @@ def test_schedule_is_stable_and_sorted(reference_plan: Plan) -> None:
 
 
 def test_the_pad_declares_three_partials_with_small_detunes(reference_plan: Plan) -> None:
-    for event in reference_plan.events:
+    pads = [event for event in reference_plan.events if event.kind == "pad"]
+    assert pads
+    for event in pads:
         assert event.partials == 3
         for detune in event.partial_detune_cents:
             assert isinstance(detune, int)
@@ -73,11 +75,20 @@ def test_the_pad_declares_three_partials_with_small_detunes(reference_plan: Plan
         assert isinstance(event.lfo_depth_cents, int)
 
 
-def test_the_fundamental_is_coherent_across_the_channels(reference_plan: Plan) -> None:
-    stereo = render_plan(reference_plan)
+def test_the_fundamental_is_coherent_across_the_channels(presets_dir: Path) -> None:
+    """The pad's fundamental must be the same in both channels.
+
+    Measured on the pad-only lane, so the band around the fundamental holds
+    nothing but the fundamental.
+    """
+    from indiegen.compose import compose, director
+    from indiegen.config import load_preset
+
+    plan = director(compose(load_preset("motorik", presets_dir=presets_dir), 1042, 10 * 44100))
+    stereo = render_plan(plan)
     mono = stereo.mean(axis=1)
     spectrum = np.abs(np.fft.rfft(mono * np.hanning(mono.size)))
-    frequencies = np.fft.rfftfreq(mono.size, 1.0 / reference_plan.sample_rate)
+    frequencies = np.fft.rfftfreq(mono.size, 1.0 / plan.sample_rate)
     fundamental = float(frequencies[int(np.argmax(spectrum))])
     band = (frequencies > fundamental * 0.99) & (frequencies < fundamental * 1.01)
     left = np.sum(np.abs(np.fft.rfft(stereo[:, 0] * np.hanning(mono.size)))[band] ** 2)
@@ -86,15 +97,19 @@ def test_the_fundamental_is_coherent_across_the_channels(reference_plan: Plan) -
     assert abs(difference) <= 1.0
 
 
-def test_no_gate_module_and_no_gate_failure_type() -> None:
-    assert not (PACKAGE / "validate.py").exists()
-    for path in PACKAGE.rglob("*.py"):
-        assert "GateFailure" not in path.read_text(encoding="utf-8")
+def test_the_gate_module_exists_and_the_failure_type_is_not_an_exception() -> None:
+    """S1 brings gates 2 and 8 into force, so validate.py and GateFailure exist."""
+    from indiegen.validate import GATES_IN_FORCE, GateFailure
+
+    assert (PACKAGE / "validate.py").exists()
+    assert GATES_IN_FORCE == (2, 8)
+    assert not issubclass(GateFailure, BaseException)
 
 
 def test_the_render_path_imports_nothing_from_compose() -> None:
     for path in PACKAGE.rglob("*.py"):
-        if path.parent.name == "compose" or path.name == "cli.py":
+        relative = path.relative_to(PACKAGE).as_posix()
+        if relative.startswith("compose/") or path.name == "cli.py":
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
@@ -111,8 +126,12 @@ def test_compose_imports_no_render_package() -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 module = (node.module or "").split(".")
-                assert not (len(module) > 1 and module[0] == "indiegen" and module[1] in {"synth", "mix", "master"})
+                assert not (
+                    len(module) > 1 and module[0] == "indiegen" and module[1] in {"synth", "mix", "master", "fx"}
+                )
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     parts = alias.name.split(".")
-                    assert not (len(parts) > 1 and parts[0] == "indiegen" and parts[1] in {"synth", "mix", "master"})
+                    assert not (
+                        len(parts) > 1 and parts[0] == "indiegen" and parts[1] in {"synth", "mix", "master", "fx"}
+                    )

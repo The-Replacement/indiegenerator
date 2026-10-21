@@ -116,6 +116,35 @@ def test_two_processes_agree_on_both_hashes(tmp_path: Path) -> None:
 
 
 @pytest.mark.slow
+def test_the_ambient_piece_matches_its_golden(tmp_path: Path) -> None:
+    """The 90 s ambient piece is pinned by its decoded PCM hash."""
+    from indiegen.writer import pcm_sha256, read_pcm
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "indiegen.cli",
+            "render",
+            "--preset",
+            "ambient",
+            "--seed",
+            str(SEED),
+            "--seconds",
+            "90",
+            "--out",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    digest = result.stdout.split("pcm_sha256: ")[1].split()[0]
+    golden = (Path(__file__).resolve().parent / "golden" / "pcm_ambient_1042.sha256").read_text().strip()
+    assert digest == golden
+
+
+@pytest.mark.slow
 def test_a_different_seed_produces_different_audio(tmp_path: Path) -> None:
     hashes: list[str] = []
     for seed in (1042, 1043):

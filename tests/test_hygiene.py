@@ -103,7 +103,8 @@ def test_no_todo_or_fixme_without_an_issue() -> None:
 def test_the_render_path_does_not_import_compose() -> None:
     """cli.py is the orchestrator and legitimately calls compose()."""
     for path, tree in iter_modules():
-        if path.parent.name == "compose" or path.name == "cli.py":
+        relative = relative_to_package(path)
+        if relative.startswith("compose/") or path.name == "cli.py":
             continue
         for name in imported_names(tree):
             assert not name.startswith("indiegen.compose")
@@ -112,9 +113,9 @@ def test_the_render_path_does_not_import_compose() -> None:
 
 def test_compose_does_not_import_the_render_path() -> None:
     for path, tree in iter_modules():
-        if path.parent.name != "compose":
+        if not relative_to_package(path).startswith("compose/"):
             continue
         for name in imported_names(tree):
             parts = name.split(".")
             if len(parts) > 1 and parts[0] == "indiegen":
-                assert parts[1] not in {"synth", "mix", "master"}
+                assert parts[1] not in {"synth", "mix", "master", "fx"}

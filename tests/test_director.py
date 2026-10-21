@@ -23,6 +23,7 @@ def test_director_log_records_exactly_one_move(composed_plan: Plan) -> None:
     assert move.sample == 220500
     assert "fourth" in move.strategy
     assert move.crossfade_frames == 11025
+    assert move.applies_to == ["pad"]
 
 
 def test_strategy_deck_holds_exactly_one_entry(composed_plan: Plan) -> None:
@@ -31,8 +32,9 @@ def test_strategy_deck_holds_exactly_one_entry(composed_plan: Plan) -> None:
 
 def test_the_move_transposes_the_material(composed_plan: Plan) -> None:
     plan = director(composed_plan)
-    assert len(plan.events) == 2
-    head, tail = plan.events
+    pads = [event for event in plan.events if event.kind == "pad"]
+    assert len(pads) == 2
+    head, tail = pads
     assert tail.midi == head.midi + 5
     assert tail.start_frame < 220500 < head.start_frame + head.duration_frames
 
