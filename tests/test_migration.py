@@ -66,9 +66,15 @@ def test_the_migration_changes_no_value_the_renderer_reads() -> None:
 
 
 def test_the_pad_arithmetic_is_unchanged() -> None:
-    """The whole-event cumsum stays: a block-wise one is not bit-identical."""
+    """The pad's arithmetic is unchanged.
+
+    The phase is now the running sum of the drifting frequency, carried from
+    one block to the next. The carry is folded in before the block's first
+    element, which is what makes the block-wise sum bit-identical to the
+    whole-event one: the fold is the same sequence of additions, split.
+    """
     source = (Path(__file__).resolve().parents[1] / "src" / "indiegen" / "synth" / "pad.py").read_text(encoding="utf-8")
-    assert "np.cumsum(frequency)" in source
+    assert "cumulative_sum(" in source
     assert "detunes = [0, *event.partial_detune_cents]" in source
     assert "np.power(2.0, drift / 1200.0)" in source
 
