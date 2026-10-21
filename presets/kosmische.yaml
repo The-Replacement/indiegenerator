@@ -11,6 +11,17 @@ meter: [4, 4]
 # The lane's scale. The fundamental is drawn from here.
 scale_midi: [36, 38, 39, 41, 43, 45, 48, 50, 51, 53, 55, 57, 60, 62, 63, 65]
 
+# T16: the modal centre drifts between these, at the section boundaries.
+mode_pool: [aeolian, dorian]
+
+# The lane has a pulse, so the sections are measured in bars.
+pulse: bars
+
+# The timbre this lane expects for each kind of section, in hertz.
+# Measured on real renders of this lane (BRIEF 5: measured, then tuned),
+# and asserted by gate 6.
+timbre: {break: 1569, build: 1776, drift: 2373, intro: 1658, outro: 1050, peak: 2036, plateau: 1780, return: 2056}
+
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 6000, q_num: 1, q_den: 1}
 
@@ -30,6 +41,7 @@ techniques:
     detune_lfo_depth_cents: 12
     amplitude_lfo_rate: {numerator: 1, denominator: 14}
     amplitude_lfo_depth_millibels: 400
+    min_density: 0
     ratios:
       - {numerator: 1, denominator: 1}
       - {numerator: 9, denominator: 8}
@@ -54,7 +66,21 @@ techniques:
     pluck_position_permille: 250
     detune_cents: 0
 
-section_count_range: [4, 4]
-duration_range_seconds: [180, 180]
+  # T3: the Frippertronics. A long feedback delay whose passes darken and
+  # die, with the tape wow on top. It is the kosmische engine.
+  - kind: frippertronics
+    delay_seconds: {min: 3, max: 6}
+    feedback_permille: {min: 650, max: 850}
+    cutoff_start_hz: 1800
+    cutoff_step_hz: 200
+    cutoff_floor_hz: 200
+    saturation_permille: 600
+    wow_depth_permille: 500
+    wow_rate_hz: {min: 3, max: 10}
+    send_millibels: -300
+    min_density: 55
+
+section_count_range: [4, 6]
+duration_range_seconds: [360, 480]
 attack_frames: 22050
 release_frames: 22050

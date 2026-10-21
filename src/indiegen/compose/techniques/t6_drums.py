@@ -71,6 +71,15 @@ def _condition_holds(
     return True
 
 
+def _section_of(ctx: TechniqueContext, frame: int) -> int:
+    """The section a frame falls in."""
+    index = 0
+    for position, boundary in enumerate(ctx.section_boundaries):
+        if frame >= boundary:
+            index = position
+    return index
+
+
 def _hit_frames(
     card: PatternCard,
     rng: SplitMix64,
@@ -79,7 +88,6 @@ def _hit_frames(
     section_end: int,
 ) -> list[tuple[int, int]]:
     """The hits of one voice: (frame, velocity millibels) in section order."""
-    pattern = rotate(euclid(card.euclid_k, card.euclid_n), card.rotation)
     frames_per_bar = ctx.frames_per_bar
     step_frames = max(1, frames_per_bar // card.steps_per_bar)
     first_bar = section_start // frames_per_bar if frames_per_bar else 0
@@ -87,19 +95,25 @@ def _hit_frames(
     hits: list[tuple[int, int]] = []
     occurrence = 0
     densities = ctx.section_densities
-    boundaries = ctx.section_boundaries
+    patterns: dict[int, list[bool]] = {}
     for bar in range(first_bar, last_bar + 1):
         bar_start = bar * frames_per_bar
-        bar_in_section = bar - first_bar
-        bars_in_section = max(1, last_bar - first_bar + 1)
+        section = _section_of(ctx, bar_start)
         # The layers come and go with the sections: a voice that the
         # arrangement has not reached yet does not play.
-        section = 0
-        for index, boundary in enumerate(boundaries):
-            if bar_start >= boundary:
-                section = index
         if densities and densities[min(section, len(densities) - 1)] < card.min_density:
             continue
+        pattern = patterns.get(section)
+        if pattern is None:
+            # The pattern turns by a step per section, so two sections
+            # that share a density still do not share a rhythm.
+            pattern = rotate(euclid(card.euclid_k, card.euclid_n), card.rotation + section)
+            patterns[section] = pattern
+        boundaries = ctx.section_boundaries
+        section_first_bar = boundaries[min(section, len(boundaries) - 1)] // frames_per_bar if frames_per_bar else 0
+        section_last_bar = boundaries[min(section + 1, len(boundaries) - 1)] // frames_per_bar if frames_per_bar else 0
+        bar_in_section = bar - section_first_bar
+        bars_in_section = max(1, section_last_bar - section_first_bar)
         for step, active in enumerate(pattern):
             if not active:
                 if card.ghost_permille and rng.below(1000) < card.ghost_permille:
@@ -206,13 +220,15 @@ def plan_hat(card: HatCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCa
 def plan_bass(card: BassCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> BassEvent:
     """The bass line: an eighth-note root with the occasional octave jump.
 
-    The root comes from the lane's scale, so the bass is in the chord; the
-    jumps are the only surprise, and they are rare.
+    The root comes from the section's own harmonic centre, so a modal shift
+    is heard in the bass and not only in the notes on top of it. The jumps
+    are the only surprise, and they are rare.
     """
     hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
     bass: list[BassHit] = []
     for frame, velocity in hits:
-        midi = ctx.root_midi - 12
+        root = ctx.section_roots[_section_of(ctx, frame)] if ctx.section_roots else ctx.root_midi
+        midi = root - 12
         if rng.below(1000) < card.octave_jump_permille:
             midi += 12
         bass.append(BassHit(frame=frame, velocity_millibels=velocity, midi=midi))

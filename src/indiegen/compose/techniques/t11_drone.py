@@ -14,8 +14,19 @@ from indiegen.config import DroneCard
 from indiegen.plan import AmplitudeLfo, DetuneLfo, DriftingPartial, DroneEvent
 
 
-def plan_drone(card: DroneCard, rng: SplitMix64, ctx: TechniqueContext) -> DroneEvent:
-    """Draw the partials of one drone stack."""
+def plan_drone(
+    card: DroneCard,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    start_frame: int,
+    duration_frames: int,
+    root_midi: int,
+) -> DroneEvent:
+    """Draw the partials of one drone stack.
+
+    The drone is scheduled per section, so a modal shift is heard in the
+    fundamental and not only in the notes on top of it.
+    """
     count = rng.between(card.partial_count.min, card.partial_count.max)
     ratios = list(card.ratios)
     partials: list[DriftingPartial] = []
@@ -37,9 +48,9 @@ def plan_drone(card: DroneCard, rng: SplitMix64, ctx: TechniqueContext) -> Drone
     return DroneEvent(
         kind="drone",
         instrument="drone",
-        start_frame=0,
-        duration_frames=ctx.duration_frames,
-        midi=ctx.root_midi,
+        start_frame=start_frame,
+        duration_frames=duration_frames,
+        midi=root_midi,
         pan_permille=0,
         amplitude_millibels=0,
         attack_frames=ctx.attack_frames,

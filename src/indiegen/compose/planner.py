@@ -2,18 +2,32 @@
 
 The RNG is created here, every draw happens here, and it dies when this
 function returns. Everything downstream reads the frozen Plan and never rolls.
+
+The arranger lives here too. The arrangement is a walk over the station's
+section graph: the walk starts at the intro, follows the declared
+successors, and ends at the outro. The sections carry the tension curve
+(their level), the density, the harmonic center (the mode and the root)
+and the texture, and no two consecutive sections may be the same
+arrangement: they have to differ in at least two of the five dimensions
+BRIEF 6 names.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
-from indiegen.compose.techniques.t5_dejavu import plan_deja_vu
+from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
 from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
+from indiegen.compose.techniques.t14_motif import StringVoice, build_cell, plan_motif
 from indiegen.config import (
     BassCard,
     DejaVuCard,
+    DirectorCard,
+    DubChainCard,
+    FrippertronicsCard,
     HatCard,
     KickCard,
     PadCard,
@@ -22,17 +36,41 @@ from indiegen.config import (
     PolyPeriodCard,
     Preset,
     SnareCard,
+    StrategyCard,
 )
 from indiegen.errors import PlanError
 from indiegen.plan import (
     SAMPLE_RATE,
+    BassEvent,
     DelaySend,
+    DirectorMove,
+    DubChainSpec,
     Event,
+    FrippertronicsSpec,
+    HatEvent,
+    KickEvent,
+    MotifAppearance,
+    MotifCell,
+    MotifNote,
     PadEvent,
     Plan,
+    PluckEvent,
+    Rational,
     ReverbSpec,
     SectionPlan,
+    SectionProfile,
+    SnareEvent,
 )
+from indiegen.theory.scales import mode_scale
+
+# The dimensions two consecutive sections have to differ in.
+DIMENSIONS: tuple[str, ...] = ("instrumentation", "harmonic_center", "rhythm", "density", "texture")
+MINIMUM_DIFFERENCES: int = 2
+
+# The harmonic center moves at least this often and at most this often, in
+# bars. BRIEF T16: "every 16-64 bars".
+MODE_SHIFT_MIN_BARS: int = 16
+MODE_SHIFT_MAX_BARS: int = 64
 
 
 def pick_lane(preset: Preset, rng: SplitMix64) -> str:
@@ -51,32 +89,150 @@ def pick_lane(preset: Preset, rng: SplitMix64) -> str:
     return entries[-1].lane
 
 
-def _section_boundaries(frames: int, frames_per_bar: int, section_count: int) -> list[int]:
-    """Bar-aligned section boundaries, with the last section running to the end.
+def _paths_from(
+    graph: list[SectionProfile],
+    start: str,
+    count: int,
+    rng: SplitMix64,
+) -> list[list[SectionProfile]]:
+    """Every walk of the graph that is ``count`` nodes long and ends at the outro.
 
-    A slow tempo can make one bar longer than the whole track, so the
-    boundaries are clamped to keep every section at least one frame long.
+    The walk never visits a function twice, so an arrangement is a shape and
+    not a loop, and the branches are taken in a rotated order, so the draw
+    decides which of the legal arrangements this seed gets.
     """
-    bars_total = max(section_count, frames // frames_per_bar)
-    boundaries: list[int] = [0]
-    for index in range(1, section_count):
-        bar = round(index * bars_total / section_count)
-        boundary = min(frames - (section_count - index), bar * frames_per_bar)
-        boundaries.append(max(boundary, boundaries[-1] + 1))
-    boundaries.append(frames)
+    by_function = {node.function: node for node in graph}
+    if start not in by_function:
+        raise PlanError(f"the section graph has no {start!r} node", preset="station")
+    if "outro" not in by_function:
+        raise PlanError("the section graph has no 'outro' node", preset="station")
+    results: list[list[SectionProfile]] = []
+
+    def walk(path: list[SectionProfile], used: set[str]) -> None:
+        if len(path) == count:
+            if path[-1].function == "outro":
+                results.append(list(path))
+            return
+        node = path[-1]
+        successors = [by_function[name] for name in node.next if name in by_function]
+        if not successors:
+            return
+        offset = rng.below(len(successors))
+        for index in range(len(successors)):
+            successor = successors[(index + offset) % len(successors)]
+            if successor.function in used:
+                continue
+            walk(path + [successor], used | {successor.function})
+
+    walk([by_function[start]], {start})
+    return results
+
+
+def _walk_graph(graph: list[SectionProfile], count: int, rng: SplitMix64) -> list[SectionProfile]:
+    """The nodes of this track's arrangement."""
+    paths = _paths_from(graph, "intro", count, rng)
+    if not paths:
+        raise PlanError(
+            f"the section graph has no arrangement of {count} sections",
+            preset="station",
+        )
+    return paths[rng.below(len(paths))]
+
+
+def _section_lengths(
+    nodes: list[SectionProfile],
+    total_frames: int,
+    frames_per_bar: int,
+    pulsed: bool,
+) -> list[int]:
+    """How long each section lasts, in frames.
+
+    The nodes carry their lengths in bars, and the bars are weights: they
+    are scaled to fill the track exactly. In a pulsed lane the lengths are
+    snapped to multiples of four bars, because BRIEF 6 asks for lengths in
+    4-bar multiples when a pulse exists. The snapping is given up when it
+    does not fit: a section that has no frames is not a section.
+    """
+    weights = [node.bars for node in nodes]
+    total_weight = sum(weights) or 1
+    shares = [max(1, total_frames * weight // total_weight) for weight in weights]
+    if pulsed and frames_per_bar:
+        snapped = [max(4, round(share / frames_per_bar / 4) * 4) * frames_per_bar for share in shares]
+        if sum(snapped) <= total_frames:
+            shares = snapped
+    remainder = total_frames - sum(shares)
+    shares[-1] += remainder
+    if shares[-1] < 1:
+        deficit = 1 - shares[-1]
+        for index in range(len(shares) - 2, -1, -1):
+            take = min(deficit, max(0, shares[index] - 1))
+            shares[index] -= take
+            deficit -= take
+            if deficit <= 0:
+                break
+        shares[-1] += deficit - 1
+    return shares
+
+
+def _assign_modes(
+    mode_pool: list[str],
+    lengths: list[int],
+    frames_per_bar: int,
+    root_midi: int,
+    rng: SplitMix64,
+) -> list[tuple[str, int]]:
+    """The harmonic center of every section: a mode and a root.
+
+    The shift is a section event, so it never lands mid-bar, and it happens
+    at least every sixteen bars and at most every sixty-four.
+    """
+    if not mode_pool:
+        raise PlanError("the lane declares no mode to draw from", preset="station")
+    assigned: list[tuple[str, int]] = []
+    mode = mode_pool[0]
+    held_bars = 0
+    for length in lengths:
+        bars = max(1, length // frames_per_bar) if frames_per_bar else 0
+        if assigned and (
+            held_bars >= MODE_SHIFT_MAX_BARS or (held_bars >= MODE_SHIFT_MIN_BARS and rng.below(1000) < 400)
+        ):
+            choices = [name for name in mode_pool if name != mode]
+            if choices:
+                mode = choices[rng.below(len(choices))]
+                held_bars = 0
+        assigned.append((mode, root_midi))
+        held_bars += bars
+    return assigned
+
+
+def _section_boundaries(lengths: list[int]) -> list[int]:
+    """The frame where each section starts, and the end of the track."""
+    boundaries = [0]
+    for length in lengths:
+        boundaries.append(boundaries[-1] + length)
     return boundaries
 
 
-def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext) -> PadEvent:
+def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> list[int]:
+    """The scale notes that can carry the chord's first tones.
+
+    A chord tone has to be in the lane's scale, so the root is drawn from
+    the notes that support the whole chord rather than from the whole scale.
+    """
+    wanted = intervals[:tones]
+    return [root for root in scale_midi if all(root + interval in scale_midi for interval in wanted)]
+
+
+def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int, length: int, root: int) -> PadEvent:
     """The sustained pad: the S0 instrument, with the S0 field semantics."""
     count = rng.between(card.partials.min, card.partials.max)
     detunes = [rng.between(card.detune_min_cents, card.detune_max_cents) for _ in range(count - 1)]
     return PadEvent(
         kind="pad",
         instrument="pad",
-        start_frame=0,
-        duration_frames=ctx.duration_frames,
-        midi=ctx.root_midi,
+        start_frame=start,
+        duration_frames=length,
+        midi=root,
         pan_permille=0,
         amplitude_millibels=card.amplitude_millibels,
         attack_frames=ctx.attack_frames,
@@ -88,14 +244,167 @@ def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext) -> PadEven
     )
 
 
-def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> list[int]:
-    """The scale notes that can carry the chord's first tones.
+def _string_voice(cards: Sequence[object]) -> StringVoice | None:
+    """The Karplus-Strong's parameters, from whichever card declares them."""
+    for card in cards:
+        if isinstance(card, PluckCard):
+            return StringVoice(
+                feedback_numerator=card.feedback_num_min,
+                feedback_denominator=card.feedback_den,
+                brightness=card.brightness,
+                pluck_position_permille=card.pluck_position_permille,
+                detune_cents=card.detune_cents,
+            )
+        if isinstance(card, DejaVuCard):
+            return StringVoice(
+                feedback_numerator=card.feedback_num,
+                feedback_denominator=card.feedback_den,
+                brightness=card.brightness,
+                pluck_position_permille=card.pluck_position_permille,
+                detune_cents=card.detune_cents,
+            )
+    return None
 
-    A chord tone has to be in the lane's scale, so the root is drawn from the
-    notes that support the whole chord rather than from the whole scale.
+
+def _instrumentation(events: list[Event], start: int, stop: int) -> list[str]:
+    """The kinds of event that sound in a window of the track.
+
+    A drum pattern spans the whole track, so the drums are in a section
+    only if a hit of theirs actually lands in it.
     """
-    wanted = intervals[:tones]
-    return [root for root in scale_midi if all(root + interval in scale_midi for interval in wanted)]
+    kinds: set[str] = set()
+    for event in events:
+        if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+            if any(start <= hit.frame < stop for hit in event.hits):
+                kinds.add(event.kind)
+            continue
+        if event.start_frame < stop and event.start_frame + event.duration_frames > start:
+            kinds.add(event.kind)
+    return sorted(kinds)
+
+
+def _rhythm_variants(cards: Sequence[object], count: int) -> list[int | None]:
+    """The rhythmic pattern of every section, or None when the lane has none.
+
+    The drums' pattern turns by one step per section, so two sections that
+    share a density still do not share a pattern.
+    """
+    rotation: int | None = None
+    for card in cards:
+        if isinstance(card, (KickCard, SnareCard, HatCard, BassCard)):
+            rotation = card.pattern.rotation
+            break
+    if rotation is None:
+        return [None] * count
+    return [(rotation + index) % 1000 for index in range(count)]
+
+
+def _planned_centroid(timbre: dict[str, int], function: str) -> int:
+    """The spectral centroid the lane expects for a section.
+
+    The lane's recipe says what each kind of section sounds like, and the
+    numbers were measured on real renders of this lane: BRIEF 5's "starting
+    specs, measured, then tuned". A lane with no entry for a function gets
+    the average of the ones it has, which is the best guess left.
+    """
+    if not timbre:
+        return 1000
+    value = timbre.get(function)
+    if value is not None:
+        return value
+    return max(1, sum(timbre.values()) // len(timbre))
+
+
+def _draw_moves(
+    card: DirectorCard,
+    frames: int,
+    frames_per_bar: int,
+    pulsed: bool,
+    boundaries: list[int],
+    instruments: set[str],
+    rng: SplitMix64,
+) -> list[DirectorMove]:
+    """The Director's moves, drawn at compose time.
+
+    The draw is the composition's: the Director itself is a pure Plan to
+    Plan transform and rolls nothing. In a pulsed lane the Director fires
+    every 8 to 32 bars, and in a lane with no pulse every 60 to 180
+    seconds, on a section boundary.
+
+    A strategy that names instruments the lane does not have is not drawn:
+    a move that could not change anything would be a move that did not
+    fire, and a Director that fires on nothing is not an arranger.
+    """
+    moves: list[DirectorMove] = []
+    choices = [entry for entry in card.strategies if not entry.applies_to or instruments.intersection(entry.applies_to)]
+    if not choices:
+        return moves
+    sample = 0
+    previous = ""
+    while True:
+        if pulsed and frames_per_bar:
+            remaining = max(1, (frames - sample) // frames_per_bar - 1)
+            step = min(rng.between(card.bars_min, card.bars_max), remaining) * frames_per_bar
+        else:
+            remaining = max(1, (frames - sample) // SAMPLE_RATE - 1)
+            step = min(rng.between(card.seconds_min, card.seconds_max), remaining) * SAMPLE_RATE
+        target = sample + step
+        if target >= frames:
+            break
+        if pulsed and frames_per_bar:
+            sample = (target // frames_per_bar) * frames_per_bar
+        else:
+            sample = next((boundary for boundary in boundaries if boundary >= target), frames)
+        if sample >= frames:
+            break
+        available = [entry for entry in choices if entry.strategy != previous] or choices
+        choice: StrategyCard = available[rng.below(len(available))]
+        previous = choice.strategy
+        span = choice.span_bars * frames_per_bar if choice.span_bars else choice.crossfade_frames
+        moves.append(
+            DirectorMove(
+                sample=sample,
+                strategy=choice.strategy,
+                detail=choice.detail,
+                parameter=rng.between(choice.parameter_min, choice.parameter_max),
+                crossfade_frames=span,
+                applies_to=list(choice.applies_to),
+            )
+        )
+    return moves
+
+
+def _frippertronics_spec(card: FrippertronicsCard, rng: SplitMix64) -> FrippertronicsSpec:
+    """T3's send, resolved to integers."""
+    delay_seconds = rng.between(card.delay_seconds.min, card.delay_seconds.max)
+    feedback = rng.between(card.feedback_permille.min, card.feedback_permille.max)
+    rate = rng.between(card.wow_rate_hz.min, card.wow_rate_hz.max)
+    return FrippertronicsSpec(
+        delay_frames=delay_seconds * SAMPLE_RATE,
+        feedback_permille=feedback,
+        cutoff_start_hz=card.cutoff_start_hz,
+        cutoff_step_hz=card.cutoff_step_hz,
+        cutoff_floor_hz=card.cutoff_floor_hz,
+        saturation_permille=card.saturation_permille,
+        wow_depth_permille=card.wow_depth_permille,
+        wow_rate=Rational(numerator=rate, denominator=10),
+        send_millibels=card.send_millibels,
+    )
+
+
+def _dub_chain_spec(card: DubChainCard, rng: SplitMix64) -> DubChainSpec:
+    """T10's chain, resolved to integers."""
+    return DubChainSpec(
+        bit_depth=card.bit_depth,
+        bandpass_hz=card.bandpass_hz,
+        bandpass_q_num=card.bandpass_q_num,
+        bandpass_q_den=card.bandpass_q_den,
+        drift_depth_hz=card.drift_depth_hz,
+        drift_seed=rng.next_u64(),
+        send_millibels=card.send_millibels,
+        sidechain_depth_millibels=card.sidechain_depth_millibels,
+        sidechain_release_frames=card.sidechain_release_frames,
+    )
 
 
 def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Plan:
@@ -128,18 +437,27 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     beats_per_bar = lane.meter[0] * 4 // lane.meter[1]
     frames_per_bar = frames_per_beat * beats_per_bar
     section_count = rng.between(lane.section_count_range[0], lane.section_count_range[1])
+    pulsed = lane.pulse == "bars"
 
-    motif = list(rng.choice(station.motif_bank))
-    title_words = rng.choice(station.title_words), rng.choice(station.title_words)
+    # The arrangement: a walk over the station's section graph.
+    nodes = _walk_graph(station.section_graph, section_count, rng)
+    lengths = _section_lengths(nodes, frames, frames_per_bar, pulsed)
+    boundaries = _section_boundaries(lengths)
+    densities = [node.density for node in nodes]
+
     intervals = next(
         (card.chord_intervals for card in lane.techniques if isinstance(card, PolyPeriodCard)),
         [],
     )
     roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
     root_midi = rng.choice(roots if roots else lane.scale_midi)
-    dither_seed = rng.next_u64()
 
-    boundaries = _section_boundaries(frames, frames_per_bar, section_count)
+    modes = _assign_modes(lane.mode_pool, lengths, frames_per_bar, root_midi, rng)
+    section_roots = [root for _, root in modes]
+    section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
+
+    title_words = rng.choice(station.title_words), rng.choice(station.title_words)
+    dither_seed = rng.next_u64()
 
     ctx = TechniqueContext(
         preset=preset.name,
@@ -154,9 +472,10 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         attack_frames=lane.attack_frames or 0,
         release_frames=lane.release_frames or 0,
         section_boundaries=list(boundaries),
-        section_densities=[
-            station.section_profiles[index % len(station.section_profiles)].density for index in range(section_count)
-        ],
+        section_densities=densities,
+        section_scales=section_scales,
+        section_roots=section_roots,
+        section_functions=[node.function for node in nodes],
     )
 
     # T7 resolves once: the lane's 1/f control signals are declared by the
@@ -166,7 +485,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     events: list[Event] = []
     for card in lane.techniques:
         if isinstance(card, PadCard):
-            events.append(_pad_event(card, rng, ctx))
+            for index in range(len(nodes)):
+                events.append(_pad_event(card, rng, ctx, boundaries[index], lengths[index], section_roots[index]))
         elif isinstance(card, PolyPeriodCard):
             events.extend(plan_poly_period(card, rng, ctx))
         elif isinstance(card, PluckCard):
@@ -181,29 +501,50 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
             events.append(plan_bass(card, rng, ctx, pink))
         elif isinstance(card, DejaVuCard):
             events.extend(plan_deja_vu(card, rng, ctx))
-        elif isinstance(card, PinkCard):
+        elif isinstance(card, (PinkCard, FrippertronicsCard, DubChainCard)):
             continue
         else:
-            events.append(plan_drone(card, rng, ctx))
+            for index in range(len(nodes)):
+                events.append(plan_drone(card, rng, ctx, boundaries[index], lengths[index], section_roots[index]))
+
+    # The motif: the station's signature, played by the Karplus-Strong.
+    cell = build_cell(station.motif_bank, station.motif_rhythm, root_midi, frames_per_beat, rng)
+    string = _string_voice(lane.techniques)
+    appearances: list[MotifAppearance] = []
+    motif_events: list[PluckEvent] = []
+    if string is not None:
+        appearances, motif_events = plan_motif(cell, string, ctx, rng)
+        events.extend(motif_events)
 
     sections: list[SectionPlan] = []
-    for index in range(section_count):
-        profile = station.section_profiles[index % len(station.section_profiles)]
+    rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
+    for index, node in enumerate(nodes):
         start = boundaries[index]
-        end = boundaries[index + 1]
+        stop = boundaries[index + 1]
+        reprise = -1
+        if node.reprise_of:
+            reprise = next((other for other, item in enumerate(nodes) if item.function == node.reprise_of), -1)
         sections.append(
             SectionPlan(
                 index=index,
-                function=profile.function,
+                function=node.function,
                 start_frame=start,
-                end_frame=end,
-                bars=max(1, (end - start) // frames_per_bar),
-                density=profile.density,
-                level_millibels=profile.level_millibels,
-                motif=list(motif),
+                end_frame=stop,
+                bars=max(1, lengths[index] // frames_per_bar) if frames_per_bar else 1,
+                density=node.density,
+                level_millibels=node.level_millibels,
                 techniques=[card.kind for card in lane.techniques],
+                instrumentation=_instrumentation(events, start, stop),
+                mode=modes[index][0],
+                root_midi=section_roots[index],
+                texture=node.texture,
+                reprise_of=reprise,
+                transform=node.transform,
+                centroid_hz=_planned_centroid(lane.timbre, node.function),
             )
         )
+
+    _assert_sections_differ(preset, seed, sections, rhythm_variants)
 
     delay = station.delay
     delay_send = DelaySend(
@@ -226,9 +567,28 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         if lane.reverb is not None
         else None
     )
+    frippertronics = next(
+        (_frippertronics_spec(card, rng) for card in lane.techniques if isinstance(card, FrippertronicsCard)),
+        None,
+    )
+    dub_chain = next(
+        (_dub_chain_spec(card, rng) for card in lane.techniques if isinstance(card, DubChainCard)),
+        None,
+    )
+    deck = _draw_moves(
+        station.director,
+        frames,
+        frames_per_bar,
+        pulsed,
+        boundaries,
+        {event.instrument for event in events},
+        rng,
+    )
+    deja_vu = next((card for card in lane.techniques if isinstance(card, DejaVuCard)), None)
+    replay = [replay_permille(deja_vu, index, len(nodes)) for index in range(len(nodes))] if deja_vu else []
 
     return Plan(
-        version=2,
+        version=3,
         format_version=station.format_version,
         preset=preset.name,
         seed=seed,
@@ -248,15 +608,18 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         frames_per_beat=frames_per_beat,
         meter_numerator=lane.meter[0],
         meter_denominator=lane.meter[1],
+        pulse=lane.pulse,
         scale_midi=list(lane.scale_midi),
         palette=list(station.palette),
         fx_sends=list(lane.fx_sends),
         techniques=[card.kind for card in lane.techniques],
-        strategy_deck=list(station.strategy_deck),
+        strategy_deck=deck,
         section_count_range=list(lane.section_count_range),
-        section_count=section_count,
+        section_count=len(nodes),
         sections=sections,
-        motif=motif,
+        motif=MotifCell(notes=[MotifNote(midi=midi, duration_frames=duration) for midi, duration in cell]),
+        motif_appearances=appearances,
+        deja_vu_replay_permille=list(replay),
         title_words=list(station.title_words),
         lane_weights=list(station.lane_weights),
         dither_seed=dither_seed,
@@ -269,6 +632,42 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         track_number=station.track_number,
         delay_sends=[delay_send],
         reverb=reverb,
+        frippertronics=frippertronics,
+        dub_chain=dub_chain,
         events=events,
         director_log=[],
     )
+
+
+def _assert_sections_differ(
+    preset: Preset,
+    seed: int,
+    sections: list[SectionPlan],
+    rhythm_variants: list[int | None],
+) -> None:
+    """No two consecutive sections may be the same arrangement.
+
+    BRIEF 6: "Each section differs from the previous in at least 2 of:
+    instrumentation, harmonic center, rhythmic pattern, density,
+    texture/space." A section that does not differ is a section that
+    repeats, and BRIEF 7 rejects a track that repeats a section verbatim.
+    """
+    for previous, current in zip(sections, sections[1:], strict=False):
+        differences = 0
+        if previous.instrumentation != current.instrumentation:
+            differences += 1
+        if (previous.mode, previous.root_midi) != (current.mode, current.root_midi):
+            differences += 1
+        if rhythm_variants[previous.index] != rhythm_variants[current.index]:
+            differences += 1
+        if previous.density != current.density:
+            differences += 1
+        if previous.texture != current.texture:
+            differences += 1
+        if differences < MINIMUM_DIFFERENCES:
+            raise PlanError(
+                f"sections {previous.index} and {current.index} differ in {differences} dimensions, "
+                f"and at least {MINIMUM_DIFFERENCES} are needed",
+                preset=preset.name,
+                seed=seed,
+            )

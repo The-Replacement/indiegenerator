@@ -30,8 +30,13 @@ def _nearest_scale_note(scale: list[int], target: int) -> int:
     return min(scale, key=lambda note: (abs(note - target), note))
 
 
-def _replay_permille(card: DejaVuCard, section: int, section_count: int) -> int:
-    """The replay probability of a section, from explore to locked."""
+def replay_permille(card: DejaVuCard, section: int, section_count: int) -> int:
+    """The replay probability of a section, from explore to locked.
+
+    BRIEF T5: "d morphs per section: 0.15 (explore) -> 0.85 (locked)". The
+    plan records the resolved values, so gate 13 can assert that the morph
+    really happened.
+    """
     if section_count <= 1:
         return card.replay_max_permille
     position = section / (section_count - 1)
@@ -45,7 +50,8 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
 
     The buffer holds the last pitches that were generated, and a step
     replays one of them with the section's probability. The new values are
-    drawn around the harmonic center and quantized to the lane's scale.
+    drawn around the harmonic centre of the section and quantized to the
+    section's scale, so a modal shift is heard in the notes themselves.
     """
     buffer: list[int] = []
     events: list[PluckEvent] = []
@@ -64,12 +70,14 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
         # The layer only plays in the sections the arrangement has reached.
         if densities and densities[min(section, len(densities) - 1)] < card.min_density:
             continue
-        probability = _replay_permille(card, section, section_count)
+        probability = replay_permille(card, section, section_count)
+        scale = ctx.section_scales[section] if ctx.section_scales else ctx.scale_midi
+        root = ctx.section_roots[section] if ctx.section_roots else ctx.root_midi
         if buffer and rng.below(1000) < probability:
             midi = buffer[rng.below(len(buffer))]
         else:
             offset = card.bias + rng.between(-card.spread, card.spread)
-            midi = _nearest_scale_note(ctx.scale_midi, ctx.root_midi + offset)
+            midi = _nearest_scale_note(scale, root + offset)
             buffer.append(midi)
             if len(buffer) > card.buffer_size:
                 buffer.pop(0)

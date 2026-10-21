@@ -27,3 +27,14 @@ class TechniqueContext(BaseModel):
     release_frames: int
     section_boundaries: list[int]
     section_densities: list[int]
+    section_scales: list[list[int]]
+    section_roots: list[int]
+    section_functions: list[str]
+
+    def section_index(self, frame: int) -> int:
+        """The section a frame falls in."""
+        index = 0
+        for position, boundary in enumerate(self.section_boundaries):
+            if frame >= boundary:
+                index = position
+        return min(index, max(0, len(self.section_densities) - 1))

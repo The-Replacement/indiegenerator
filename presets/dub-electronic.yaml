@@ -11,6 +11,17 @@ meter: [4, 4]
 # The lane's scale. The fundamental is drawn from here.
 scale_midi: [38, 39, 41, 43, 45, 46, 48, 50, 51, 53, 55, 56, 58, 60, 62, 63]
 
+# T16: the harmonic centre moves between these, at the section boundaries.
+mode_pool: [phrygian, aeolian]
+
+# The lane has a pulse, so the sections are measured in bars.
+pulse: bars
+
+# The timbre this lane expects for each kind of section, in hertz.
+# Measured on real renders of this lane (BRIEF 5: measured, then tuned),
+# and asserted by gate 6.
+timbre: {break: 1687, build: 2642, drift: 1855, intro: 1578, outro: 1742, peak: 3298, plateau: 3014, return: 3224}
+
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 9000, q_num: 1, q_den: 1}
 
@@ -98,5 +109,19 @@ techniques:
     octave_jump_permille: 200
     fifth_permille: 0
 
-section_count_range: [4, 4]
-duration_range_seconds: [180, 180]
+  # T10: the dub chain. The stabs are bit-reduced, bandpassed at 450 Hz
+  # with a slow 1/f drift on the cutoff, and everything but the kick is
+  # ducked by the kick.
+  - kind: dub_chain
+    bit_depth: 8
+    bandpass_hz: 450
+    bandpass_q_num: 2
+    bandpass_q_den: 1
+    drift_depth_hz: 120
+    send_millibels: -200
+    sidechain_depth_millibels: -900
+    sidechain_release_frames: 12000
+    min_density: 40
+
+section_count_range: [4, 6]
+duration_range_seconds: [360, 480]

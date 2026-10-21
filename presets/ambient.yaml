@@ -11,6 +11,16 @@ meter: [4, 4]
 # D dorian, two octaves. The fundamental is drawn from here.
 scale_midi: [38, 40, 41, 43, 45, 47, 48, 50, 52, 53, 55, 57, 59, 60, 62, 64]
 
+# The lane has no pulse, so the sections are measured in seconds and the
+# Director fires every 60 to 180 of them.
+mode_pool: [dorian, aeolian]
+pulse: seconds
+
+# The timbre this lane expects for each kind of section, in hertz.
+# Measured on real renders of this lane (BRIEF 5: measured, then tuned),
+# and asserted by gate 6.
+timbre: {intro: 800, build: 800, plateau: 800, peak: 800, break: 800, drift: 800, return: 800, outro: 800}
+
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 5000, q_num: 1, q_den: 1}
 
@@ -24,6 +34,7 @@ techniques:
     on_fraction_permille: {min: 140, max: 280}
     attack_seconds_range: {min: 2, max: 10}
     chord_intervals: [0, 3, 5, 7, 10]
+    min_density: 0
     partial_ratios:
       - {numerator: 1, denominator: 1}
       - {numerator: 2, denominator: 1}
@@ -37,6 +48,7 @@ techniques:
     detune_lfo_depth_cents: 12
     amplitude_lfo_rate: {numerator: 1, denominator: 13}
     amplitude_lfo_depth_millibels: 400
+    min_density: 0
     ratios:
       - {numerator: 1, denominator: 1}
       - {numerator: 9, denominator: 8}
@@ -57,8 +69,8 @@ techniques:
     duration_seconds: {min: 3, max: 6}
     spacing_seconds: {min: 4, max: 12}
 
-section_count_range: [4, 4]
-duration_range_seconds: [180, 180]
+section_count_range: [2, 4]
+duration_range_seconds: [360, 480]
 attack_frames: 13230
 release_frames: 13230
 

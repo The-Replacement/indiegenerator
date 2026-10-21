@@ -28,6 +28,10 @@ motif_bank:
   - [0, 3, 7, 10]
   - [0, 5, 7, 10]
 
+# The cell's own shape, in beats. The motif is longer than it looks: the
+# last note of the phrase is held.
+motif_rhythm: [1, 1, 2, 1]
+
 title_words:
   - Low
   - Tide
@@ -50,23 +54,41 @@ title_words:
   - Iron
   - Meadow
 
-# The shape of a track: what each section is for and how loud it is.
-section_profiles:
-  - {function: intro, density: 20, level_millibels: -1200}
-  - {function: build, density: 55, level_millibels: -600}
-  - {function: plateau, density: 80, level_millibels: -500}
-  - {function: outro, density: 30, level_millibels: -1400}
+# THE SECTION GRAPH. A track is a walk over this: the walk starts at the
+# intro, follows the declared successors, and ends at the outro. The
+# density and the level are the tension curve, and no two sections in a row
+# may be the same arrangement.
+section_graph:
+  - {function: intro, next: [build, outro], density: 20, level_millibels: -1200, bars: 8, reprise_of: "", transform: identity, texture: sparse}
+  - {function: build, next: [plateau, break, outro], density: 55, level_millibels: -600, bars: 16, reprise_of: "", transform: identity, texture: open}
+  - {function: plateau, next: [peak, break, return, outro], density: 80, level_millibels: -500, bars: 16, reprise_of: "", transform: identity, texture: full}
+  - {function: peak, next: [break, return], density: 95, level_millibels: -350, bars: 8, reprise_of: "", transform: identity, texture: dense}
+  - {function: break, next: [drift, return, plateau, outro], density: 30, level_millibels: -1000, bars: 8, reprise_of: "", transform: identity, texture: hollow}
+  - {function: drift, next: [return, plateau, outro], density: 45, level_millibels: -800, bars: 8, reprise_of: "", transform: identity, texture: drifting}
+  - {function: return, next: [outro, plateau], density: 70, level_millibels: -450, bars: 8, reprise_of: build, transform: transpose, texture: returning}
+  - {function: outro, next: [], density: 25, level_millibels: -1400, bars: 8, reprise_of: "", transform: identity, texture: fading}
 
-# The Director's deck. Every draw is logged in the plan. The move declares
-# which kinds of event it applies to, so the ambient lane's material is left
-# alone: T14 as a general arranger is a later slice.
-strategy_deck:
-  - sample: 220500
-    strategy: transpose_up_fourth
-    detail: transpose the motif up a fourth
-    parameter: 5
-    crossfade_frames: 11025
-    applies_to: [pad]
+# THE DIRECTOR. It draws a transformation every 8 to 32 bars in a pulsed
+# lane and every 60 to 180 seconds in a lane with no pulse, and applies it
+# to the running plan. The draw is compose()'s; the application is
+# director()'s, and it is a pure function over the plan.
+director:
+  bars_min: 8
+  bars_max: 32
+  seconds_min: 60
+  seconds_max: 180
+  strategies:
+    - {strategy: transpose_up_fourth, detail: transpose the sustained material up a fourth, parameter_min: 5, parameter_max: 5, applies_to: [pad, drone], crossfade_frames: 11025, span_bars: 0}
+    - {strategy: transpose_motif, detail: transpose the motif, parameter_min: -5, parameter_max: 5, applies_to: [motif], crossfade_frames: 0, span_bars: 0}
+    - {strategy: invert_motif, detail: invert the motif around the harmonic centre, parameter_min: 0, parameter_max: 0, applies_to: [motif], crossfade_frames: 0, span_bars: 0}
+    - {strategy: retrograde_motif, detail: play the motif backwards, parameter_min: 0, parameter_max: 0, applies_to: [motif], crossfade_frames: 0, span_bars: 0}
+    - {strategy: drop_drums, detail: take the drums out for a while, parameter_min: 0, parameter_max: 0, applies_to: [kick, snare, hat], crossfade_frames: 0, span_bars: 8}
+    - {strategy: drop_kick, detail: take the kick out for a while, parameter_min: 0, parameter_max: 0, applies_to: [kick], crossfade_frames: 0, span_bars: 8}
+    - {strategy: half_time, detail: halve the rhythm for a while, parameter_min: 0, parameter_max: 0, applies_to: [kick, snare, hat], crossfade_frames: 0, span_bars: 8}
+    - {strategy: drop_bass, detail: take the bass out for a while, parameter_min: 0, parameter_max: 0, applies_to: [bass], crossfade_frames: 0, span_bars: 8}
+    - {strategy: solo_texture, detail: leave the texture alone for a while, parameter_min: 0, parameter_max: 0, applies_to: [kick, snare, hat, bass], crossfade_frames: 0, span_bars: 8}
+    - {strategy: swap_delay_to_triplets, detail: swap the delay to triplets, parameter_min: 0, parameter_max: 0, applies_to: [], crossfade_frames: 0, span_bars: 0}
+    - {strategy: reharmonize_relative, detail: move the harmonic centre to the relative mode, parameter_min: 0, parameter_max: 0, applies_to: [], crossfade_frames: 0, span_bars: 0}
 
 # The station's signature: the KS guitar is always heard through a dotted
 # eighth delay. The ratio is resolved to an integer frame count at compose
