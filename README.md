@@ -31,13 +31,13 @@ path: out/ambient_circuit_glass_s1042.flac
 sidecar: out/ambient_circuit_glass_s1042.json
 duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
-peak: -18.001 dBFS
-true_peak: -17.995 dBTP
-loudness: -31.079 LUFS
+peak: -17.998 dBFS
+true_peak: -17.993 dBTP
+loudness: -30.752 LUFS
 sections: 4
 techniques: poly_period,drone,pluck
 plan_sha256: 715a21b1ee5aa64b3627300379500d32fe15adae2f6f06b5c8fad92b8bcd2ec5
-pcm_sha256: d86a8b8b5f4292f913ecdaecfbc5576bf733eee83179346b27ae117d943820d0
+pcm_sha256: 7e2ae631989adba0d2e522de1fba0085e0b5b07df5e2c54466ad2f1745b68369
 render_seconds: 21.052
 ```
 
@@ -58,7 +58,9 @@ cannot compose, so it cannot invent a different track.
 ## Measured on this machine
 
 Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
-520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS.
+520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS. The times are the
+best of three runs on an otherwise idle host; the host is shared, and under
+load the 90 s render has been observed to take up to 98 s.
 
 | Measurement | 10 s station | 90 s ambient |
 |---|---|---|
@@ -66,9 +68,9 @@ Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
 | Faster than realtime | 33× | 4.3× |
 | Wall clock, including interpreter start | 3.10 s | 26.83 s |
 | Peak RSS | 211 MB | 823 MB (budget 1500 MB) |
-| Integrated loudness | −26.791 LUFS | −31.079 LUFS |
-| Sample peak | −18.001 dBFS | −18.001 dBFS |
-| True peak (4× oversampled) | −17.995 dBTP | −17.995 dBTP |
+| Integrated loudness | −26.297 LUFS | −30.752 LUFS |
+| Sample peak | −18.001 dBFS | −17.998 dBFS |
+| True peak (4× oversampled) | −17.995 dBTP | −17.993 dBTP |
 | Frames | 441 000 | 3 969 000 |
 | `plan_sha256` stable across runs | yes | yes |
 | `pcm_sha256` stable across runs | yes | yes |

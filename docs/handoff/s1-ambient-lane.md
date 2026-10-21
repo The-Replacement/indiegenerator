@@ -1,7 +1,7 @@
 # Handoff — `s1-ambient-lane`
 
 Slice S1 of the build order in `BRIEF.md` §15. Date: 2026-10-20.
-Status: implemented, 247 tests green, ruff and mypy clean, pending the SDD verify verdict.
+Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle done, pending the SDD verify verdict.
 
 ## What was accomplished
 
@@ -33,7 +33,7 @@ Status: implemented, 247 tests green, ruff and mypy clean, pending the SDD verif
 
 ## Current state
 
-- 247 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
+- 257 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
 - Measured on this machine: the 90 s ambient piece renders in 21.05 s of
   audio time (4.3× faster than realtime) with 823 MB peak RSS; the 10 s
   station render in 0.30 s with 211 MB. Peak −18.001 dBFS, true peak

@@ -60,7 +60,7 @@ def pluck_excitation(
     burst = uniform_stream(seed, 0, 0, length) * 2.0
     position = max(1, min(length - 1, round(position_permille * length / 1000)))
     combed = burst - np.concatenate([np.zeros(position), burst[: length - position]])
-    shaped: np.ndarray = combed * np.exp(-np.arange(length, dtype=np.float64) / (0.5 * length))
+    shaped: np.ndarray = combed
     return shaped
 
 

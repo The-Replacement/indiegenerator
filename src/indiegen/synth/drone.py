@@ -38,12 +38,12 @@ def render_drone(event: DroneEvent, sample_rate: int) -> np.ndarray:
         detune_signal = np.clip(interpolate_to(detune_control, count, sample_rate), -1.0, 1.0)
         detune = partial.detune_cents + partial.detune_lfo.depth_cents * detune_signal
         ratio = partial.ratio.numerator / partial.ratio.denominator
-        frequency = base * ratio * np.power(2.0, detune / 1200.0)
+        frequency = base * ratio * np.exp(detune * (math.log(2.0) / 1200.0))
         phase = 2.0 * math.pi * np.cumsum(frequency) / sample_rate
 
         amplitude_control = pink_stream(stream_key(event.noise_seed, index, AMPLITUDE_STREAM), control, CONTROL_RATE)
         amplitude_signal = np.clip(interpolate_to(amplitude_control, count, sample_rate), -1.0, 1.0)
         millibels = partial.amplitude_millibels + partial.amplitude_lfo.depth_millibels * amplitude_signal
-        voice += np.sin(phase) * np.power(10.0, millibels / 2000.0)
+        voice += np.sin(phase) * np.exp(millibels * (math.log(10.0) / 2000.0))
 
     return dc_block(voice, sample_rate)

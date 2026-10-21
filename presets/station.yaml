@@ -1,5 +1,4 @@
 kind: station
-station_id: indiegenerator
 
 # The blend. The lane is drawn inside compose(), which is the only place
 # randomness is allowed to exist.

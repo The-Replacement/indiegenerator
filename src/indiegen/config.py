@@ -161,7 +161,6 @@ class StationPreset(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["station"]
-    station_id: str
     lane_weights: list[LaneWeight]
     palette: list[str]
     motif_bank: list[list[int]]
