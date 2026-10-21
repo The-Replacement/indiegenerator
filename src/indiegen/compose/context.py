@@ -1,0 +1,26 @@
+"""What a compose-time technique needs to know about the track it is writing for.
+
+It is data, not behaviour: a technique may not import the render path, and it
+may not look at a clock.
+"""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict
+
+
+class TechniqueContext(BaseModel):
+    """The facts a technique draws against."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    preset: str
+    seed: int
+    lane: str
+    scale_midi: list[int]
+    root_midi: int
+    sample_rate: int
+    duration_frames: int
+    frames_per_beat: int
+    attack_frames: int
+    release_frames: int

@@ -6,10 +6,20 @@ function returns. Everything downstream reads the frozen Plan and never rolls.
 
 from __future__ import annotations
 
+from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64, seed_from_bytes
-from indiegen.config import Preset, canonical_preset_json
+from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
+from indiegen.config import PadCard, PluckCard, PolyPeriodCard, Preset, canonical_preset_json
 from indiegen.errors import PlanError
-from indiegen.plan import SAMPLE_RATE, NoteEvent, Plan, SectionPlan
+from indiegen.plan import (
+    SAMPLE_RATE,
+    DelaySend,
+    Event,
+    PadEvent,
+    Plan,
+    ReverbSpec,
+    SectionPlan,
+)
 
 
 def pick_lane(preset: Preset, rng: SplitMix64) -> str:
@@ -44,6 +54,37 @@ def _section_boundaries(frames: int, frames_per_bar: int, section_count: int) ->
     return boundaries
 
 
+def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext) -> PadEvent:
+    """The sustained pad: the S0 instrument, with the S0 field semantics."""
+    count = rng.between(card.partials.min, card.partials.max)
+    detunes = [rng.between(card.detune_min_cents, card.detune_max_cents) for _ in range(count - 1)]
+    return PadEvent(
+        kind="pad",
+        instrument="pad",
+        start_frame=0,
+        duration_frames=ctx.duration_frames,
+        midi=ctx.root_midi,
+        pan_permille=0,
+        amplitude_millibels=card.amplitude_millibels,
+        attack_frames=ctx.attack_frames,
+        release_frames=ctx.release_frames,
+        partials=count,
+        partial_detune_cents=detunes,
+        lfo_rate=card.lfo_rate,
+        lfo_depth_cents=card.lfo_depth_cents,
+    )
+
+
+def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> list[int]:
+    """The scale notes that can carry the chord's first tones.
+
+    A chord tone has to be in the lane's scale, so the root is drawn from the
+    notes that support the whole chord rather than from the whole scale.
+    """
+    wanted = intervals[:tones]
+    return [root for root in scale_midi if all(root + interval in scale_midi for interval in wanted)]
+
+
 def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Plan:
     """Build the frozen Plan from a preset and a seed."""
     material = canonical_preset_json(preset) + b"\x00" + str(seed).encode("utf-8")
@@ -68,6 +109,37 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
 
     motif = list(rng.choice(station.motif_bank))
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
+    intervals = next(
+        (card.chord_intervals for card in lane.techniques if isinstance(card, PolyPeriodCard)),
+        [],
+    )
+    roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
+    root_midi = rng.choice(roots if roots else lane.scale_midi)
+    dither_seed = rng.next_u64()
+
+    ctx = TechniqueContext(
+        preset=preset.name,
+        seed=seed,
+        lane=lane.lane,
+        scale_midi=list(lane.scale_midi),
+        root_midi=root_midi,
+        sample_rate=SAMPLE_RATE,
+        duration_frames=frames,
+        frames_per_beat=frames_per_beat,
+        attack_frames=lane.attack_frames,
+        release_frames=lane.release_frames,
+    )
+
+    events: list[Event] = []
+    for card in lane.techniques:
+        if isinstance(card, PadCard):
+            events.append(_pad_event(card, rng, ctx))
+        elif isinstance(card, PolyPeriodCard):
+            events.extend(plan_poly_period(card, rng, ctx))
+        elif isinstance(card, PluckCard):
+            events.extend(plan_plucks(card, rng, ctx))
+        else:
+            events.append(plan_drone(card, rng, ctx))
 
     boundaries = _section_boundaries(frames, frames_per_bar, section_count)
     sections: list[SectionPlan] = []
@@ -85,30 +157,34 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
                 density=profile.density,
                 level_millibels=profile.level_millibels,
                 motif=list(motif),
-                techniques=[card.name for card in lane.techniques],
+                techniques=[card.kind for card in lane.techniques],
             )
         )
 
-    card = lane.techniques[0]
-    detunes = [rng.between(card.detune_min_cents, card.detune_max_cents) for _ in range(card.partials - 1)]
-    event = NoteEvent(
-        instrument=card.name,
-        start_frame=0,
-        duration_frames=frames,
-        midi=rng.choice(lane.scale_midi),
-        velocity_millibels=card.amplitude_millibels,
-        partials=card.partials,
-        partial_detune_cents=detunes,
-        lfo_rate=card.lfo_rate,
-        lfo_depth_cents=card.lfo_depth_cents,
-        amplitude_millibels=card.amplitude_millibels,
-        pan_permille=0,
-        attack_frames=lane.attack_frames,
-        release_frames=lane.release_frames,
+    delay = station.delay
+    delay_send = DelaySend(
+        name="dotted_eighth",
+        delay_frames=delay.delay_ratio.numerator * frames_per_beat // delay.delay_ratio.denominator,
+        feedback=delay.feedback,
+        damping=delay.damping,
+        send_millibels=delay.send_millibels,
+    )
+    reverb = (
+        ReverbSpec(
+            comb_delays_frames=list(lane.reverb.comb_delays_frames),
+            comb_feedback=lane.reverb.comb_feedback,
+            damping=lane.reverb.damping,
+            allpass_delays_frames=list(lane.reverb.allpass_delays_frames),
+            allpass_feedback=lane.reverb.allpass_feedback,
+            stereo_spread_frames=lane.reverb.stereo_spread_frames,
+            send_millibels=lane.reverb.send_millibels,
+        )
+        if lane.reverb is not None
+        else None
     )
 
-    plan = Plan(
-        version=1,
+    return Plan(
+        version=2,
         format_version=station.format_version,
         preset=preset.name,
         seed=seed,
@@ -131,7 +207,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         scale_midi=list(lane.scale_midi),
         palette=list(station.palette),
         fx_sends=list(lane.fx_sends),
-        techniques=list(lane.techniques),
+        techniques=[card.kind for card in lane.techniques],
         strategy_deck=list(station.strategy_deck),
         section_count_range=list(lane.section_count_range),
         section_count=section_count,
@@ -139,7 +215,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         motif=motif,
         title_words=list(station.title_words),
         lane_weights=list(station.lane_weights),
-        dither_seed=rng.next_u64(),
+        dither_seed=dither_seed,
         dither_lsb=station.dither_lsb,
         master_gain_millibels=station.target_peak_millibels,
         ceiling_millibels=station.ceiling_millibels,
@@ -147,7 +223,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         fade_out_frames=station.fade_out_frames,
         section_crossfade_frames=station.section_crossfade_frames,
         track_number=station.track_number,
-        events=[event],
+        delay_sends=[delay_send],
+        reverb=reverb,
+        events=events,
         director_log=[],
     )
-    return plan
