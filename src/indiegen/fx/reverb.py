@@ -30,6 +30,7 @@ class ReverbState:
     allpass_states: tuple[tuple[np.ndarray, ...], ...]
     dc_states: tuple[np.ndarray, ...]
     dc_sum_states: tuple[np.ndarray, ...]
+    damping_states: tuple[np.ndarray, ...]
 
 
 def reverb_state(spec: ReverbSpec) -> ReverbState:
@@ -47,6 +48,7 @@ def reverb_state(spec: ReverbSpec) -> ReverbState:
         allpass_states=tuple(allpass_states),
         dc_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
         dc_sum_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
+        damping_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
     )
 
 
@@ -66,6 +68,7 @@ def render_reverb(
     new_allpass_states: list[tuple[np.ndarray, ...]] = []
     new_dc_states: list[np.ndarray] = []
     new_dc_sum_states: list[np.ndarray] = []
+    new_damping_states: list[np.ndarray] = []
 
     for channel in range(block.shape[1]):
         offset = spec.stereo_spread_frames if channel == 1 else 0
@@ -83,7 +86,10 @@ def render_reverb(
         summed, dc_sum_carry = dc_block_state(summed, sample_rate, state.dc_sum_states[channel])
         new_dc_sum_states.append(dc_sum_carry)
         if damping < 1.0:
-            summed = lfilter([1.0 - damping], [1.0, -damping], summed)
+            summed, damp_carry = lfilter([1.0 - damping], [1.0, -damping], summed, zi=state.damping_states[channel])
+            new_damping_states.append(damp_carry)
+        else:
+            new_damping_states.append(state.damping_states[channel])
 
         allpass_states = list(state.allpass_states[channel])
         for index, delay in enumerate(spec.allpass_delays_frames):
@@ -100,4 +106,5 @@ def render_reverb(
         allpass_states=tuple(new_allpass_states),
         dc_states=tuple(new_dc_states),
         dc_sum_states=tuple(new_dc_sum_states),
+        damping_states=tuple(new_damping_states),
     )
