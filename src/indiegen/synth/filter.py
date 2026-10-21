@@ -28,11 +28,17 @@ def lowpass_sos(cutoff_hz: int, q_num: int, q_den: int, sample_rate: int) -> np.
 
 
 def initial_state(sos: np.ndarray, channels: int = 1) -> np.ndarray:
-    """The zero state for a block of ``channels`` interleaved channels."""
-    state = sosfilt_zi(sos)
+    """The zero state of a filter that starts from silence.
+
+    ``sosfilt_zi`` would return the state for a *steady* input, which makes
+    a render begin with an offset instead of with silence. The fades have
+    been hiding that; it is not what a filter on a track that starts at zero
+    should do.
+    """
+    state = np.zeros((sos.shape[0], 2), dtype=np.float64)
     if channels == 1:
-        return np.asarray(state, dtype=np.float64)
-    return np.repeat(np.asarray(state, dtype=np.float64)[:, :, np.newaxis], channels, axis=2)
+        return state
+    return np.repeat(state[:, :, np.newaxis], channels, axis=2)
 
 
 def apply_biquad(sos: np.ndarray, block: np.ndarray, state: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
