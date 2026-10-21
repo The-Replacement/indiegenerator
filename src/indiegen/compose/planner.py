@@ -9,7 +9,20 @@ from __future__ import annotations
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
-from indiegen.config import PadCard, PluckCard, PolyPeriodCard, Preset
+from indiegen.compose.techniques.t5_dejavu import plan_deja_vu
+from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
+from indiegen.config import (
+    BassCard,
+    DejaVuCard,
+    HatCard,
+    KickCard,
+    PadCard,
+    PinkCard,
+    PluckCard,
+    PolyPeriodCard,
+    Preset,
+    SnareCard,
+)
 from indiegen.errors import PlanError
 from indiegen.plan import (
     SAMPLE_RATE,
@@ -126,6 +139,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     root_midi = rng.choice(roots if roots else lane.scale_midi)
     dither_seed = rng.next_u64()
 
+    boundaries = _section_boundaries(frames, frames_per_bar, section_count)
+
     ctx = TechniqueContext(
         preset=preset.name,
         seed=seed,
@@ -135,9 +150,18 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         sample_rate=SAMPLE_RATE,
         duration_frames=frames,
         frames_per_beat=frames_per_beat,
-        attack_frames=lane.attack_frames,
-        release_frames=lane.release_frames,
+        frames_per_bar=frames_per_bar,
+        attack_frames=lane.attack_frames or 0,
+        release_frames=lane.release_frames or 0,
+        section_boundaries=list(boundaries),
+        section_densities=[
+            station.section_profiles[index % len(station.section_profiles)].density for index in range(section_count)
+        ],
     )
+
+    # T7 resolves once: the lane's 1/f control signals are declared by the
+    # pink card and stamped onto the drum events.
+    pink = next((card for card in lane.techniques if isinstance(card, PinkCard)), None)
 
     events: list[Event] = []
     for card in lane.techniques:
@@ -147,10 +171,21 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
             events.extend(plan_poly_period(card, rng, ctx))
         elif isinstance(card, PluckCard):
             events.extend(plan_plucks(card, rng, ctx))
+        elif isinstance(card, KickCard):
+            events.append(plan_kick(card, rng, ctx, pink))
+        elif isinstance(card, SnareCard):
+            events.append(plan_snare(card, rng, ctx, pink))
+        elif isinstance(card, HatCard):
+            events.append(plan_hat(card, rng, ctx, pink))
+        elif isinstance(card, BassCard):
+            events.append(plan_bass(card, rng, ctx, pink))
+        elif isinstance(card, DejaVuCard):
+            events.extend(plan_deja_vu(card, rng, ctx))
+        elif isinstance(card, PinkCard):
+            continue
         else:
             events.append(plan_drone(card, rng, ctx))
 
-    boundaries = _section_boundaries(frames, frames_per_bar, section_count)
     sections: list[SectionPlan] = []
     for index in range(section_count):
         profile = station.section_profiles[index % len(station.section_profiles)]

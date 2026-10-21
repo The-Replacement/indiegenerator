@@ -35,8 +35,19 @@ from indiegen.errors import PlanError, RenderError
 from indiegen.fx.delay import DelayState, delay_state, render_delay
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
 from indiegen.mix.bus import pan_gains
-from indiegen.plan import DroneEvent, Event, Plan, PluckEvent, PolyPeriodEvent
+from indiegen.plan import (
+    BassEvent,
+    DroneEvent,
+    Event,
+    HatEvent,
+    KickEvent,
+    Plan,
+    PluckEvent,
+    PolyPeriodEvent,
+    SnareEvent,
+)
 from indiegen.synth.drone import DroneState, drone_state, render_drone_block
+from indiegen.synth.drums import DrumState, drum_state, render_drum_block
 from indiegen.synth.env import fade_gain, note_envelope_block, section_gain
 from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos
 from indiegen.synth.ks import PluckState, pluck_state, render_pluck_block
@@ -46,7 +57,9 @@ from indiegen.synth.poly_period import PolyPeriodState, poly_period_state, rende
 BLOCK_SIZE: int = 8192
 RENDER_BLOCK: int = 131072
 
-VoiceState = PadState | PolyPeriodState | DroneState | PluckState
+DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
+
+VoiceState = PadState | PolyPeriodState | DroneState | PluckState | DrumState
 
 
 @dataclass(frozen=True)
@@ -81,6 +94,8 @@ def _voice_state(event: Event, sample_rate: int) -> VoiceState:
         return poly_period_state(event)
     if isinstance(event, DroneEvent):
         return drone_state(event)
+    if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+        return drum_state(event)
     return pad_state(event)
 
 
@@ -101,6 +116,10 @@ def _voice_block(
     if isinstance(event, DroneEvent):
         assert isinstance(state, DroneState)
         return render_drone_block(event, sample_rate, start, stop, state)
+    if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+        assert isinstance(state, DrumState)
+        stereo, new_state = render_drum_block(event, sample_rate, start, stop, state)
+        return stereo, new_state
     assert isinstance(state, PadState)
     return render_pad_block(event, sample_rate, start, stop, state)
 
@@ -136,6 +155,12 @@ def _render_block(
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
 
     for index, event in enumerate(events):
+        if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+            # A drum pattern plays itself: the hits carry their own pan, so
+            # the block is already stereo.
+            stereo, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
+            main += stereo
+            continue
         event_start = event.start_frame
         event_stop = event_start + event.duration_frames
         overlap_start = max(start, event_start)

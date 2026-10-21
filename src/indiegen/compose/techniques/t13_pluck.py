@@ -31,6 +31,15 @@ def plan_plucks(card: PluckCard, rng: SplitMix64, ctx: TechniqueContext) -> list
         if start >= ctx.duration_frames:
             break
         length = min(duration, ctx.duration_frames - start)
+        # The layer only plays in the sections the arrangement has reached.
+        section = 0
+        for index, boundary in enumerate(ctx.section_boundaries):
+            if start >= boundary:
+                section = index
+        densities = ctx.section_densities
+        if densities and densities[min(section, len(densities) - 1)] < card.min_density:
+            start += spacing
+            continue
         for voice, detune in ((0, 0), (1, card.detune_cents)):
             events.append(
                 PluckEvent(
