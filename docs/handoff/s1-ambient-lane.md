@@ -33,22 +33,33 @@ Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle
 
 ## Current state
 
-- 257 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
-- Measured on this machine: the 90 s ambient piece renders in 21.05 s of
-  audio time (4.3× faster than realtime) with 823 MB peak RSS; the 10 s
-  station render in 0.30 s with 211 MB. Peak −18.001 dBFS, true peak
-  −17.995 dBTP, integrated loudness −31.079 LUFS (ambient) and −26.791 LUFS
-  (station). Both hashes stable across runs and across processes.
+- 262 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
+- Measured on this machine: the 90 s ambient piece renders in 9.53 s of
+  audio time (9.5× faster than realtime) with 332 MB peak RSS; the 10 s
+  station render in 0.22 s with 143 MB; the 15-minute piece in 99.2 s with
+  887 MB. Peak −17.998 dBFS, true peak −17.993 dBTP, integrated loudness
+  −30.752 LUFS (ambient) and −26.297 LUFS (station). Both hashes stable
+  across runs and across processes.
 - The **frozen S0 artifact is still bit-identical**: its committed plan bytes
   are migrated into the new model and re-render to `892cb06a…` (a test, not
   a claim).
 
 ## Known issues and blockers
 
-- **The render is not yet memory-block-wise.** 90 s costs 823 MB, so a
-  6–15 minute ambient piece will not fit the 1.5 GB budget. The voices are
-  rendered whole and the mix is held in full. This is the next thing to fix,
-  and it is a real limit of the current slice.
+- **The render is memory-block-wise as of 2026-10-21.** The voices, the bus
+  graph, the master chain and the loudness meter are all cut into blocks and
+  carry their state; the 90 s piece peaks at 332 MB and a 15-minute one at
+  887 MB, inside the 1.5 GB budget. What still grows with the track is the
+  mix itself — one stereo float64 array, 605 MB at fifteen minutes — because
+  the master chain needs the peak of the whole mix before it can stage it.
+- **T1's phase does not advance.** The poly-period partial's frequency is a
+  plain float and `np.cumsum` of a float is a one-element array, so the phase
+  is one number for the whole event and the voice is the envelope times a
+  constant. The loops of T1 are some 74 dB under the drone, which is to say
+  inaudible, and the README's claim of "a bank of poly-period loops" is
+  stronger than the artifact. The fix is to carry the running phase the way
+  the pad and the drone do; it moves the ambient golden, so it is its own
+  commit and its own re-verify.
 - **The other four lanes are still the S0 pad.** Only the ambient lane has
   the drone, the loops and the guitar, so most seeds of the station blend
   still land on a pad.
@@ -73,18 +84,21 @@ Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle
 
 ## Next steps
 
-1. Get the `sdd-verify` verdict for `s1-ambient-lane`; fix and re-verify if
-   it is NEEDS_WORK (max two cycles, then surface the table and stop).
-2. `sdd-archive` writes `sdd-s1-ambient-lane-done`.
-3. **Make the render block-wise in memory** so a 6–15 minute piece fits the
-   budget. This belongs to the start of S2 or S3.
-4. **S2 `s2-motorik-lane`** — drums, T6 euclidean rhythms with conditional
+1. ~~Get the `sdd-verify` verdict~~ — done: APPROVED, with the caveat that
+   the remediation table was re-audited by the orchestrator and not by a
+   second independent pair of eyes. That second pass is still owed.
+2. ~~`sdd-archive` writes `sdd-s1-ambient-lane-done`~~ — done.
+3. ~~**Make the render block-wise in memory**~~ — done, 2026-10-21. A
+   15-minute piece fits the budget at 887 MB.
+4. **Fix T1's phase** (see the known issues) — its own commit, its own golden
+   regeneration, its own re-verify.
+5. **S2 `s2-motorik-lane`** — drums, T6 euclidean rhythms with conditional
    triggers, T7 as a technique, T5 deja-vu sequencing, one 3-minute piece.
    Gates 2, 4, 7, 8.
-5. **S3 `s3-arranger`** — section graph, tension curve, motif transforms, T14
+6. **S3 `s3-arranger`** — section graph, tension curve, motif transforms, T14
    as a general arranger, T16 modal shift, kosmische and dub lanes. Gates 5,
    6, 13. **Stop and ask the human at the S3 checkpoint.**
-6. S4 mix/master and the full gate set, S5 catalog and install, S6 the taste
+7. S4 mix/master and the full gate set, S5 catalog and install, S6 the taste
    pass with a human listening.
 
 ## Relevant files

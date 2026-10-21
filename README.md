@@ -62,18 +62,18 @@ Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
 best of three runs on an otherwise idle host; the host is shared, and under
 load the 90 s render has been observed to take up to 98 s.
 
-| Measurement | 10 s station | 90 s ambient |
-|---|---|---|
-| Render time (audio only) | 0.30 s | 21.05 s |
-| Faster than realtime | 33× | 4.3× |
-| Wall clock, including interpreter start | 3.10 s | 26.83 s |
-| Peak RSS | 211 MB | 823 MB (budget 1500 MB) |
-| Integrated loudness | −26.297 LUFS | −30.752 LUFS |
-| Sample peak | −18.001 dBFS | −17.998 dBFS |
-| True peak (4× oversampled) | −17.995 dBTP | −17.993 dBTP |
-| Frames | 441 000 | 3 969 000 |
-| `plan_sha256` stable across runs | yes | yes |
-| `pcm_sha256` stable across runs | yes | yes |
+| Measurement | 10 s station | 90 s ambient | 900 s ambient |
+|---|---|---|---|
+| Render time (audio only) | 0.22 s | 9.53 s | 99.2 s |
+| Faster than realtime | 46× | 9.5× | 9.1× |
+| Wall clock, including interpreter start | 2.04 s | 13.70 s | 128 s |
+| Peak RSS | 143 MB | 332 MB | 887 MB (budget 1500 MB) |
+| Integrated loudness | −26.297 LUFS | −30.752 LUFS | −31.280 LUFS |
+| Sample peak | −18.001 dBFS | −17.998 dBFS | −18.001 dBFS |
+| True peak (4× oversampled) | −17.995 dBTP | −17.993 dBTP | −17.995 dBTP |
+| Frames | 441 000 | 3 969 000 | 39 690 000 |
+| `plan_sha256` stable across runs | yes | yes | yes |
+| `pcm_sha256` stable across runs | yes | yes | yes |
 
 Loudness and peak are **printed, not enforced** except by the two gates below.
 
@@ -114,8 +114,11 @@ preset.yaml + seed ──compose()──▶ Plan ──director()──▶ Plan 
   event kinds it applies to, and it is logged only if it changed something:
   the station's transpose-up-a-fourth acts on the pad, and the ambient lane's
   material is left alone.
-- **The renderer** is a state machine over 8192-sample blocks. Biquad state,
-  delay-line state and reverb state cross the block boundary as values.
+- **The renderer is a state machine over blocks.** The voices, the bus
+  lowpass, the delay, the reverb, the master chain and the loudness meter
+  all carry their state across the block boundary as values, and a block is
+  the same audio whatever the block size is. Only the mix itself spans the
+  whole track.
 - **The master chain** stages the mix to a declared target peak, applies a
   safety limiter and a seeded TPDF dither, and quantises to int16.
 - **The write path** is `out/.tmp/<name>.flac` → `fsync` → `os.replace` into
@@ -221,9 +224,10 @@ This slice is the first lane, not the last one. Everything below is
   the drone, the loops and the guitar. The station blend picks a lane per
   seed, so most seeds still land on a pad.
 - **The ambient piece is 90 seconds, not the 6–15 minutes** the recipe asks
-  for, and **the render is not yet block-wise in memory**: 90 s costs 823 MB,
-  so a fifteen-minute piece would not fit in the 1.5 GB budget. That is the
-  next thing to fix, and it is a real limitation, not a rounding error.
+  for. The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
+  budget, at 887 MB. What still grows with the track is the mix itself —
+  one stereo float64 array, 605 MB at fifteen minutes — because the master
+  chain needs the peak of the whole mix before it can stage it.
 - **No mix buses beyond the two**, no sidechain, no limiter as a mastering
   stage, no loudness normalisation.
 - **No `theory/` module**: the chord and scale rules live in the composer

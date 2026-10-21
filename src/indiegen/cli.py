@@ -143,6 +143,11 @@ def _render(
             )
         raise typer.Exit(code=2)
 
+    # The gates have looked at the mix; from here on the master is the only
+    # copy of the audio that has to be held, and at fifteen minutes the mix
+    # is 605 MB of it.
+    del mix
+
     filename = filename_for(plan)
     tags = build_tags(plan)
     path = write_flac_atomic(out, filename, pcm, plan.sample_rate, tags, preset=plan.preset, seed=plan.seed)
