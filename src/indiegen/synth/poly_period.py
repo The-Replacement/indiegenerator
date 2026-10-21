@@ -5,18 +5,12 @@ voice sounds for its on-window at the start of every cycle and is exactly
 silent in between, so a cycle boundary is never a click and the silence
 between cycles is exact zero rather than nearly zero.
 
-The voice is rendered a block at a time. The envelope of a cycle is cut over
-the whole cycle and sliced, because the ramp of a cycle is a function of the
-cycle and not of the block: a ramp cut short would be a different ramp.
+The phase runs continuously through the track and the envelope is the only
+thing that cycles. The voices have different periods, so their on-windows
+never line up and the superpattern does not repeat.
 
-KNOWN DEFECT: the phase does not advance. The partial's frequency is a
-plain float, and ``np.cumsum`` of a float is a one-element array, so the
-phase is the same number for the whole event and the voice is the envelope
-times a constant. The loops of T1 are therefore inaudible: the voice's RMS
-is 0.0002 against the drone's, some 74 dB down. This is kept exactly as it
-is, because the block-wise render must not move the audio; the fix is to
-carry the running phase the way the pad and the drone do, which moves the
-ambient golden.
+The voice is rendered a block at a time. The phase is the sum of the
+partial's frequency, so every voice and partial carries a running total.
 """
 
 from __future__ import annotations
@@ -28,19 +22,23 @@ import numpy as np
 
 from indiegen.plan import PolyPeriodEvent, PolyPeriodVoice
 from indiegen.synth.env import dc_block_state
-from indiegen.synth.osc import midi_to_hz
+from indiegen.synth.osc import cumulative_sum, midi_to_hz
 
 
 @dataclass(frozen=True)
 class PolyPeriodState:
-    """The DC blocker of a poly-period loop."""
+    """The running phase of every voice and partial, and the DC blocker."""
 
+    carries: tuple[float, ...]
     dc: np.ndarray
 
 
 def poly_period_state(event: PolyPeriodEvent) -> PolyPeriodState:
     """The zero state of a poly-period loop."""
-    return PolyPeriodState(dc=np.zeros(1, dtype=np.float64))
+    return PolyPeriodState(
+        carries=tuple(0.0 for _ in range(len(event.voices) * len(event.partials))),
+        dc=np.zeros(1, dtype=np.float64),
+    )
 
 
 def voice_envelope_block(
@@ -102,6 +100,8 @@ def render_poly_period_block(
     """One poly-period loop, over the local frames ``[start, stop)``."""
     count = stop - start
     voice = np.zeros(count, dtype=np.float64)
+    carries = list(state.carries)
+    index = 0
     for entry in event.voices:
         envelope = voice_envelope_block(
             entry,
@@ -115,10 +115,15 @@ def render_poly_period_block(
         for partial in event.partials:
             ratio = partial.ratio.numerator / partial.ratio.denominator
             frequency = base * ratio * math.pow(2.0, partial.detune_cents / 1200.0)
-            phase = 2.0 * np.pi * np.cumsum(frequency) / sample_rate
-            voice += envelope * np.sin(phase) * math.pow(10.0, partial.amplitude_millibels / 2000.0)
+            phase, carries[index] = cumulative_sum(carries[index], np.full(count, frequency, dtype=np.float64))
+            voice += (
+                envelope
+                * np.sin(2.0 * np.pi * phase / sample_rate)
+                * math.pow(10.0, partial.amplitude_millibels / 2000.0)
+            )
+            index += 1
     blocked, dc_carry = dc_block_state(voice, sample_rate, state.dc)
-    return blocked, PolyPeriodState(dc=dc_carry)
+    return blocked, PolyPeriodState(carries=tuple(carries), dc=dc_carry)
 
 
 def render_poly_period(event: PolyPeriodEvent, sample_rate: int) -> np.ndarray:

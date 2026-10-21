@@ -74,7 +74,8 @@ class LoudnessMeter:
         self._filters: list[list[np.ndarray]] = []
         self._energies: list[np.ndarray] = []
         self._buffer = np.zeros((0, 0), dtype=np.float64)
-        self._tail = np.zeros((0, 0), dtype=np.float64)
+        self._pending: np.ndarray | None = None
+        self._past = np.zeros((0, 0), dtype=np.float64)
         self._position = 0
         self._next_window = 0
         self._count = 0
@@ -109,27 +110,40 @@ class LoudnessMeter:
             weighted[:, index] = channel
         return weighted
 
-    def _feed_true_peak(self, signal: np.ndarray) -> None:
-        """Oversample the block and keep the largest inter-sample peak.
+    def _measure_true_peak(self, block: np.ndarray, past: np.ndarray, future: np.ndarray) -> None:
+        """Oversample one block with its context and keep the largest peak.
 
-        The filter of the oversampler reaches back over a handful of
-        samples, so the block is oversampled with the last samples of the
-        block before it: without them the peak at the start of a block would
-        be measured against silence.
+        The filter of the oversampler reaches over a handful of samples in
+        both directions, so the block is oversampled together with the last
+        samples of the block before it and the first samples of the block
+        after it. Without the past the start of the block is measured
+        against silence; without the future the end of it is, and the peak
+        comes out wrong by up to a third of a dB.
         """
-        if self._tail.size:
-            combined = np.concatenate((self._tail, signal))
-        else:
-            combined = signal
-        offset = OVERSAMPLE * self._tail.shape[0]
+        pieces = [piece for piece in (past, block, future) if piece.size]
+        combined = np.concatenate(pieces) if len(pieces) > 1 else pieces[0]
         upsampled = resample_poly(combined, OVERSAMPLE, 1, axis=0)
-        stop = min(offset + OVERSAMPLE * signal.shape[0], upsampled.shape[0])
-        if stop > offset:
-            value = float(np.max(np.abs(upsampled[offset:stop])))
-            if value > self._true_peak:
-                self._true_peak = value
-        keep = min(MARGIN_FRAMES, signal.shape[0])
-        self._tail = signal[signal.shape[0] - keep :].copy() if keep else signal[:0].copy()
+        offset = OVERSAMPLE * past.shape[0]
+        stop = offset + OVERSAMPLE * block.shape[0]
+        value = float(np.max(np.abs(upsampled[offset:stop])))
+        if value > self._true_peak:
+            self._true_peak = value
+
+    def _feed_true_peak(self, signal: np.ndarray) -> None:
+        """Hold the block until the next one arrives, then measure it."""
+        if self._pending is not None:
+            self._measure_true_peak(self._pending, self._past, signal[:MARGIN_FRAMES])
+            keep = min(MARGIN_FRAMES, self._pending.shape[0])
+            self._past = self._pending[self._pending.shape[0] - keep :].copy() if keep else self._pending[:0].copy()
+        self._pending = signal
+
+    def _flush_true_peak(self) -> None:
+        """Measure the last block, whose future is silence."""
+        if self._pending is None:
+            return
+        silence = np.zeros((MARGIN_FRAMES, self._pending.shape[1]), dtype=np.float64)
+        self._measure_true_peak(self._pending, self._past, silence)
+        self._pending = None
 
     def _feed_energies(self, weighted: np.ndarray) -> None:
         """Cut the loudness windows out of the rolling buffer."""
@@ -177,7 +191,11 @@ class LoudnessMeter:
         return 20.0 * math.log10(max(self._peak, 1e-30))
 
     def true_peak_dbtp(self) -> float:
-        """The inter-sample peak, in dBTP."""
+        """The inter-sample peak, in dBTP.
+
+        The last block is measured here, against the silence that follows it.
+        """
+        self._flush_true_peak()
         if self._count == 0:
             return float("-inf")
         return 20.0 * math.log10(max(self._true_peak, 1e-30))

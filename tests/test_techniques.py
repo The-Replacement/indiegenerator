@@ -8,6 +8,9 @@ frozen plan.
 
 from __future__ import annotations
 
+import math
+
+import numpy as np
 import pytest
 
 from indiegen.compose import compose, director
@@ -96,6 +99,35 @@ def test_the_gate_eight_safety_rule(ambient_plan: Plan) -> None:
         if event.kind != "poly_period":
             continue
         assert event.voices[0].phase_frames == 0
+
+
+def test_the_poly_period_voice_is_a_tone(ambient_plan: Plan) -> None:
+    """The loops are tones, not a shaped constant.
+
+    The partial's frequency used to be a plain float, and np.cumsum of a
+    float is a one-element array, so the phase was one number for the whole
+    event: the voice was the envelope times a constant, and the loops of T1
+    were some 74 dB under the drone. The phase has to advance.
+    """
+    from indiegen.synth.osc import midi_to_hz
+    from indiegen.synth.poly_period import render_poly_period
+
+    event = next(event for event in ambient_plan.events if event.kind == "poly_period")
+    voice = render_poly_period(event, 44100)
+    entry = event.voices[0]
+    start = entry.phase_frames + event.attack_frames + (entry.on_frames - event.attack_frames) // 2
+    window = voice[start : start + 131072]
+    assert window.size == 131072
+
+    # Not a constant: the envelope's shape is the only thing that was left.
+    assert float(np.std(window)) > 0.05
+
+    # And a tone at the voice's own pitch.
+    spectrum = np.abs(np.fft.rfft(window * np.hanning(window.size)))
+    peak = int(np.argmax(spectrum))
+    measured = peak * 44100 / window.size
+    expected = midi_to_hz(entry.midi)
+    assert abs(1200.0 * math.log2(measured / expected)) < 10.0
 
 
 def test_a_density_outside_the_band_raises_a_plan_error(presets_dir: object) -> None:
