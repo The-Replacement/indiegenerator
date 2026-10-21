@@ -43,6 +43,37 @@ def comb_line(
     return flat[:count], new_state
 
 
+def delay_line(
+    signal: np.ndarray,
+    delay: int,
+    feedback: float,
+    state: tuple[np.ndarray, np.ndarray],
+) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray]]:
+    """A true delay line: ``y[n] = x[n-D] + g * y[n-D]``.
+
+    Unlike a comb, a delay has no zero-delay path: the wet starts at frame
+    D, so the first D frames of a delay's output are exactly zero. The
+    station's guitar is heard through this, and the guitar's dry is never
+    summed separately - if the delay had a zero-delay path, the dry would
+    leak in through it.
+    The state holds the last D input and output samples, not one block's
+    worth: the delay is longer than the render block, so a block's worth of
+    history would silently shorten the delay to the block size and let the
+    dry leak through.
+    """
+    count = signal.size
+    input_history, output_history = state
+    extended_input = np.concatenate([input_history, signal])
+    extended_output = np.empty(delay + count, dtype=np.float64)
+    extended_output[:delay] = output_history
+    for start in range(delay, delay + count, delay):
+        stop = min(delay + count, start + delay)
+        extended_output[start:stop] = (
+            extended_input[start - delay : stop - delay] + feedback * extended_output[start - delay : stop - delay]
+        )
+    return extended_output[delay:], (extended_input[count:], extended_output[count:])
+
+
 def allpass_line(
     signal: np.ndarray,
     delay: int,
