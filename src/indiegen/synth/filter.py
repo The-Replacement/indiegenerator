@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from scipy.signal import sosfilt, sosfilt_zi
+from scipy.signal import sosfilt
 
 
 def lowpass_sos(cutoff_hz: int, q_num: int, q_den: int, sample_rate: int) -> np.ndarray:
