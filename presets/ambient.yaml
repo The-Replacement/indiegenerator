@@ -1,9 +1,9 @@
 kind: lane
 lane: ambient
-# The filename token: the output regex forbids hyphens.
-file_token: ambient
 alias: Long Exposure
 album: Rooms in Half Light
+# The filename token: the output regex forbids hyphens.
+file_token: ambient
 
 tempo_range_bpm: [112, 124]
 meter: [4, 4]
@@ -15,15 +15,58 @@ fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 5000, q_num: 1, q_den: 1}
 
 techniques:
-  - name: pad_drone
-    partials: 3
-    detune_min_cents: -5
-    detune_max_cents: 5
-    lfo_rate: {numerator: 1, denominator: 8}
-    lfo_depth_cents: 4
-    amplitude_millibels: -300
+  # T1: poly-period loops. The periods are drawn without replacement, so the
+  # superpattern never repeats. The chord is the lane's interval list, and at
+  # most one pair of voices may form a minor second.
+  - kind: poly_period
+    voice_count: {min: 4, max: 6}
+    period_seconds_range: {min: 15, max: 90}
+    on_fraction_permille: {min: 140, max: 280}
+    attack_seconds_range: {min: 2, max: 10}
+    chord_intervals: [0, 3, 5, 7, 10]
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+
+  # T11: a spectral drone stack. The partials are exact just ratios and each
+  # one drifts on its own 1/f signal.
+  - kind: drone
+    partial_count: {min: 6, max: 10}
+    detune_cents_range: {min: -15, max: 15}
+    detune_lfo_rate: {numerator: 1, denominator: 10}
+    detune_lfo_depth_cents: 12
+    amplitude_lfo_rate: {numerator: 1, denominator: 13}
+    amplitude_lfo_depth_millibels: 400
+    ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 9, denominator: 8}
+      - {numerator: 5, denominator: 4}
+      - {numerator: 4, denominator: 3}
+      - {numerator: 3, denominator: 2}
+
+  # T13: the station's signature timbre.
+  - kind: pluck
+    count: {min: 3, max: 6}
+    feedback_num_min: 996
+    feedback_num_max: 999
+    feedback_den: 1000
+    detune_cents: 7
+    brightness: {numerator: 1, denominator: 2}
+    pluck_position_permille: 300
+    duration_seconds: {min: 3, max: 6}
+    spacing_seconds: {min: 4, max: 12}
 
 section_count_range: [4, 4]
-duration_range_seconds: [10, 10]
+duration_range_seconds: [90, 90]
 attack_frames: 13230
 release_frames: 13230
+
+# A short Schroeder reverb: eight parallel combs into four series allpasses.
+reverb:
+  comb_delays_frames: [1557, 1617, 1491, 1422, 1277, 1356, 1397, 1129]
+  comb_feedback: {numerator: 84, denominator: 100}
+  damping: {numerator: 2, denominator: 100}
+  allpass_delays_frames: [556, 441, 341, 225]
+  allpass_feedback: {numerator: 5, denominator: 10}
+  stereo_spread_frames: 23
+  send_millibels: -600

@@ -10,17 +10,117 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Annotated, Any, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from indiegen.errors import PlanError
-from indiegen.plan import DirectorMove, FxSend, LaneWeight, SectionProfile, TechniqueCard
+from indiegen.plan import DirectorMove, FxSend, LaneWeight, Rational, SectionProfile
 
 LANE_NAMES: tuple[str, ...] = ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise")
 
 PresetModel = TypeVar("PresetModel", bound=BaseModel)
+
+
+class RangeInt(BaseModel):
+    """An inclusive integer range."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    min: int
+    max: int
+
+
+class PadCard(BaseModel):
+    """The pad drone's parameters."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["pad"]
+    partials: RangeInt
+    detune_min_cents: int
+    detune_max_cents: int
+    lfo_rate: Rational
+    lfo_depth_cents: int
+    amplitude_millibels: int
+
+
+class PolyPeriodCard(BaseModel):
+    """T1: poly-period loops with distinct periods and one chord."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["poly_period"]
+    voice_count: RangeInt
+    period_seconds_range: RangeInt
+    on_fraction_permille: RangeInt
+    attack_seconds_range: RangeInt
+    chord_intervals: list[int]
+    partial_ratios: list[Rational]
+
+
+class DroneCard(BaseModel):
+    """T11: a spectral drone stack with per-partial drift."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["drone"]
+    partial_count: RangeInt
+    detune_cents_range: RangeInt
+    detune_lfo_rate: Rational
+    detune_lfo_depth_cents: int
+    amplitude_lfo_rate: Rational
+    amplitude_lfo_depth_millibels: int
+    ratios: list[Rational]
+
+
+class PluckCard(BaseModel):
+    """T13: the Karplus-Strong guitar, the station's signature timbre."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: Literal["pluck"]
+    count: RangeInt
+    feedback_num_min: int
+    feedback_num_max: int
+    feedback_den: int
+    detune_cents: int
+    brightness: Rational
+    pluck_position_permille: int
+    duration_seconds: RangeInt
+    spacing_seconds: RangeInt
+
+
+TechniqueCard = Annotated[
+    PadCard | PolyPeriodCard | DroneCard | PluckCard,
+    Field(discriminator="kind"),
+]
+
+
+class DelayCard(BaseModel):
+    """The station's dotted-eighth delay send."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    delay_ratio: Rational
+    feedback: Rational
+    damping: Rational
+    send_millibels: int
+
+
+class ReverbCard(BaseModel):
+    """A lane's short Schroeder reverb."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    comb_delays_frames: list[int]
+    comb_feedback: Rational
+    damping: Rational
+    allpass_delays_frames: list[int]
+    allpass_feedback: Rational
+    stereo_spread_frames: int
+    send_millibels: int
 
 
 class LanePreset(BaseModel):
@@ -42,6 +142,7 @@ class LanePreset(BaseModel):
     duration_range_seconds: list[int]
     attack_frames: int
     release_frames: int
+    reverb: ReverbCard | None = None
 
 
 class LaneEntry(BaseModel):
@@ -75,6 +176,7 @@ class StationPreset(BaseModel):
     dither_lsb: int
     track_number: int
     format_version: int
+    delay: DelayCard
 
 
 class Preset(BaseModel):

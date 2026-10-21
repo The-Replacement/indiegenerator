@@ -58,13 +58,25 @@ section_profiles:
   - {function: plateau, density: 80, level_millibels: -500}
   - {function: outro, density: 30, level_millibels: -1400}
 
-# The Director's deck. Every draw is logged in the plan.
+# The Director's deck. Every draw is logged in the plan. The move declares
+# which kinds of event it applies to, so the ambient lane's material is left
+# alone: T14 as a general arranger is a later slice.
 strategy_deck:
   - sample: 220500
     strategy: transpose_up_fourth
     detail: transpose the motif up a fourth
     parameter: 5
     crossfade_frames: 11025
+    applies_to: [pad]
+
+# The station's signature: the KS guitar is always heard through a dotted
+# eighth delay. The ratio is resolved to an integer frame count at compose
+# time, so the renderer never sees the tempo.
+delay:
+  delay_ratio: {numerator: 3, denominator: 4}
+  feedback: {numerator: 55, denominator: 100}
+  damping: {numerator: 30, denominator: 100}
+  send_millibels: 0
 
 fade_in_frames: 13230
 fade_out_frames: 22050
