@@ -27,18 +27,18 @@ The render prints twelve lines and leaves two files in `out/`: the tagged
 FLAC and a JSON sidecar holding the plan and the measurements.
 
 ```
-path: out/ambient_circuit_glass_s1042.flac
-sidecar: out/ambient_circuit_glass_s1042.json
+path: out/ambient_signal_iron_s1042.flac
+sidecar: out/ambient_signal_iron_s1042.json
 duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
-peak: -17.998 dBFS
-true_peak: -17.993 dBTP
-loudness: -30.752 LUFS
+peak: -18.001 dBFS
+true_peak: -17.995 dBTP
+loudness: -32.506 LUFS
 sections: 4
 techniques: poly_period,drone,pluck
-plan_sha256: 715a21b1ee5aa64b3627300379500d32fe15adae2f6f06b5c8fad92b8bcd2ec5
-pcm_sha256: 7e2ae631989adba0d2e522de1fba0085e0b5b07df5e2c54466ad2f1745b68369
-render_seconds: 21.052
+plan_sha256: 063846bf02d63d94c41867874e9914fec9b21997a4fd41434e8f754f5227b3d5
+pcm_sha256: f0909aa0c5dee0c31aa6753b10a5e5a966b64739ba4cf8361e4c1a81a38837d6
+render_seconds: 10.739
 ```
 
 Other commands:
@@ -64,13 +64,13 @@ load the 90 s render has been observed to take up to 98 s.
 
 | Measurement | 10 s station | 90 s ambient | 900 s ambient |
 |---|---|---|---|
-| Render time (audio only) | 0.22 s | 9.53 s | 99.2 s |
-| Faster than realtime | 46× | 9.5× | 9.1× |
-| Wall clock, including interpreter start | 2.04 s | 13.70 s | 128 s |
-| Peak RSS | 143 MB | 332 MB | 887 MB (budget 1500 MB) |
-| Integrated loudness | −26.297 LUFS | −30.752 LUFS | −31.280 LUFS |
-| Sample peak | −18.001 dBFS | −17.998 dBFS | −18.001 dBFS |
-| True peak (4× oversampled) | −17.995 dBTP | −17.993 dBTP | −17.995 dBTP |
+| Render time (audio only) | 0.21 s | 10.74 s | 111 s |
+| Faster than realtime | 47× | 8.4× | 8.1× |
+| Wall clock, including interpreter start | 2.06 s | 14.90 s | 140 s |
+| Peak RSS | 143 MB | 331 MB | 890 MB (budget 1500 MB) |
+| Integrated loudness | −26.297 LUFS | −32.506 LUFS | −33.03 LUFS |
+| Sample peak | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS |
+| True peak (4× oversampled) | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP |
 | Frames | 441 000 | 3 969 000 | 39 690 000 |
 | `plan_sha256` stable across runs | yes | yes | yes |
 | `pcm_sha256` stable across runs | yes | yes | yes |

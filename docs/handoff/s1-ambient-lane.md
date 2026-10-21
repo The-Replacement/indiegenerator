@@ -33,12 +33,12 @@ Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle
 
 ## Current state
 
-- 262 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
-- Measured on this machine: the 90 s ambient piece renders in 9.53 s of
-  audio time (9.5× faster than realtime) with 332 MB peak RSS; the 10 s
-  station render in 0.22 s with 143 MB; the 15-minute piece in 99.2 s with
-  887 MB. Peak −17.998 dBFS, true peak −17.993 dBTP, integrated loudness
-  −30.752 LUFS (ambient) and −26.297 LUFS (station). Both hashes stable
+- 265 tests pass; `ruff check`, `ruff format --check` and `mypy --strict` are clean.
+- Measured on this machine: the 90 s ambient piece renders in 10.74 s of
+  audio time (8.4× faster than realtime) with 331 MB peak RSS; the 10 s
+  station render in 0.21 s with 143 MB; the 15-minute piece in 111 s with
+  890 MB. Peak −18.001 dBFS, true peak −17.995 dBTP, integrated loudness
+  −32.506 LUFS (ambient) and −26.297 LUFS (station). Both hashes stable
   across runs and across processes.
 - The **frozen S0 artifact is still bit-identical**: its committed plan bytes
   are migrated into the new model and re-render to `892cb06a…` (a test, not
@@ -52,14 +52,15 @@ Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle
   887 MB, inside the 1.5 GB budget. What still grows with the track is the
   mix itself — one stereo float64 array, 605 MB at fifteen minutes — because
   the master chain needs the peak of the whole mix before it can stage it.
-- **T1's phase does not advance.** The poly-period partial's frequency is a
-  plain float and `np.cumsum` of a float is a one-element array, so the phase
-  is one number for the whole event and the voice is the envelope times a
-  constant. The loops of T1 are some 74 dB under the drone, which is to say
-  inaudible, and the README's claim of "a bank of poly-period loops" is
-  stronger than the artifact. The fix is to carry the running phase the way
-  the pad and the drone do; it moves the ambient golden, so it is its own
-  commit and its own re-verify.
+- **T1's phase did not advance, and now it does.** `np.cumsum` of a Python
+  float is a one-element array, so the poly-period voice was the envelope
+  times a constant: the loops were some 74 dB under the drone, which is to
+  say inaudible, and the README's claim of "a bank of poly-period loops" was
+  stronger than the artifact. Fixed on 2026-10-21 by carrying the running
+  phase the way the pad and the drone do. The plan does not change, so the
+  plan hash holds; the audio does, so the ambient golden moved to
+  `f0909aa0…` and the piece is 1.75 LU quieter, because the loops are now
+  the loudest thing in the mix and the master stages to the peak.
 - **The other four lanes are still the S0 pad.** Only the ambient lane has
   the drone, the loops and the guitar, so most seeds of the station blend
   still land on a pad.
@@ -90,8 +91,8 @@ Status: implemented, 257 tests green, ruff and mypy clean, one remediation cycle
 2. ~~`sdd-archive` writes `sdd-s1-ambient-lane-done`~~ — done.
 3. ~~**Make the render block-wise in memory**~~ — done, 2026-10-21. A
    15-minute piece fits the budget at 887 MB.
-4. **Fix T1's phase** (see the known issues) — its own commit, its own golden
-   regeneration, its own re-verify.
+4. ~~**Fix T1's phase**~~ — done, 2026-10-21. The ambient golden moved to
+   `f0909aa0…`; the S1 verify needs a re-run over the T1 criteria.
 5. **S2 `s2-motorik-lane`** — drums, T6 euclidean rhythms with conditional
    triggers, T7 as a technique, T5 deja-vu sequencing, one 3-minute piece.
    Gates 2, 4, 7, 8.
