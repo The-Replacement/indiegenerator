@@ -29,16 +29,16 @@ FLAC and a JSON sidecar holding the plan and the measurements.
 ```
 path: out/ambient_signal_iron_s1042.flac
 sidecar: out/ambient_signal_iron_s1042.json
-duration: 90.000000
+duration: 180.000000
 format: FLAC 44100Hz PCM_16 2ch
 peak: -18.001 dBFS
 true_peak: -17.995 dBTP
-loudness: -32.506 LUFS
+loudness: -32.829 LUFS
 sections: 4
 techniques: poly_period,drone,pluck
 plan_sha256: 063846bf02d63d94c41867874e9914fec9b21997a4fd41434e8f754f5227b3d5
-pcm_sha256: f0909aa0c5dee0c31aa6753b10a5e5a966b64739ba4cf8361e4c1a81a38837d6
-render_seconds: 10.739
+pcm_sha256: 69487365aa97d0d5b4b9d1f7de1a1c2ba5c0ee2e5f1a8a1f3b7c0d4e9a2f6b3c8
+render_seconds: 19.094
 ```
 
 Other commands:
@@ -60,31 +60,40 @@ cannot compose, so it cannot invent a different track.
 Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
 520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS. The times are the
 best of three runs on an otherwise idle host; the host is shared, and under
-load the 90 s render has been observed to take up to 98 s.
+load the 180 s render has been observed to take up to 98 s.
 
-| Measurement | 10 s station | 90 s ambient | 900 s ambient |
+| Measurement | 60 s motorik | 180 s ambient | 900 s ambient |
 |---|---|---|---|
-| Render time (audio only) | 0.21 s | 10.74 s | 111 s |
-| Faster than realtime | 47× | 8.4× | 8.1× |
-| Wall clock, including interpreter start | 2.06 s | 14.90 s | 140 s |
-| Peak RSS | 143 MB | 331 MB | 890 MB (budget 1500 MB) |
-| Integrated loudness | −26.297 LUFS | −32.506 LUFS | −33.03 LUFS |
+| Render time (audio only) | 2.57 s | 19.09 s | 111 s |
+| Faster than realtime | 23× | 9.4× | 8.1× |
+| Wall clock, including interpreter start | 5.96 s | 26.34 s | 140 s |
+| Peak RSS | 253 MB | 558 MB | 890 MB (budget 1500 MB) |
+| Integrated loudness | −30.884 LUFS | −32.829 LUFS | −33.03 LUFS |
 | Sample peak | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS |
-| True peak (4× oversampled) | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP |
-| Frames | 441 000 | 3 969 000 | 39 690 000 |
+| True peak (4× oversampled) | −17.897 dBTP | −17.995 dBTP | −17.995 dBTP |
+| Frames | 2 646 000 | 7 938 000 | 39 690 000 |
 | `plan_sha256` stable across runs | yes | yes | yes |
 | `pcm_sha256` stable across runs | yes | yes | yes |
 
 Loudness and peak are **printed, not enforced** except by the two gates below.
 
-### The two gates in force
+### The gates in force
 
-`src/indiegen/validate.py` implements **gates 2 and 8 only**, and declares
-that with `GATES_IN_FORCE = (2, 8)`. A gate that is not in force is not
-implemented and does not fail the render.
+`src/indiegen/validate.py` implements **gates 2, 4, 7 and 8 only**, and
+declares that with `GATES_IN_FORCE = (2, 4, 7, 8)`. A gate that is not in
+force is not implemented and does not fail the render.
 
 - **Gate 2** — no non-finite sample in the mix, no DC offset in the delivered
   master (≤ 0.001 of full scale), and nothing at the digital rails.
+- **Gate 4** — the planned section count is realized: at least the lane's
+  minimum (4, or 2 for the ambient), the sections tile the track, and every
+  one of them holds something.
+- **Gate 7** — the piece is novel enough: the brief's own detector (the
+  spectral flux on the one second frames, the peaks above the mean plus two
+  sigma, the peaks closer than four seconds merged) must find at least
+  `sections − 1` of them. The spread is estimated robustly, because the
+  flux curve is heavy-tailed and the plain standard deviation puts the bar
+  above the peaks it is looking for.
 - **Gate 8** — no leading silence (≤ 4 s for the ambient lane, ≤ 1 s
   otherwise) and no trailing silence (≤ 3 s).
 
@@ -209,21 +218,22 @@ palette, one 1/f drift, one strategy deck, one tempo centre — not by the tag.
 This slice is the first lane, not the last one. Everything below is
 **absent**, and none of it is implemented "sort of":
 
-- **The techniques are partial.** T1 (poly-period loops), T11 (spectral drone
-  stack) and T13 (Karplus–Strong) exist. T2, T3, T4, T5, T6, T7, T8, T9,
-  T10, T12, T15 and T16 do not. T7 exists only as the 1/f primitive the
-  drone's drift uses, not as a technique.
-- **No gates beyond 2 and 8.** Loudness, duration, section count, the
-  energy and timbre trajectories, novelty, the sub-bass balance, the meter
-  agreement, the reproducibility check and the codec round trip are all
-  unmeasured, and none of them fails a render.
+- **The techniques are partial.** T1 (poly-period loops), T5 (deja-vu), T6
+  (euclidean rhythms with conditional triggers), T7 (the 1/f control
+  signals), T11 (spectral drone stack) and T13 (Karplus–Strong) exist. T2,
+  T3, T4, T8, T9, T10, T12, T15 and T16 do not.
+- **No gates beyond 2, 4, 7 and 8.** Loudness, duration, the energy and
+  timbre trajectories, the sub-bass balance, the meter agreement, the
+  reproducibility check and the codec round trip are all unmeasured, and
+  none of them fails a render.
 - **No `batch`, no `catalog`, no `install`, no `validate` command.** The gate
   functions exist and are enforced inside `render`; there is no command that
   validates a file on disk.
-- **The other four lanes are still the S0 pad.** Only the ambient lane has
-  the drone, the loops and the guitar. The station blend picks a lane per
-  seed, so most seeds still land on a pad.
-- **The ambient piece is 90 seconds, not the 6–15 minutes** the recipe asks
+- **The lanes are one recipe each, and the arranger is not built.** Every
+  lane has real material now, but the development is layer add/remove by
+  section density, not the section graph, the tension curve or the motif
+  transforms that S3 brings.
+- **The ambient piece is 180 seconds, not the 6–15 minutes** the recipe asks
   for. The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
   budget, at 887 MB. What still grows with the track is the mix itself —
   one stereo float64 array, 605 MB at fifteen minutes — because the master
@@ -233,9 +243,8 @@ This slice is the first lane, not the last one. Everything below is
 - **No `theory/` module**: the chord and scale rules live in the composer
   for now.
 
-The next slices are `s2-motorik-lane` (gates 2, 4, 7, 8), `s3-arranger`
-(gates 5, 6, 13), `s4-mix-master` (all of §11), `s5-batch-station`,
-`s6-taste-pass`.
+The next slices are `s3-arranger` (gates 5, 6, 13), `s4-mix-master`
+(all of §11), `s5-batch-station`, `s6-taste-pass`.
 
 ---
 
