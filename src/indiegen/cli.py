@@ -19,7 +19,7 @@ from indiegen.master.loudness import measure
 from indiegen.metadata import build_tags, filename_for
 from indiegen.plan import SAMPLE_RATE, Plan, canonical_json, plan_sha256
 from indiegen.render import BLOCK_SIZE, render_plan
-from indiegen.validate import run_gates
+from indiegen.validate import check_gate_10, run_gates, stereo_correlation
 from indiegen.writer import pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
 
 app = typer.Typer(add_completion=False, name="indiegen", no_args_is_help=True)
@@ -154,6 +154,19 @@ def _render(
     decoded = read_pcm(path)
     measurements = measure(decoded, plan.sample_rate)
     digest = pcm_sha256(decoded)
+
+    # Gate 10: the file on disk has to be the audio that was rendered. The
+    # re-run half of the gate is in the tests, where two processes render
+    # the same plan and compare their hashes.
+    mismatched = check_gate_10(pcm_sha256(pcm), digest)
+    if mismatched:
+        for result in mismatched:
+            typer.echo(
+                f"gate {result.gate}: {result.check}: measured {result.measured:.6f} limit {result.limit:.6f}",
+                err=True,
+            )
+        raise typer.Exit(code=2)
+
     sidecar = write_sidecar_atomic(
         out,
         filename,
@@ -170,6 +183,8 @@ def _render(
                 "integrated_lufs": measurements["integrated_lufs"],
                 "sample_peak_dbfs": measurements["sample_peak_dbfs"],
                 "true_peak_dbtp": measurements["true_peak_dbtp"],
+                "loudness_range_lu": measurements["loudness_range_lu"],
+                "stereo_correlation": stereo_correlation(decoded),
                 "render_seconds": render_seconds,
             },
         },
@@ -184,6 +199,7 @@ def _render(
     typer.echo(f"peak: {measurements['sample_peak_dbfs']:.3f} dBFS")
     typer.echo(f"true_peak: {measurements['true_peak_dbtp']:.3f} dBTP")
     typer.echo(f"loudness: {measurements['integrated_lufs']:.3f} LUFS")
+    typer.echo(f"loudness_range: {measurements['loudness_range_lu']:.3f} LU")
     typer.echo(f"sections: {plan.section_count}")
     typer.echo(f"techniques: {','.join(plan.techniques)}")
     typer.echo(f"plan_sha256: {plan_sha256(plan)}")

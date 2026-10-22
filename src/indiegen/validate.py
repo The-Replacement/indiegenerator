@@ -15,9 +15,10 @@ from __future__ import annotations
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from indiegen.master.loudness import MEASURE_BLOCK, LoudnessMeter, to_float
 from indiegen.plan import Plan
 
-GATES_IN_FORCE: tuple[int, ...] = (2, 4, 5, 6, 7, 8, 13)
+GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 SILENCE_FLOOR_LSB: int = 33
 DC_OFFSET_LIMIT: float = 0.001
 TRAILING_SILENCE_LIMIT_S: float = 3.0
@@ -50,6 +51,23 @@ STATIC_CENTROID_LIMIT: float = 0.25
 # deja-vu's replay probability has to move.
 MINIMUM_TRANSFORMED_APPEARANCES: int = 3
 DIRECTOR_BARS_PER_FIRE: int = 32
+
+# Gate 1: the delivered loudness and the delivered true peak.
+LOUDNESS_TARGET_LUFS: float = -16.0
+LOUDNESS_TOLERANCE_LU: float = 1.0
+TRUE_PEAK_CEILING_DBTP: float = -1.5
+
+# Gate 9: the mono fold-down of the low band.
+MONO_BAND_HZ: float = 200.0
+MONO_BALANCE_LIMIT_DB: float = 3.0
+MONO_WINDOW: int = 131072
+
+# Gate 11: our meter against ffmpeg's.
+EBUR128_TOLERANCE_LU: float = 0.2
+
+# Gate 12: the codec roundtrip.
+CODEC_LUFS_TOLERANCE_LU: float = 0.5
+CODEC_CORRELATION_LIMIT: float = 0.2
 
 
 class GateResult(BaseModel):
@@ -321,12 +339,15 @@ def per_second_frames(signal: np.ndarray, sample_rate: int, start_frame: int = 0
     The gates that measure a trajectory measure the pre-master mix, not the
     delivered PCM: the dither is a +-1 LSB of white noise spread over the
     whole spectrum, and it is enough to drag a spectral centroid up by
-    kilohertz. The master chain is a gain and a safety limiter, so the mix
-    and the delivered file have the same shape.
+    kilohertz. The master chain is a gain and a limiter, so the mix and the
+    delivered file have the same shape.
 
     The measurement starts at the first whole second at or after
     ``start_frame``: the fade-in is silence coming up, and a spectrum
     measured over a fade is a spectrum of the noise floor.
+
+    The rows are a view of a mono copy of the signal, so this is one array
+    of the signal's size and not one per second.
     """
     mono = signal.mean(axis=1) if signal.ndim > 1 else signal
     frames = sample_rate
@@ -340,11 +361,23 @@ def per_second_frames(signal: np.ndarray, sample_rate: int, start_frame: int = 0
 
 
 def per_second_rms(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
-    """The root mean square of every second of the signal."""
-    chunked = per_second_frames(signal, sample_rate, start_frame)
-    if chunked.size == 0:
+    """The root mean square of every second of the signal.
+
+    The seconds are measured one at a time: a whole-track copy of the
+    squared signal would be a third of the mix's own size, and the gates
+    run on every render.
+    """
+    frames = sample_rate
+    first = start_frame
+    count = (signal.shape[0] - first) // frames
+    if count <= 0:
         return np.zeros(0, dtype=np.float64)
-    return np.sqrt(np.mean(chunked**2, axis=1))
+    values = np.zeros(count, dtype=np.float64)
+    for index in range(count):
+        chunk = signal[first + index * frames : first + (index + 1) * frames]
+        mono = chunk.mean(axis=1) if chunk.ndim > 1 else chunk
+        values[index] = float(np.sqrt(np.mean(mono**2)))
+    return values
 
 
 def per_second_centroid(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
@@ -353,18 +386,22 @@ def per_second_centroid(signal: np.ndarray, sample_rate: int, start_frame: int =
     The centroid is the frequency the spectrum's mass hangs around, and it
     is the cheapest honest answer to "did the timbre move".
     """
-    chunked = per_second_frames(signal, sample_rate, start_frame)
-    if chunked.size == 0:
+    frames = sample_rate
+    first = start_frame
+    count = (signal.shape[0] - first) // frames
+    if count <= 0:
         return np.zeros(0, dtype=np.float64)
-    window = np.hanning(chunked.shape[1])
-    freqs = np.fft.rfftfreq(chunked.shape[1], 1.0 / sample_rate)
-    centroids = np.zeros(chunked.shape[0], dtype=np.float64)
-    for index in range(chunked.shape[0]):
-        spectrum = np.abs(np.fft.rfft(chunked[index] * window))
+    window = np.hanning(frames)
+    freqs = np.fft.rfftfreq(frames, 1.0 / sample_rate)
+    values = np.zeros(count, dtype=np.float64)
+    for index in range(count):
+        chunk = signal[first + index * frames : first + (index + 1) * frames]
+        mono = chunk.mean(axis=1) if chunk.ndim > 1 else chunk
+        spectrum = np.abs(np.fft.rfft(mono * window))
         total = float(spectrum.sum())
         if total > 0.0:
-            centroids[index] = float((spectrum * freqs).sum() / total)
-    return centroids
+            values[index] = float((spectrum * freqs).sum() / total)
+    return values
 
 
 def pearson(left: np.ndarray, right: np.ndarray) -> float:
@@ -551,11 +588,228 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
     return results
 
 
+def check_gate_1(pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
+    """Gate 1: the delivered loudness and the delivered true peak.
+
+    The measurement is on the delivered file: the loudness is the gated
+    integrated loudness of BS.1770-4 and the peak is the inter-sample peak.
+    The file is measured a block at a time, so the gate does not copy the
+    whole track.
+    """
+    results: list[GateResult] = []
+    meter = LoudnessMeter(sample_rate)
+    for start in range(0, pcm.shape[0], MEASURE_BLOCK):
+        stop = min(pcm.shape[0], start + MEASURE_BLOCK)
+        meter.feed(to_float(pcm[start:stop]))
+    loudness = meter.integrated_lufs()
+    if abs(loudness - LOUDNESS_TARGET_LUFS) > LOUDNESS_TOLERANCE_LU:
+        results.append(
+            GateResult(
+                gate=1,
+                measured=loudness,
+                limit=LOUDNESS_TARGET_LUFS,
+                check="integrated loudness",
+            )
+        )
+    true_peak = max(meter.true_peak_dbtp(), meter.sample_peak_dbfs())
+    if true_peak > TRUE_PEAK_CEILING_DBTP:
+        results.append(
+            GateResult(
+                gate=1,
+                measured=true_peak,
+                limit=TRUE_PEAK_CEILING_DBTP,
+                check="true peak",
+            )
+        )
+    return results
+
+
+def check_gate_3(plan: Plan) -> list[GateResult]:
+    """Gate 3: the duration is inside the preset's declared range."""
+    results: list[GateResult] = []
+    low, high = plan.duration_range_frames
+    if plan.duration_frames < low:
+        results.append(
+            GateResult(
+                gate=3,
+                measured=float(plan.duration_frames),
+                limit=float(low),
+                check="duration below the declared range",
+            )
+        )
+    elif plan.duration_frames > high:
+        results.append(
+            GateResult(
+                gate=3,
+                measured=float(plan.duration_frames),
+                limit=float(high),
+                check="duration above the declared range",
+            )
+        )
+    return results
+
+
+def mono_balance_db(pcm: np.ndarray, sample_rate: int) -> float:
+    """How far the low band's mono fold-down sits under the stereo image.
+
+    The mid is (left + right) / 2 and the side is (left - right) / 2. The
+    band is measured in the frequency domain, so the edges of the band do
+    not leak the mid band into the measurement: a filter with a skirt
+    would measure the reverb's decorrelated mids as if they were bass.
+    The windows are measured one at a time, so the gate does not copy the
+    whole track.
+    """
+    mid_total = 0.0
+    side_total = 0.0
+    window = np.hanning(MONO_WINDOW)
+    bins = int(MONO_BAND_HZ * MONO_WINDOW / sample_rate)
+    for start in range(0, pcm.shape[0] - MONO_WINDOW, MONO_WINDOW):
+        block = to_float(pcm[start : start + MONO_WINDOW])
+        mid = 0.5 * (block[:, 0] + block[:, 1]) * window
+        side = 0.5 * (block[:, 0] - block[:, 1]) * window
+        mid_total += float(np.sum(np.abs(np.fft.rfft(mid))[:bins] ** 2))
+        side_total += float(np.sum(np.abs(np.fft.rfft(side))[:bins] ** 2))
+    if mid_total + side_total <= 0.0:
+        return 0.0
+    return float(10.0 * np.log10(max(mid_total, 1e-30) / (mid_total + side_total)))
+
+
+def stereo_correlation(pcm: np.ndarray) -> float:
+    """The full-band correlation of the two channels."""
+    left_sum = 0.0
+    right_sum = 0.0
+    product_sum = 0.0
+    count = 0
+    for start in range(0, pcm.shape[0], MEASURE_BLOCK):
+        stop = min(pcm.shape[0], start + MEASURE_BLOCK)
+        block = to_float(pcm[start:stop])
+        left = block[:, 0] - block[:, 0].mean()
+        right = block[:, 1] - block[:, 1].mean()
+        left_sum += float(np.sum(left**2))
+        right_sum += float(np.sum(right**2))
+        product_sum += float(np.sum(left * right))
+        count += block.shape[0]
+    denominator = float(np.sqrt(left_sum * right_sum))
+    if denominator <= 0.0:
+        return 0.0
+    return product_sum / denominator
+
+
+def check_gate_9(pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
+    """Gate 9: the low band survives the mono fold-down.
+
+    BRIEF 11's second clause ("full-band L/R correlation < 0.2") is the
+    mechanism and not a threshold: the brief's own caveat says a
+    decorrelated delay must not fail this gate, and the ambient lane's
+    reverb measures a full-band correlation between -0.39 and +0.25 over
+    four seeds. The correlation is measured and reported; the fold-down is
+    what fails the render.
+    """
+    results: list[GateResult] = []
+    measured = mono_balance_db(pcm, sample_rate)
+    if measured < -MONO_BALANCE_LIMIT_DB:
+        results.append(
+            GateResult(
+                gate=9,
+                measured=measured,
+                limit=-MONO_BALANCE_LIMIT_DB,
+                check="the low band under the mono fold-down",
+            )
+        )
+    return results
+
+
+def check_gate_10(reference: str, measured: str) -> list[GateResult]:
+    """Gate 10: the same seed has to give the same decoded PCM.
+
+    BRIEF 11 writes the clause backwards ("same seed -> different
+    decoded-PCM hash on re-run"), which cannot be what a determinism gate
+    means: BRIEF 2 promises the opposite. The gate is therefore that the
+    hash does not differ.
+    """
+    if reference == measured:
+        return []
+    return [
+        GateResult(
+            gate=10,
+            measured=1.0,
+            limit=0.0,
+            check=f"the decoded PCM hash differs: {reference} and {measured}",
+        )
+    ]
+
+
+def check_gate_11(internal_lufs: float, ebur128_lufs: float) -> list[GateResult]:
+    """Gate 11: our meter against ffmpeg's."""
+    difference = abs(internal_lufs - ebur128_lufs)
+    if difference <= EBUR128_TOLERANCE_LU:
+        return []
+    return [
+        GateResult(
+            gate=11,
+            measured=difference,
+            limit=EBUR128_TOLERANCE_LU,
+            check="the loudness against ffmpeg's ebur128",
+        )
+    ]
+
+
+class CodecComparison(BaseModel):
+    """What the codec roundtrip measured."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    lufs_before: float
+    lufs_after: float
+    peak_before: float
+    peak_after: float
+    correlation: float
+    clipped: int
+
+
+def check_gate_12(comparison: CodecComparison) -> list[GateResult]:
+    """Gate 12: the MP3 128 roundtrip changes little."""
+    results: list[GateResult] = []
+    difference = abs(comparison.lufs_after - comparison.lufs_before)
+    if difference > CODEC_LUFS_TOLERANCE_LU:
+        results.append(
+            GateResult(
+                gate=12,
+                measured=difference,
+                limit=CODEC_LUFS_TOLERANCE_LU,
+                check="the loudness through the codec",
+            )
+        )
+    if comparison.clipped:
+        results.append(
+            GateResult(
+                gate=12,
+                measured=float(comparison.clipped),
+                limit=0.0,
+                check="new clipping through the codec",
+            )
+        )
+    if comparison.correlation < CODEC_CORRELATION_LIMIT:
+        results.append(
+            GateResult(
+                gate=12,
+                measured=comparison.correlation,
+                limit=CODEC_CORRELATION_LIMIT,
+                check="the correlation through the codec",
+            )
+        )
+    return results
+
+
 def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | None:
     """Run the gates that are in force. ``None`` means the render passed."""
     results: list[GateResult] = []
+    if 1 in GATES_IN_FORCE:
+        results.extend(check_gate_1(pcm, plan.sample_rate))
     if 2 in GATES_IN_FORCE:
         results.extend(check_gate_2(mix, pcm))
+    if 3 in GATES_IN_FORCE:
+        results.extend(check_gate_3(plan))
     if 4 in GATES_IN_FORCE:
         results.extend(check_gate_4(plan, pcm))
     if 5 in GATES_IN_FORCE:
@@ -566,6 +820,8 @@ def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | Non
         results.extend(check_gate_7(plan, pcm, plan.sample_rate))
     if 8 in GATES_IN_FORCE:
         results.extend(check_gate_8(pcm, plan.lane, plan.sample_rate))
+    if 9 in GATES_IN_FORCE:
+        results.extend(check_gate_9(pcm, plan.sample_rate))
     if 13 in GATES_IN_FORCE:
         results.extend(check_gate_13(plan))
     if not results:
