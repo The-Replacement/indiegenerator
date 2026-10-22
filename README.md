@@ -105,6 +105,13 @@ ambient lane at fifteen minutes, seed 1042: 254.1 s (3.5× realtime) and
 **2177 MB** peak RSS. Time still holds; memory is what the eight-minute lane
 ceiling is protecting.
 
+The table was re-checked after the audit refactor, which rewrote every
+dispatch path and left the arithmetic alone. The audio is hash-identical, so
+the only things the refactor could have moved are time and memory, and the
+spot check says it moved neither: ambient at eight minutes measured 1257 MB
+against the table's 1252, and interleaved before/after runs of the old and new
+code differed by 0.2% in wall time against a ±7 s run-to-run spread.
+
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
 ceiling on every lane, which is what a limiter that works looks like; the
