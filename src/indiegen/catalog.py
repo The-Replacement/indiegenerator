@@ -14,13 +14,13 @@ rather than losing one of them.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from indiegen.errors import RenderError
-from indiegen.writer import TEMP_DIR_NAME, _fsync_dir
+from indiegen.plan import canonical_bytes
+from indiegen.writer import publish_atomically, staging_dir
 
 SCHEMA: str = "indiegen/catalog/1"
 CATALOG_NAME: str = "catalog.json"
@@ -85,11 +85,6 @@ class Catalog:
         }
 
 
-def _sidecar_path(flac: Path) -> Path:
-    """The sidecar that belongs to a master."""
-    return flac.with_suffix(".json")
-
-
 def read_sidecar(path: Path) -> dict[str, Any] | None:
     """Read one sidecar, or nothing if it is not a sidecar."""
     try:
@@ -130,6 +125,7 @@ def build_catalog(directory: Path) -> Catalog:
     """Read every sidecar of a directory and build the catalog."""
     catalog = Catalog()
     seeds_by_hash: dict[str, list[int]] = {}
+    paths_by_hash: dict[str, list[str]] = {}
     paths_by_seed: dict[int, list[str]] = {}
     if not directory.is_dir():
         return catalog
@@ -145,14 +141,19 @@ def build_catalog(directory: Path) -> Catalog:
         if entry is None:
             continue
         catalog.entries[entry.pcm_sha256] = entry
+        # The total is what the library occupies on disk, duplicates included:
+        # it is a disk-usage number, while `entries` is the set of distinct
+        # audio. A duplicate that overwrites an entry is not lost to the
+        # catalog: its path is kept with its hash below.
         catalog.total_bytes += entry.size_bytes
         seeds_by_hash.setdefault(entry.pcm_sha256, []).append(entry.seed)
+        paths_by_hash.setdefault(entry.pcm_sha256, []).append(entry.path)
         paths_by_seed.setdefault(entry.seed, []).append(entry.pcm_sha256)
     catalog.duplicate_seeds = [
         {"seed": seed, "pcm_sha256": digests} for seed, digests in sorted(paths_by_seed.items()) if len(digests) > 1
     ]
     catalog.duplicate_hashes = [
-        {"pcm_sha256": digest, "seeds": sorted(set(seed_list))}
+        {"pcm_sha256": digest, "seeds": sorted(set(seed_list)), "paths": sorted(paths_by_hash[digest])}
         for digest, seed_list in sorted(seeds_by_hash.items())
         if len(set(seed_list)) > 1
     ]
@@ -161,20 +162,14 @@ def build_catalog(directory: Path) -> Catalog:
 
 def write_catalog(directory: Path, catalog: Catalog) -> Path:
     """Write catalog.json into a directory, atomically."""
-    directory.mkdir(parents=True, exist_ok=True)
-    temp_dir = directory / TEMP_DIR_NAME
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = temp_dir / CATALOG_NAME
     target = directory / CATALOG_NAME
-    data = json.dumps(catalog.as_json(), sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    temp_path = staging_dir(directory) / CATALOG_NAME
+    data = canonical_bytes(catalog.as_json())
     try:
         with open(temp_path, "wb") as handle:
             handle.write(data)
             handle.flush()
-            os.fsync(handle.fileno())
-        _fsync_dir(temp_dir)
-        os.replace(temp_path, target)
-        _fsync_dir(directory)
+        publish_atomically(temp_path, target)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
         raise RenderError(f"cannot write the catalog: {exc}", preset="", seed=0, block_index=0) from exc

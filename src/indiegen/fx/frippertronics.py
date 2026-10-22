@@ -135,10 +135,7 @@ def _coefficients(spec: FrippertronicsSpec, sample_rate: int) -> list[float]:
     start = spec.cutoff_start_hz
     step = spec.cutoff_step_hz
     floor_hz = spec.cutoff_floor_hz
-    if step > 0:
-        saturated = max(0, math.ceil((start - floor_hz) / step))
-    else:
-        saturated = 0
+    saturated = max(0, math.ceil((start - floor_hz) / step)) if step > 0 else 0
     coefficients: list[float] = []
     for passes in range(saturated + 1):
         cutoff = max(floor_hz, start - step * passes)
@@ -170,7 +167,7 @@ def render_frippertronics(
     block: np.ndarray,
     state: FrippertronicsState,
     spec: FrippertronicsSpec,
-    sample_rate: int = 44100,
+    sample_rate: int,
 ) -> tuple[np.ndarray, FrippertronicsState]:
     """Run one block of the bus through the loop.
 

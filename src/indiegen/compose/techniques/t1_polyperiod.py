@@ -50,6 +50,46 @@ def _minor_second_pairs(pitches: list[int]) -> int:
     return pairs
 
 
+def _usable_intervals(card: PolyPeriodCard, ctx: TechniqueContext) -> list[int]:
+    """The chord tones the scale can carry, as the prefix the voices take."""
+    intervals: list[int] = []
+    for interval in card.chord_intervals:
+        if ctx.root_midi + interval in ctx.scale_midi:
+            intervals.append(interval)
+        else:
+            break
+    return intervals or [0]
+
+
+def _draw_periods(rng: SplitMix64, card: PolyPeriodCard, count: int, sample_rate: int) -> list[int]:
+    """``count`` distinct periods, drawn from the card's range."""
+    low = card.period_seconds_range.min * sample_rate
+    high = card.period_seconds_range.max * sample_rate
+    periods: list[int] = []
+    while len(periods) < count:
+        candidate = rng.between(low, high)
+        if candidate not in periods:
+            periods.append(candidate)
+    return periods
+
+
+def _fit_density(ons: list[int], periods: list[int], phases: list[int], duration_frames: int) -> list[int]:
+    """Pull the on-windows toward the density band, once, in the same direction.
+
+    The band is a declaration the card makes; this is the one correction
+    step. A plan that is still outside the band after it is a plan the
+    composer refuses, not one it quietly accepts.
+    """
+    density = _density(periods, ons, phases, duration_frames)
+    if density > DENSITY_MAX:
+        scale = (DENSITY_MAX * 0.9) / density
+    elif density < DENSITY_MIN:
+        scale = (DENSITY_MIN * 1.1) / density
+    else:
+        return ons
+    return [max(1, min(period, int(on * scale))) for on, period in zip(ons, periods, strict=True)]
+
+
 def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContext) -> list[PolyPeriodEvent]:
     """Draw the voices of one poly-period loop.
 
@@ -58,17 +98,8 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
     prefix of the declared list rather than a cycle of it, and the voice
     count is capped by how many tones the scale can actually carry.
     """
-    intervals: list[int] = []
-    for interval in card.chord_intervals:
-        if ctx.root_midi + interval in ctx.scale_midi:
-            intervals.append(interval)
-        else:
-            break
-    if not intervals:
-        intervals = [0]
-
-    voice_count = rng.between(card.voice_count.min, card.voice_count.max)
-    voice_count = min(voice_count, len(intervals))
+    intervals = _usable_intervals(card, ctx)
+    voice_count = min(rng.between(card.voice_count.min, card.voice_count.max), len(intervals))
     if voice_count < 3:
         raise PlanError(
             f"poly-period chord has only {voice_count} usable tones",
@@ -76,14 +107,7 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
             seed=ctx.seed,
         )
 
-    low = card.period_seconds_range.min * ctx.sample_rate
-    high = card.period_seconds_range.max * ctx.sample_rate
-
-    periods: list[int] = []
-    while len(periods) < voice_count:
-        candidate = rng.between(low, high)
-        if candidate not in periods:
-            periods.append(candidate)
+    periods = _draw_periods(rng, card, voice_count, ctx.sample_rate)
 
     fractions = [rng.between(card.on_fraction_permille.min, card.on_fraction_permille.max) for _ in range(voice_count)]
     phases = [rng.below(period) for period in periods]
@@ -92,13 +116,7 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
     ons = [max(1, period * fraction // 1000) for period, fraction in zip(periods, fractions, strict=True)]
     ons = [min(on, period) for on, period in zip(ons, periods, strict=True)]
 
-    density = _density(periods, ons, phases, ctx.duration_frames)
-    if density > DENSITY_MAX:
-        scale = (DENSITY_MAX * 0.9) / density
-        ons = [max(1, min(period, int(on * scale))) for on, period in zip(ons, periods, strict=True)]
-    elif density < DENSITY_MIN:
-        scale = (DENSITY_MIN * 1.1) / density
-        ons = [max(1, min(period, int(on * scale))) for on, period in zip(ons, periods, strict=True)]
+    ons = _fit_density(ons, periods, phases, ctx.duration_frames)
 
     density = _density(periods, ons, phases, ctx.duration_frames)
     if not DENSITY_MIN <= density <= DENSITY_MAX:

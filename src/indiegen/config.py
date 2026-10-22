@@ -8,34 +8,29 @@ musical parameters and its identity. There are no merge keys, no anchors, no
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from indiegen.errors import PlanError
-from indiegen.plan import BusGain, FxSend, LaneWeight, Rational, SectionProfile
+from indiegen.plan import BusGain, FrozenModel, FxSend, LaneWeight, Rational, SectionProfile
 
 LANE_NAMES: tuple[str, ...] = ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise")
 
-PresetModel = TypeVar("PresetModel", bound=BaseModel)
+PresetModel = TypeVar("PresetModel", bound=FrozenModel)
 
 
-class RangeInt(BaseModel):
+class RangeInt(FrozenModel):
     """An inclusive integer range."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     min: int
     max: int
 
 
-class PadCard(BaseModel):
+class PadCard(FrozenModel):
     """The pad drone's parameters."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["pad"]
     partials: RangeInt
@@ -47,10 +42,8 @@ class PadCard(BaseModel):
     min_density: int
 
 
-class PolyPeriodCard(BaseModel):
+class PolyPeriodCard(FrozenModel):
     """T1: poly-period loops with distinct periods and one chord."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["poly_period"]
     voice_count: RangeInt
@@ -62,10 +55,8 @@ class PolyPeriodCard(BaseModel):
     min_density: int
 
 
-class DroneCard(BaseModel):
+class DroneCard(FrozenModel):
     """T11: a spectral drone stack with per-partial drift."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["drone"]
     partial_count: RangeInt
@@ -78,10 +69,8 @@ class DroneCard(BaseModel):
     min_density: int
 
 
-class FrippertronicsCard(BaseModel):
+class FrippertronicsCard(FrozenModel):
     """T3: the Frippertronics send of the kosmische and ambient lanes."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["frippertronics"]
     delay_seconds: RangeInt
@@ -96,10 +85,8 @@ class FrippertronicsCard(BaseModel):
     min_density: int
 
 
-class DubChainCard(BaseModel):
+class DubChainCard(FrozenModel):
     """T10: the dub chain, and the sidechain to the kick."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["dub_chain"]
     bit_depth: int
@@ -113,10 +100,8 @@ class DubChainCard(BaseModel):
     min_density: int
 
 
-class PluckCard(BaseModel):
+class PluckCard(FrozenModel):
     """T13: the Karplus-Strong guitar, the station's signature timbre."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["pluck"]
     count: RangeInt
@@ -131,15 +116,13 @@ class PluckCard(BaseModel):
     spacing_seconds: RangeInt
 
 
-class PatternCard(BaseModel):
+class PatternCard(FrozenModel):
     """How one drum voice's hits are laid out on the grid.
 
     The euclid pattern is the pulse count and the step count, rotated. The
     condition is what lets a voice in: always, every other step, three in
     four, the first step of a phrase, or only in a fill.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     steps_per_bar: int
     euclid_k: int
@@ -152,10 +135,8 @@ class PatternCard(BaseModel):
     velocity_millibels: int
 
 
-class KickCard(BaseModel):
+class KickCard(FrozenModel):
     """T6: the kick drum."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["kick"]
     pattern: PatternCard
@@ -165,10 +146,8 @@ class KickCard(BaseModel):
     decay_frames: int
 
 
-class SnareCard(BaseModel):
+class SnareCard(FrozenModel):
     """T6: the snare drum."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["snare"]
     pattern: PatternCard
@@ -177,10 +156,8 @@ class SnareCard(BaseModel):
     noise_decay_frames: int
 
 
-class HatCard(BaseModel):
+class HatCard(FrozenModel):
     """T6: the closed hat."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["hat"]
     pattern: PatternCard
@@ -188,10 +165,8 @@ class HatCard(BaseModel):
     decay_frames: int
 
 
-class BassCard(BaseModel):
+class BassCard(FrozenModel):
     """T6: the bass line, an eighth-note root with octave jumps."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["bass"]
     pattern: PatternCard
@@ -201,10 +176,8 @@ class BassCard(BaseModel):
     fifth_permille: int
 
 
-class PinkCard(BaseModel):
+class PinkCard(FrozenModel):
     """T7: the 1/f control signals of the lane."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["pink"]
     velocity_depth_millibels: int
@@ -212,10 +185,8 @@ class PinkCard(BaseModel):
     pan_drift_permille: int
 
 
-class DejaVuCard(BaseModel):
+class DejaVuCard(FrozenModel):
     """T5: the deja-vu sequencer, over the Karplus-Strong stabs."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["deja_vu"]
     step_beats: int
@@ -250,14 +221,12 @@ TechniqueCard = Annotated[
 ]
 
 
-class StrategyCard(BaseModel):
+class StrategyCard(FrozenModel):
     """One transformation in the Director's deck.
 
     The deck is a pool, not a list of moves: the arranger draws from it,
     and the draw is the only randomness the Director ever has.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     strategy: str
     detail: str
@@ -268,10 +237,8 @@ class StrategyCard(BaseModel):
     span_bars: int = Field(ge=0)
 
 
-class DirectorCard(BaseModel):
+class DirectorCard(FrozenModel):
     """How often the Director fires, and what it can do."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     bars_min: int = Field(ge=1)
     bars_max: int = Field(ge=1)
@@ -280,10 +247,8 @@ class DirectorCard(BaseModel):
     strategies: list[StrategyCard]
 
 
-class DelayCard(BaseModel):
+class DelayCard(FrozenModel):
     """The station's dotted-eighth delay send."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     delay_ratio: Rational
     feedback: Rational
@@ -291,10 +256,8 @@ class DelayCard(BaseModel):
     send_millibels: int
 
 
-class ReverbCard(BaseModel):
+class ReverbCard(FrozenModel):
     """A lane's short Schroeder reverb."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     comb_delays_frames: list[int]
     comb_feedback: Rational
@@ -305,10 +268,8 @@ class ReverbCard(BaseModel):
     send_millibels: int
 
 
-class LanePreset(BaseModel):
+class LanePreset(FrozenModel):
     """One lane's musical parameters and its identity."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["lane"]
     lane: str
@@ -331,17 +292,15 @@ class LanePreset(BaseModel):
     reverb: ReverbCard | None = None
 
 
-class LaneEntry(BaseModel):
+class LaneEntry(FrozenModel):
     """A lane and its weight inside the station blend."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     lane: str
     weight: int
     parameters: LanePreset
 
 
-class FormCard(BaseModel):
+class FormCard(FrozenModel):
     """One of the station's track forms, and how many of them there are.
 
     BRIEF 15: "A 20-track batch is not 20 tracks: ~60% full tracks (4-10
@@ -350,17 +309,13 @@ class FormCard(BaseModel):
     lane.
     """
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     form: Literal["full", "longform", "interlude"]
     weight: int = Field(ge=0)
     duration_range_seconds: list[int]
 
 
-class StationPreset(BaseModel):
+class StationPreset(FrozenModel):
     """The shared station signature: what makes three tracks the same station."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["station"]
     lane_weights: list[LaneWeight]
@@ -382,10 +337,8 @@ class StationPreset(BaseModel):
     delay: DelayCard
 
 
-class Preset(BaseModel):
+class Preset(FrozenModel):
     """A resolved preset: the station signature plus every lane's parameters."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     name: str
     kind: Literal["station", "lane"]
@@ -445,13 +398,3 @@ def load_preset(name: str, *, presets_dir: Path | None = None) -> Preset:
     if name not in LANE_NAMES:
         raise PlanError("unknown preset", preset=name)
     return Preset(name=name, kind="lane", station=station, lanes=[_load_lane(directory, name, 0, name)])
-
-
-def canonical_preset_json(preset: Preset) -> bytes:
-    """The canonical bytes of a preset, used to seed the compose PRNG."""
-    return json.dumps(
-        preset.model_dump(mode="json"),
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-    ).encode("utf-8")

@@ -1,22 +1,26 @@
-"""The gates, and only the gates that are in force.
+"""The gates of BRIEF §11, and the registry that says which are in force.
 
-BRIEF §15 is explicit: "A gate not yet in force is not implemented, and it
-does not fail the render." So this module measures gates 2, 4, 5, 6, 7, 8
-and 13 and nothing else - no loudness, no duration, no codec.
-``GATES_IN_FORCE`` is the registry that keeps it that way.
+BRIEF §15: "A gate not yet in force is not implemented, and it does not fail
+the render." ``GATES_IN_FORCE`` is that registry, and today it is the whole of
+§11: every gate from one to thirteen is implemented here - loudness, duration,
+codec, and the rest. The tuple is also a test seam: the suite runs a track
+through a subset so the slow gates stay out of the fast tests.
 
 ``GateFailure`` is a data holder, not an exception: BRIEF §8 asks for a list
 of {gate, measured, limit} and explicitly not an exception used for control
-flow.
+flow. ``failure()`` is the one place a ``GateResult`` is built, so its shape is
+decided once and not in thirty-five call sites.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from indiegen.master.loudness import MEASURE_BLOCK, LoudnessMeter, to_float
-from indiegen.plan import Plan
+from indiegen.plan import INT16_MAX, INT16_MIN, Plan
 
 GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 SILENCE_FLOOR_LSB: int = 33
@@ -30,8 +34,6 @@ NOVELTY_FRAME_SECONDS: float = 1.0
 NOVELTY_SIGMA: float = 2.0
 NOVELTY_MERGE_SECONDS: float = 4.0
 MAD_TO_SIGMA: float = 1.4826
-INT16_MAX: int = 32767
-INT16_MIN: int = -32768
 
 # Gate 5: the delivered energy trajectory has to follow the planned one.
 ENERGY_CORRELATION_LIMIT: float = 0.5
@@ -89,6 +91,11 @@ class GateFailure(BaseModel):
     failures: list[GateResult]
 
 
+def failure(gate: int, measured: float, limit: float, check: str) -> GateResult:
+    """One failed gate, built in the one place its shape is decided."""
+    return GateResult(gate=gate, measured=measured, limit=limit, check=check)
+
+
 def leading_silence_limit(lane: str) -> float:
     """The leading-silence limit of a lane, in seconds."""
     for name, limit in LEADING_SILENCE_LIMITS:
@@ -111,7 +118,7 @@ def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
     non_finite = int(np.count_nonzero(~np.isfinite(mix)))
     if non_finite:
         results.append(
-            GateResult(
+            failure(
                 gate=2,
                 measured=float(non_finite),
                 limit=0.0,
@@ -123,7 +130,7 @@ def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
         offset = max(abs(float(np.mean(delivered[:, channel]))) for channel in range(delivered.shape[1]))
         if offset > DC_OFFSET_LIMIT:
             results.append(
-                GateResult(
+                failure(
                     gate=2,
                     measured=offset,
                     limit=DC_OFFSET_LIMIT,
@@ -133,7 +140,7 @@ def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
     rails = int(np.count_nonzero((pcm == INT16_MAX) | (pcm == INT16_MIN)))
     if rails:
         results.append(
-            GateResult(
+            failure(
                 gate=2,
                 measured=float(rails),
                 limit=0.0,
@@ -159,7 +166,7 @@ def check_gate_8(pcm: np.ndarray, lane: str, sample_rate: int) -> list[GateResul
     limit = leading_silence_limit(lane)
     if leading / sample_rate > limit:
         results.append(
-            GateResult(
+            failure(
                 gate=8,
                 measured=leading / sample_rate,
                 limit=limit,
@@ -168,7 +175,7 @@ def check_gate_8(pcm: np.ndarray, lane: str, sample_rate: int) -> list[GateResul
         )
     if trailing / sample_rate > TRAILING_SILENCE_LIMIT_S:
         results.append(
-            GateResult(
+            failure(
                 gate=8,
                 measured=trailing / sample_rate,
                 limit=TRAILING_SILENCE_LIMIT_S,
@@ -197,7 +204,7 @@ def check_gate_4(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
     limit = minimum_sections(plan.lane)
     if plan.section_count < limit:
         results.append(
-            GateResult(
+            failure(
                 gate=4,
                 measured=float(plan.section_count),
                 limit=float(limit),
@@ -208,7 +215,7 @@ def check_gate_4(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
     for section in plan.sections:
         if section.start_frame != expected or section.end_frame <= section.start_frame:
             results.append(
-                GateResult(
+                failure(
                     gate=4,
                     measured=float(section.start_frame),
                     limit=float(expected),
@@ -219,7 +226,7 @@ def check_gate_4(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
         expected = section.end_frame
     if not results and expected != plan.duration_frames:
         results.append(
-            GateResult(
+            failure(
                 gate=4,
                 measured=float(expected),
                 limit=float(plan.duration_frames),
@@ -233,7 +240,7 @@ def check_gate_4(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
         peak = int(np.max(np.abs(window.astype(np.int32))))
         if peak <= SILENCE_FLOOR_LSB:
             results.append(
-                GateResult(
+                failure(
                     gate=4,
                     measured=float(peak),
                     limit=float(SILENCE_FLOOR_LSB),
@@ -323,7 +330,7 @@ def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResu
     limit = max(0, plan.section_count - 1)
     if peaks < limit:
         results.append(
-            GateResult(
+            failure(
                 gate=7,
                 measured=float(peaks),
                 limit=float(limit),
@@ -331,33 +338,6 @@ def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResu
             )
         )
     return results
-
-
-def per_second_frames(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
-    """A float signal, one row per second, as a mono signal.
-
-    The gates that measure a trajectory measure the pre-master mix, not the
-    delivered PCM: the dither is a +-1 LSB of white noise spread over the
-    whole spectrum, and it is enough to drag a spectral centroid up by
-    kilohertz. The master chain is a gain and a limiter, so the mix and the
-    delivered file have the same shape.
-
-    The measurement starts at the first whole second at or after
-    ``start_frame``: the fade-in is silence coming up, and a spectrum
-    measured over a fade is a spectrum of the noise floor.
-
-    The rows are a view of a mono copy of the signal, so this is one array
-    of the signal's size and not one per second.
-    """
-    mono = signal.mean(axis=1) if signal.ndim > 1 else signal
-    frames = sample_rate
-    first = start_frame
-    if first >= mono.size:
-        return np.zeros((0, frames), dtype=np.float64)
-    count = (mono.size - first) // frames
-    if count == 0:
-        return np.zeros((0, frames), dtype=np.float64)
-    return mono[first : first + count * frames].reshape(count, frames)
 
 
 def per_second_rms(signal: np.ndarray, sample_rate: int, start_frame: int = 0) -> np.ndarray:
@@ -472,7 +452,7 @@ def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     correlation = energy_correlation(plan, mix)
     if correlation < ENERGY_CORRELATION_LIMIT:
         results.append(
-            GateResult(
+            failure(
                 gate=5,
                 measured=correlation,
                 limit=ENERGY_CORRELATION_LIMIT,
@@ -537,7 +517,7 @@ def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
         relative = correlation
         if relative > STATIC_CENTROID_LIMIT:
             results.append(
-                GateResult(
+                failure(
                     gate=6,
                     measured=relative,
                     limit=STATIC_CENTROID_LIMIT,
@@ -547,7 +527,7 @@ def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
         return results
     if correlation < TIMBRE_CORRELATION_LIMIT:
         results.append(
-            GateResult(
+            failure(
                 gate=6,
                 measured=correlation,
                 limit=TIMBRE_CORRELATION_LIMIT,
@@ -574,7 +554,7 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
     transformed = [appearance for appearance in plan.motif_appearances if appearance.transform != "identity"]
     if len(transformed) < MINIMUM_TRANSFORMED_APPEARANCES:
         results.append(
-            GateResult(
+            failure(
                 gate=13,
                 measured=float(len(transformed)),
                 limit=float(MINIMUM_TRANSFORMED_APPEARANCES),
@@ -591,7 +571,7 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
         fires = float(len(plan.director_log))
         if fires * DIRECTOR_BARS_PER_FIRE < bars:
             results.append(
-                GateResult(
+                failure(
                     gate=13,
                     measured=fires,
                     limit=bars / DIRECTOR_BARS_PER_FIRE,
@@ -600,7 +580,7 @@ def check_gate_13(plan: Plan) -> list[GateResult]:
             )
     if plan.deja_vu_replay_permille and len(set(plan.deja_vu_replay_permille)) <= 1:
         results.append(
-            GateResult(
+            failure(
                 gate=13,
                 measured=float(plan.deja_vu_replay_permille[0]),
                 limit=float(plan.deja_vu_replay_permille[0]),
@@ -626,7 +606,7 @@ def check_gate_1(pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
     loudness = meter.integrated_lufs()
     if abs(loudness - LOUDNESS_TARGET_LUFS) > LOUDNESS_TOLERANCE_LU:
         results.append(
-            GateResult(
+            failure(
                 gate=1,
                 measured=loudness,
                 limit=LOUDNESS_TARGET_LUFS,
@@ -636,7 +616,7 @@ def check_gate_1(pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
     true_peak = max(meter.true_peak_dbtp(), meter.sample_peak_dbfs())
     if true_peak > TRUE_PEAK_CEILING_DBTP:
         results.append(
-            GateResult(
+            failure(
                 gate=1,
                 measured=true_peak,
                 limit=TRUE_PEAK_CEILING_DBTP,
@@ -652,7 +632,7 @@ def check_gate_3(plan: Plan) -> list[GateResult]:
     low, high = plan.duration_range_frames
     if plan.duration_frames < low:
         results.append(
-            GateResult(
+            failure(
                 gate=3,
                 measured=float(plan.duration_frames),
                 limit=float(low),
@@ -661,7 +641,7 @@ def check_gate_3(plan: Plan) -> list[GateResult]:
         )
     elif plan.duration_frames > high:
         results.append(
-            GateResult(
+            failure(
                 gate=3,
                 measured=float(plan.duration_frames),
                 limit=float(high),
@@ -731,7 +711,7 @@ def check_gate_9(pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
     measured = mono_balance_db(pcm, sample_rate)
     if measured < -MONO_BALANCE_LIMIT_DB:
         results.append(
-            GateResult(
+            failure(
                 gate=9,
                 measured=measured,
                 limit=-MONO_BALANCE_LIMIT_DB,
@@ -752,7 +732,7 @@ def check_gate_10(reference: str, measured: str) -> list[GateResult]:
     if reference == measured:
         return []
     return [
-        GateResult(
+        failure(
             gate=10,
             measured=1.0,
             limit=0.0,
@@ -767,7 +747,7 @@ def check_gate_11(internal_lufs: float, ebur128_lufs: float) -> list[GateResult]
     if difference <= EBUR128_TOLERANCE_LU:
         return []
     return [
-        GateResult(
+        failure(
             gate=11,
             measured=difference,
             limit=EBUR128_TOLERANCE_LU,
@@ -787,7 +767,7 @@ def check_gate_12(
     difference = abs(lufs_after - lufs_before)
     if difference > CODEC_LUFS_TOLERANCE_LU:
         results.append(
-            GateResult(
+            failure(
                 gate=12,
                 measured=difference,
                 limit=CODEC_LUFS_TOLERANCE_LU,
@@ -796,7 +776,7 @@ def check_gate_12(
         )
     if clipped:
         results.append(
-            GateResult(
+            failure(
                 gate=12,
                 measured=float(clipped),
                 limit=0.0,
@@ -805,7 +785,7 @@ def check_gate_12(
         )
     if correlation < CODEC_CORRELATION_LIMIT:
         results.append(
-            GateResult(
+            failure(
                 gate=12,
                 measured=correlation,
                 limit=CODEC_CORRELATION_LIMIT,
@@ -816,28 +796,26 @@ def check_gate_12(
 
 
 def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | None:
-    """Run the gates that are in force. ``None`` means the render passed."""
-    results: list[GateResult] = []
-    if 1 in GATES_IN_FORCE:
-        results.extend(check_gate_1(pcm, plan.sample_rate))
-    if 2 in GATES_IN_FORCE:
-        results.extend(check_gate_2(mix, pcm))
-    if 3 in GATES_IN_FORCE:
-        results.extend(check_gate_3(plan))
-    if 4 in GATES_IN_FORCE:
-        results.extend(check_gate_4(plan, pcm))
-    if 5 in GATES_IN_FORCE:
-        results.extend(check_gate_5(plan, mix))
-    if 6 in GATES_IN_FORCE:
-        results.extend(check_gate_6(plan, mix))
-    if 7 in GATES_IN_FORCE:
-        results.extend(check_gate_7(plan, pcm, plan.sample_rate))
-    if 8 in GATES_IN_FORCE:
-        results.extend(check_gate_8(pcm, plan.lane, plan.sample_rate))
-    if 9 in GATES_IN_FORCE:
-        results.extend(check_gate_9(pcm, plan.sample_rate))
-    if 13 in GATES_IN_FORCE:
-        results.extend(check_gate_13(plan))
+    """Run the gates that are in force. ``None`` means the render passed.
+
+    The table is the order of BRIEF §11 and the order the failures come out
+    in: a gate is added by adding a row, and a gate that measures the file's
+    trajectory (4 to 7) reads the pre-master mix, which is what the render
+    measured and the dither would hide.
+    """
+    checks: tuple[tuple[int, Callable[..., list[GateResult]], tuple[object, ...]], ...] = (
+        (1, check_gate_1, (pcm, plan.sample_rate)),
+        (2, check_gate_2, (mix, pcm)),
+        (3, check_gate_3, (plan,)),
+        (4, check_gate_4, (plan, pcm)),
+        (5, check_gate_5, (plan, mix)),
+        (6, check_gate_6, (plan, mix)),
+        (7, check_gate_7, (plan, pcm, plan.sample_rate)),
+        (8, check_gate_8, (pcm, plan.lane, plan.sample_rate)),
+        (9, check_gate_9, (pcm, plan.sample_rate)),
+        (13, check_gate_13, (plan,)),
+    )
+    results = [result for gate, check, args in checks if gate in GATES_IN_FORCE for result in check(*args)]
     if not results:
         return None
     return GateFailure(failures=results)

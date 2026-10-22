@@ -21,14 +21,13 @@ from typing import Any
 import numpy as np
 
 from indiegen.catalog import read_sidecar
+from indiegen.errors import PlanError
 from indiegen.master.codec import CodecError, ebur128, mp3_roundtrip
 from indiegen.master.loudness import integrated_lufs
-from indiegen.plan import Plan
+from indiegen.plan import INT16_MAX, INT16_MIN, Plan
 from indiegen.validate import (
     DC_OFFSET_LIMIT,
     ENERGY_CORRELATION_LIMIT,
-    INT16_MAX,
-    INT16_MIN,
     STATIC_CENTROID_LIMIT,
     TIMBRE_CORRELATION_LIMIT,
     GateResult,
@@ -42,6 +41,7 @@ from indiegen.validate import (
     check_gate_11,
     check_gate_12,
     check_gate_13,
+    failure,
 )
 from indiegen.writer import pcm_sha256, read_pcm
 
@@ -67,40 +67,25 @@ def check_file(path: Path, *, with_codec: bool = True) -> FileCheck:
     payload = read_sidecar(sidecar_path)
     if payload is None:
         # A file with no sidecar cannot be matched to a plan, and a file
-        # that cannot be matched is not a file that can be installed.
-        check.failures.append(
-            GateResult(
-                gate=10,
-                measured=0.0,
-                limit=1.0,
-                check=f"there is no sidecar next to {path.name}",
-            )
-        )
-        check.skipped.append(f"no sidecar next to {path.name}: the plan's gates cannot be checked")
+        # that cannot be matched is not a file that can be installed. A
+        # sidecar that exists but will not read is a different story: the
+        # operator has to fix that file, not go looking for it.
+        if sidecar_path.is_file():
+            reason = f"the sidecar of {path.name} is not a readable sidecar"
+        else:
+            reason = f"there is no sidecar next to {path.name}"
+        check.failures.append(failure(10, 0.0, 1.0, reason))
+        check.skipped.append(f"{reason}: the plan's gates cannot be checked")
         return check
     plan_payload = payload.get("plan")
     if not isinstance(plan_payload, dict):
-        check.failures.append(
-            GateResult(
-                gate=10,
-                measured=0.0,
-                limit=1.0,
-                check=f"the sidecar of {path.name} carries no plan",
-            )
-        )
+        check.failures.append(failure(10, 0.0, 1.0, f"the sidecar of {path.name} carries no plan"))
         check.skipped.append(f"the sidecar of {path.name} carries no plan")
         return check
     try:
         plan = Plan.model_validate(plan_payload)
-    except ValueError:
-        check.failures.append(
-            GateResult(
-                gate=10,
-                measured=0.0,
-                limit=1.0,
-                check=f"the sidecar of {path.name} does not validate as a plan",
-            )
-        )
+    except ValueError, PlanError:
+        check.failures.append(failure(10, 0.0, 1.0, f"the sidecar of {path.name} does not validate as a plan"))
         check.skipped.append(f"the sidecar of {path.name} does not validate as a plan")
         return check
 
@@ -153,10 +138,10 @@ def _check_gate_2_file(pcm: np.ndarray) -> list[GateResult]:
         delivered = pcm.astype(np.float64) / 32768.0
         offset = max(abs(float(np.mean(delivered[:, channel]))) for channel in range(delivered.shape[1]))
         if offset > DC_OFFSET_LIMIT:
-            results.append(GateResult(gate=2, measured=offset, limit=DC_OFFSET_LIMIT, check="DC offset"))
+            results.append(failure(gate=2, measured=offset, limit=DC_OFFSET_LIMIT, check="DC offset"))
     rails = int(np.count_nonzero((pcm == INT16_MAX) | (pcm == INT16_MIN)))
     if rails:
-        results.append(GateResult(gate=2, measured=float(rails), limit=0.0, check="samples at digital full scale"))
+        results.append(failure(gate=2, measured=float(rails), limit=0.0, check="samples at digital full scale"))
     return results
 
 
@@ -171,7 +156,7 @@ def _check_gate_5_recorded(payload: dict[str, Any]) -> list[GateResult]:
     if value is None or float(value) >= ENERGY_CORRELATION_LIMIT:
         return []
     return [
-        GateResult(
+        failure(
             gate=5,
             measured=float(value),
             limit=ENERGY_CORRELATION_LIMIT,
@@ -190,7 +175,7 @@ def _check_gate_6_recorded(payload: dict[str, Any]) -> list[GateResult]:
         if float(value) <= STATIC_CENTROID_LIMIT:
             return []
         return [
-            GateResult(
+            failure(
                 gate=6,
                 measured=float(value),
                 limit=STATIC_CENTROID_LIMIT,
@@ -200,7 +185,7 @@ def _check_gate_6_recorded(payload: dict[str, Any]) -> list[GateResult]:
     if float(value) >= TIMBRE_CORRELATION_LIMIT:
         return []
     return [
-        GateResult(
+        failure(
             gate=6,
             measured=float(value),
             limit=TIMBRE_CORRELATION_LIMIT,

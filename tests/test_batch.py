@@ -99,9 +99,7 @@ def test_the_forms_are_spread_over_the_batch() -> None:
     assert "longform" in drawn[10:]
 
 
-def test_a_batch_renders_the_tracks_and_writes_the_catalog(
-    short_preset, no_trajectory_gates, tmp_path: Path
-) -> None:
+def test_a_batch_renders_the_tracks_and_writes_the_catalog(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
     result = batch(short_preset, 4, 2000, tmp_path)
     assert len(result.tracks) == 4
     assert [track.seed for track in result.tracks] == [2000, 2001, 2002, 2003]

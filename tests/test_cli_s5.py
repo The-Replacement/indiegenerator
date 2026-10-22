@@ -36,8 +36,7 @@ def short_preset_dir(tmp_path: Path, repo_root: Path, monkeypatch: pytest.Monkey
         (directory / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
     raw = yaml.safe_load((directory / "station.yaml").read_text(encoding="utf-8"))
     raw["forms"] = [
-        {"form": card.form, "weight": card.weight, "duration_range_seconds": [4, 6]}
-        for card in station.forms
+        {"form": card.form, "weight": card.weight, "duration_range_seconds": [4, 6]} for card in station.forms
     ]
     (directory / "station.yaml").write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
     return directory
@@ -93,9 +92,7 @@ def test_the_batch_refuses_a_seed_that_is_already_in_the_library(
     assert "already in the library" in again.output
 
 
-def test_the_catalog_command_reports_the_library(
-    cli_runner: CliRunner, short_preset_dir: Path, tmp_path: Path
-) -> None:
+def test_the_catalog_command_reports_the_library(cli_runner: CliRunner, short_preset_dir: Path, tmp_path: Path) -> None:
     out = tmp_path / "out"
     cli_runner.invoke(
         app,
@@ -141,9 +138,7 @@ def test_the_validate_command_checks_a_file(cli_runner: CliRunner, real_track: P
     assert "ok:" in result.stdout
 
 
-def test_the_install_command_copies_the_valid_tracks(
-    cli_runner: CliRunner, real_track: Path, tmp_path: Path
-) -> None:
+def test_the_install_command_copies_the_valid_tracks(cli_runner: CliRunner, real_track: Path, tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     (out / real_track.name).write_bytes(real_track.read_bytes())

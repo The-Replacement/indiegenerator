@@ -14,8 +14,10 @@ BRIEF 6 names.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Literal, cast
 
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
@@ -42,18 +44,16 @@ from indiegen.config import (
     SnareCard,
     StationPreset,
     StrategyCard,
+    TechniqueCard,
 )
 from indiegen.errors import PlanError
 from indiegen.plan import (
     SAMPLE_RATE,
-    BassEvent,
     DelaySend,
     DirectorMove,
     DubChainSpec,
     Event,
     FrippertronicsSpec,
-    HatEvent,
-    KickEvent,
     MotifAppearance,
     MotifCell,
     MotifNote,
@@ -62,9 +62,9 @@ from indiegen.plan import (
     PluckEvent,
     Rational,
     ReverbSpec,
+    RhythmEvent,
     SectionPlan,
     SectionProfile,
-    SnareEvent,
 )
 from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES, mode_scale
 
@@ -72,7 +72,6 @@ from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES, mode_scale
 Form = Literal["full", "longform", "interlude"]
 
 # The dimensions two consecutive sections have to differ in.
-DIMENSIONS: tuple[str, ...] = ("instrumentation", "harmonic_center", "rhythm", "density", "texture")
 MINIMUM_DIFFERENCES: int = 2
 
 # The harmonic center moves at least this often and at most this often, in
@@ -92,6 +91,10 @@ DROPPING_STRATEGIES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("drop_bass", ("bass",)),
     ("solo_texture", ("kick", "snare", "hat", "bass")),
 )
+# The same pairs, as the read-only lookup `_would_empty` needs: the tuple is
+# the declaration, this is the index into it, built once instead of twice per
+# call in the arranger's bar loop.
+_LAYERS_BY_DROP: Mapping[str, tuple[str, ...]] = MappingProxyType(dict(DROPPING_STRATEGIES))
 
 
 def pick_lane(preset: Preset, rng: SplitMix64) -> str:
@@ -311,7 +314,7 @@ def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int
     )
 
 
-def _string_voice(cards: Sequence[object]) -> StringVoice | None:
+def _string_voice(cards: Sequence[TechniqueCard]) -> StringVoice | None:
     """The Karplus-Strong's parameters, from whichever card declares them."""
     for card in cards:
         if isinstance(card, PluckCard):
@@ -341,7 +344,7 @@ def _instrumentation(events: list[Event], start: int, stop: int) -> list[str]:
     """
     kinds: set[str] = set()
     for event in events:
-        if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
+        if isinstance(event, RhythmEvent):
             if any(start <= hit.frame < stop for hit in event.hits):
                 kinds.add(event.kind)
             continue
@@ -350,7 +353,7 @@ def _instrumentation(events: list[Event], start: int, stop: int) -> list[str]:
     return sorted(kinds)
 
 
-def _rhythm_variants(cards: Sequence[object], count: int) -> list[int | None]:
+def _rhythm_variants(cards: Sequence[TechniqueCard], count: int) -> list[int | None]:
     """The rhythmic pattern of every section, or None when the lane has none.
 
     The drums' pattern turns by one step per section, so two sections that
@@ -382,27 +385,27 @@ def _planned_centroid(timbre: dict[str, int], function: str) -> int:
     return max(1, sum(timbre.values()) // len(timbre))
 
 
-def _card_instrument(card: object) -> str | None:
+# Which instrument a card kind puts in the plan. A card that is not an
+# instrument (the pink stream, the Frippertronics send, the dub chain) and a
+# card the plan does not know are both absent from the map.
+INSTRUMENT_BY_KIND: Mapping[str, str] = MappingProxyType(
+    {
+        "pad": "pad",
+        "poly_period": "poly_period",
+        "drone": "drone",
+        "pluck": "ks",
+        "kick": "kick",
+        "snare": "snare",
+        "hat": "hat",
+        "bass": "bass",
+        "deja_vu": "pluck",
+    }
+)
+
+
+def _card_instrument(card: TechniqueCard) -> str | None:
     """The instrument a card puts in the plan, or None when it is not one."""
-    if isinstance(card, PadCard):
-        return "pad"
-    if isinstance(card, PolyPeriodCard):
-        return "poly_period"
-    if isinstance(card, DroneCard):
-        return "drone"
-    if isinstance(card, PluckCard):
-        return "ks"
-    if isinstance(card, KickCard):
-        return "kick"
-    if isinstance(card, SnareCard):
-        return "snare"
-    if isinstance(card, HatCard):
-        return "hat"
-    if isinstance(card, BassCard):
-        return "bass"
-    if isinstance(card, DejaVuCard):
-        return "pluck"
-    return None
+    return INSTRUMENT_BY_KIND.get(card.kind)
 
 
 def _card_min_density(card: object) -> int:
@@ -533,10 +536,11 @@ def _would_empty(
     not a drop. The dub lane's hats play in one section; a drop of eight
     bars in that section took all of them, and the lane had no hats at all.
     """
-    if strategy not in dict(DROPPING_STRATEGIES):
+    layers = _LAYERS_BY_DROP.get(strategy)
+    if layers is None:
         return False
     end = sample + span
-    for name in dict(DROPPING_STRATEGIES)[strategy]:
+    for name in layers:
         spans = ranges.get(name)
         if not spans:
             continue
@@ -675,32 +679,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     # pink card and stamped onto the drum events.
     pink = next((card for card in lane.techniques if isinstance(card, PinkCard)), None)
 
-    events: list[Event] = []
-    for card in lane.techniques:
-        if isinstance(card, PadCard):
-            for index in range(len(nodes)):
-                if nodes[index].density < card.min_density:
-                    continue
-                events.append(_pad_event(card, rng, ctx, boundaries[index], lengths[index], section_roots[index]))
-        elif isinstance(card, PolyPeriodCard):
-            events.extend(plan_poly_period(card, rng, ctx))
-        elif isinstance(card, PluckCard):
-            events.extend(plan_plucks(card, rng, ctx))
-        elif isinstance(card, KickCard):
-            events.append(plan_kick(card, rng, ctx, pink))
-        elif isinstance(card, SnareCard):
-            events.append(plan_snare(card, rng, ctx, pink))
-        elif isinstance(card, HatCard):
-            events.append(plan_hat(card, rng, ctx, pink))
-        elif isinstance(card, BassCard):
-            events.append(plan_bass(card, rng, ctx, pink))
-        elif isinstance(card, DejaVuCard):
-            events.extend(plan_deja_vu(card, rng, ctx))
-        elif isinstance(card, (PinkCard, FrippertronicsCard, DubChainCard)):
-            continue
-        else:
-            for index in range(len(nodes)):
-                events.append(plan_drone(card, rng, ctx, boundaries[index], lengths[index], section_roots[index]))
+    events = _events_for_lane(lane, nodes, boundaries, lengths, section_roots, rng, ctx, pink)
 
     # The motif: the station's signature, played by the Karplus-Strong.
     cell = build_cell(station.motif_bank, station.motif_rhythm, root_midi, frames_per_beat, rng)
@@ -711,33 +690,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         appearances, motif_events = plan_motif(cell, string, ctx, rng)
         events.extend(motif_events)
 
-    sections: list[SectionPlan] = []
+    sections = _section_plans(nodes, boundaries, lengths, frames_per_bar, modes, section_roots, lane, events)
     rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
-    for index, node in enumerate(nodes):
-        start = boundaries[index]
-        stop = boundaries[index + 1]
-        reprise = -1
-        if node.reprise_of:
-            reprise = next((other for other, item in enumerate(nodes) if item.function == node.reprise_of), -1)
-        sections.append(
-            SectionPlan(
-                index=index,
-                function=node.function,
-                start_frame=start,
-                end_frame=stop,
-                bars=max(1, lengths[index] // frames_per_bar) if frames_per_bar else 1,
-                density=node.density,
-                level_millibels=node.level_millibels,
-                techniques=[card.kind for card in lane.techniques],
-                instrumentation=_instrumentation(events, start, stop),
-                mode=modes[index][0],
-                root_midi=section_roots[index],
-                texture=node.texture,
-                reprise_of=reprise,
-                transform=node.transform,
-                centroid_hz=_planned_centroid(lane.timbre, node.function),
-            )
-        )
 
     _assert_sections_differ(preset, seed, sections, rhythm_variants)
 
@@ -834,6 +788,160 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         events=events,
         director_log=[],
     )
+
+
+@dataclass(frozen=True)
+class _LaneFrames:
+    """Where each section starts, how long it is, and the lane's pink card."""
+
+    nodes: list[SectionProfile]
+    boundaries: list[int]
+    lengths: list[int]
+    section_roots: list[int]
+    pink: PinkCard | None
+
+
+CardEvents = Callable[[TechniqueCard, SplitMix64, TechniqueContext, _LaneFrames], Sequence[Event]]
+
+
+def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    """One pad per section the card declares itself dense enough for."""
+    pad = cast(PadCard, card)
+    return [
+        _pad_event(pad, rng, ctx, frames.boundaries[index], frames.lengths[index], frames.section_roots[index])
+        for index in range(len(frames.nodes))
+        if frames.nodes[index].density >= pad.min_density
+    ]
+
+
+def _drone_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    """One drone per section, from the same card."""
+    drone = cast(DroneCard, card)
+    return [
+        plan_drone(drone, rng, ctx, frames.boundaries[index], frames.lengths[index], frames.section_roots[index])
+        for index in range(len(frames.nodes))
+    ]
+
+
+def _poly_period_events(
+    card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
+) -> Sequence[Event]:
+    return plan_poly_period(cast(PolyPeriodCard, card), rng, ctx)
+
+
+def _pluck_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    return plan_plucks(cast(PluckCard, card), rng, ctx)
+
+
+def _deja_vu_events(
+    card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
+) -> Sequence[Event]:
+    return plan_deja_vu(cast(DejaVuCard, card), rng, ctx)
+
+
+def _kick_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    return [plan_kick(cast(KickCard, card), rng, ctx, frames.pink)]
+
+
+def _snare_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    return [plan_snare(cast(SnareCard, card), rng, ctx, frames.pink)]
+
+
+def _hat_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    return [plan_hat(cast(HatCard, card), rng, ctx, frames.pink)]
+
+
+def _bass_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    return [plan_bass(cast(BassCard, card), rng, ctx, frames.pink)]
+
+
+def _no_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    """A card that is a send or a stream, not an instrument: it schedules nothing."""
+    return []
+
+
+# One row per card kind: the tag the discriminated union already carries, and
+# the builder that turns that card into events. A kind that is missing from
+# this table is a preset bug the composer reports; a kind that is present but
+# does not play is ``_no_events``, said out loud. The old ``else`` branch sent
+# every unrecognised card to the drone builder.
+_CARD_EVENTS: Mapping[str, CardEvents] = MappingProxyType(
+    {
+        "pad": _pad_events,
+        "poly_period": _poly_period_events,
+        "pluck": _pluck_events,
+        "kick": _kick_events,
+        "snare": _snare_events,
+        "hat": _hat_events,
+        "bass": _bass_events,
+        "deja_vu": _deja_vu_events,
+        "drone": _drone_events,
+        "pink": _no_events,
+        "frippertronics": _no_events,
+        "dub_chain": _no_events,
+    }
+)
+
+
+def _events_for_lane(
+    lane: LanePreset,
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+    lengths: list[int],
+    section_roots: list[int],
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    pink: PinkCard | None,
+) -> list[Event]:
+    """Every event the lane's cards declare, in the order the lane declares them."""
+    frames = _LaneFrames(nodes=nodes, boundaries=boundaries, lengths=lengths, section_roots=section_roots, pink=pink)
+    events: list[Event] = []
+    for card in lane.techniques:
+        builder = _CARD_EVENTS.get(card.kind)
+        if builder is None:
+            raise PlanError(f"unknown technique card {card.kind!r}", preset=lane.lane, seed=ctx.seed)
+        events.extend(builder(card, rng, ctx, frames))
+    return events
+
+
+def _section_plans(
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+    lengths: list[int],
+    frames_per_bar: int,
+    modes: list[tuple[str, int]],
+    section_roots: list[int],
+    lane: LanePreset,
+    events: list[Event],
+) -> list[SectionPlan]:
+    """The sections the plan records: what each one carries and what sounds in it."""
+    sections: list[SectionPlan] = []
+    for index, node in enumerate(nodes):
+        start = boundaries[index]
+        stop = boundaries[index + 1]
+        reprise = -1
+        if node.reprise_of:
+            reprise = next((other for other, item in enumerate(nodes) if item.function == node.reprise_of), -1)
+        sections.append(
+            SectionPlan(
+                index=index,
+                function=node.function,
+                start_frame=start,
+                end_frame=stop,
+                bars=max(1, lengths[index] // frames_per_bar) if frames_per_bar else 1,
+                density=node.density,
+                level_millibels=node.level_millibels,
+                techniques=[card.kind for card in lane.techniques],
+                instrumentation=_instrumentation(events, start, stop),
+                mode=modes[index][0],
+                root_midi=section_roots[index],
+                texture=node.texture,
+                reprise_of=reprise,
+                transform=node.transform,
+                centroid_hz=_planned_centroid(lane.timbre, node.function),
+            )
+        )
+    return sections
 
 
 def _assert_sections_differ(

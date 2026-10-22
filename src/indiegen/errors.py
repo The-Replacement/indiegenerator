@@ -44,3 +44,13 @@ class RenderError(Exception):
         self.preset = preset
         self.seed = seed
         self.block_index = block_index
+
+
+class DecodeError(Exception):
+    """A file on disk could not be read as the audio it claims to be.
+
+    Distinct from :class:`PlanError` (nothing to render) and from
+    :class:`RenderError` (the render is ours and it broke): here the input is
+    a file somebody else produced, and the operator needs to be told which
+    file and why, not shown a library traceback.
+    """

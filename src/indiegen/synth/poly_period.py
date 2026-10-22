@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from indiegen.gain import millibels_to_gain
 from indiegen.plan import PolyPeriodEvent, PolyPeriodVoice
 from indiegen.synth.env import dc_block_state
 from indiegen.synth.osc import cumulative_sum, midi_to_hz
@@ -117,9 +118,7 @@ def render_poly_period_block(
             frequency = base * ratio * math.pow(2.0, partial.detune_cents / 1200.0)
             phase, carries[index] = cumulative_sum(carries[index], np.full(count, frequency, dtype=np.float64))
             voice += (
-                envelope
-                * np.sin(2.0 * np.pi * phase / sample_rate)
-                * math.pow(10.0, partial.amplitude_millibels / 2000.0)
+                envelope * np.sin(2.0 * np.pi * phase / sample_rate) * millibels_to_gain(partial.amplitude_millibels)
             )
             index += 1
     blocked, dc_carry = dc_block_state(voice, sample_rate, state.dc)

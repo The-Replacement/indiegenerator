@@ -20,6 +20,8 @@ import math
 import numpy as np
 from scipy.signal import lfilter, resample_poly
 
+from indiegen.gain import decibels_to_gain
+
 BLOCK_SECONDS: float = 0.4
 HOP_SECONDS: float = 0.1
 ABSOLUTE_GATE_LUFS: float = -70.0
@@ -43,7 +45,7 @@ def _high_shelf(rate: int) -> tuple[list[float], list[float]]:
     gain_db = 3.999843853973347
     quality = 0.7071752369554196
     k = math.tan(math.pi * f0 / rate)
-    vh = math.pow(10.0, gain_db / 20.0)
+    vh = decibels_to_gain(gain_db)
     vb = math.pow(vh, 0.4996667741545416)
     a0 = 1.0 + k / quality + k * k
     numerators = [
@@ -160,10 +162,7 @@ class LoudnessMeter:
 
     def _feed_energies(self, weighted: np.ndarray) -> None:
         """Cut the loudness windows out of the rolling buffer."""
-        if self._buffer.size:
-            combined = np.concatenate((self._buffer, weighted))
-        else:
-            combined = weighted
+        combined = np.concatenate((self._buffer, weighted)) if self._buffer.size else weighted
         base = self._position - self._buffer.shape[0]
         end = self._position + weighted.shape[0]
         while self._next_window * self._hop + self._window <= end:
@@ -252,22 +251,23 @@ class LoudnessMeter:
         return 20.0 * math.log10(max(self._true_peak, 1e-30))
 
 
-def integrated_lufs(samples: np.ndarray, rate: int) -> float:
-    """The gated integrated loudness, in LUFS."""
+def _meter_with(samples: np.ndarray, rate: int, *, measure_peak: bool = False) -> LoudnessMeter:
+    """A meter fed with the whole signal, one measure block at a time."""
     meter = LoudnessMeter(rate)
     for start in range(0, samples.shape[0], MEASURE_BLOCK):
         stop = min(samples.shape[0], start + MEASURE_BLOCK)
-        meter.feed(samples[start:stop], measure_peak=False)
-    return meter.integrated_lufs()
+        meter.feed(samples[start:stop], measure_peak=measure_peak)
+    return meter
+
+
+def integrated_lufs(samples: np.ndarray, rate: int) -> float:
+    """The gated integrated loudness, in LUFS."""
+    return _meter_with(samples, rate).integrated_lufs()
 
 
 def loudness_range(samples: np.ndarray, rate: int) -> float:
     """The loudness range, in LU."""
-    meter = LoudnessMeter(rate)
-    for start in range(0, samples.shape[0], MEASURE_BLOCK):
-        stop = min(samples.shape[0], start + MEASURE_BLOCK)
-        meter.feed(samples[start:stop], measure_peak=False)
-    return meter.loudness_range()
+    return _meter_with(samples, rate).loudness_range()
 
 
 def sample_peak_dbfs(samples: np.ndarray) -> float:

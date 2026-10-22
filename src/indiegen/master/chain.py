@@ -28,15 +28,14 @@ import math
 import numpy as np
 
 from indiegen.errors import RenderError
+from indiegen.gain import decibels_to_gain, millibels_to_gain
 from indiegen.master.dither import tpdf
 from indiegen.master.limiter import limit, peak_envelope
 from indiegen.master.loudness import integrated_lufs
-from indiegen.plan import Plan
+from indiegen.plan import INT16_MAX, INT16_MIN, Plan
 from indiegen.synth.env import fade_gain
 
-INT16_SCALE: float = 32767.0
-INT16_MIN: float = -32768.0
-INT16_MAX: float = 32767.0
+INT16_SCALE: float = float(INT16_MAX)
 
 # How close to the target the delivered loudness has to be before the chain
 # stops correcting, and how many times it is allowed to correct.
@@ -49,14 +48,14 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
     if not bool(np.all(np.isfinite(stereo))):
         raise RenderError("non-finite sample in the mix", preset=plan.preset, seed=plan.seed, block_index=0)
     target = plan.target_lufs_millibels / 1000.0
-    ceiling = math.pow(10.0, plan.ceiling_millibels / 2000.0)
+    ceiling = millibels_to_gain(plan.ceiling_millibels)
     peaks = peak_envelope(stereo, block)
 
     # The first gain is the one that lands the mix on the target, and the
     # loop corrects it: the limiter removes energy, so the loudness of the
     # limited signal is not the loudness of the mix.
     measured = integrated_lufs(stereo, plan.sample_rate)
-    gain = math.pow(10.0, (target - measured) / 20.0) if math.isfinite(measured) else 1.0
+    gain = decibels_to_gain(target - measured) if math.isfinite(measured) else 1.0
     limited = stereo
     best: tuple[float, np.ndarray] | None = None
     previous_error = 0.0
@@ -75,7 +74,7 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
             # loudest the ceiling allows is what gets delivered.
             break
         previous_error = error
-        gain *= math.pow(10.0, error / 20.0)
+        gain *= decibels_to_gain(error)
     if best is not None:
         limited = best[1]
 
@@ -86,6 +85,6 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
         weight = (fade_gain(plan, start, stop - start) >= 1.0).astype(np.float64)[:, np.newaxis]
         noise = tpdf(plan.dither_seed, stop - start, start)[:, np.newaxis] * plan.dither_lsb * weight
         quantized = np.round(chunk * INT16_SCALE + noise)
-        clipped: np.ndarray = np.clip(quantized, INT16_MIN, INT16_MAX)
+        clipped: np.ndarray = np.clip(quantized, float(INT16_MIN), INT16_SCALE)
         out[start:stop] = clipped.astype("<i2")
     return out

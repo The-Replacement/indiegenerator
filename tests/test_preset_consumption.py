@@ -81,28 +81,38 @@ def _mutate(value: Any, key: str = "") -> Any:
     if isinstance(value, str):
         return f"{value}x"
     if isinstance(value, list):
-        if not value:
-            return None
-        mutated = list(value)
-        for index, item in enumerate(mutated):
-            changed = _mutate(item)
-            if changed is None:
-                return None
-            mutated[index] = changed
-        return mutated
+        return _mutate_list(value)
     if isinstance(value, dict):
-        if not value:
-            return None
-        mutated = dict(value)
-        for name, item in value.items():
-            if name in SKIPPED_KEYS:
-                continue
-            changed = _mutate(item, name)
-            if changed is None:
-                return None
-            mutated[name] = changed
-        return mutated
+        return _mutate_dict(value)
     return None
+
+
+def _mutate_list(value: list[Any]) -> list[Any] | None:
+    """Every element changed, or ``None`` when one of them cannot change."""
+    if not value:
+        return None
+    mutated = list(value)
+    for index, item in enumerate(mutated):
+        changed = _mutate(item)
+        if changed is None:
+            return None
+        mutated[index] = changed
+    return mutated
+
+
+def _mutate_dict(value: dict[str, Any]) -> dict[str, Any] | None:
+    """Every key changed except the skipped ones, or ``None`` when one cannot."""
+    if not value:
+        return None
+    mutated = dict(value)
+    for name, item in value.items():
+        if name in SKIPPED_KEYS:
+            continue
+        changed = _mutate(item, name)
+        if changed is None:
+            return None
+        mutated[name] = changed
+    return mutated
 
 
 def _preset_name_for(path: Path) -> str:

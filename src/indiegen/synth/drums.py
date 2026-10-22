@@ -19,10 +19,14 @@ from typing import cast
 import numpy as np
 from scipy.signal import lfilter
 
+from indiegen.errors import PlanError
+from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, RhythmEvent, SnareEvent
 from indiegen.synth.env import dc_block
 from indiegen.synth.noise import CONTROL_RATE, PinkState, control_slice, pink_state, stream_key, uniform_stream
+
+DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
 
 SNARE_STREAM: int = 0
 HAT_STREAM: int = 1
@@ -160,8 +164,33 @@ def _clip(value: float) -> float:
     return max(-1.0, min(1.0, value))
 
 
+def _drum_voice(event: DrumEvent, hit: DrumHit | BassHit, sample_rate: int, gain: float) -> np.ndarray:
+    """One hit's voice, dispatched on the pattern's own tag."""
+    match event.kind:
+        case "kick":
+            return render_kick(event, cast(DrumHit, hit), sample_rate, gain)
+        case "snare":
+            return render_snare(event, cast(DrumHit, hit), sample_rate, gain)
+        case "hat":
+            return render_hat(event, cast(DrumHit, hit), sample_rate, gain)
+        case "bass":
+            return render_bass(event, cast(BassHit, hit), sample_rate, gain)
+        case unknown:
+            raise PlanError(f"unknown drum kind {unknown!r}")
+
+
+def _mix_pending(pending: tuple[PendingHit, ...], block: np.ndarray, count: int) -> None:
+    """Mix the tails of the hits that began in the block that has gone by."""
+    for tail in pending:
+        until = min(count, tail.voice.size - tail.skip)
+        if until <= 0:
+            continue
+        block[:until, 0] += tail.voice[tail.skip : tail.skip + until] * tail.left
+        block[:until, 1] += tail.voice[tail.skip : tail.skip + until] * tail.right
+
+
 def render_drum_block(
-    event: KickEvent | SnareEvent | HatEvent | BassEvent,
+    event: DrumEvent,
     sample_rate: int,
     start: int,
     stop: int,
@@ -193,13 +222,7 @@ def render_drum_block(
         cursor += 1
 
     # The hits whose voice began in the last block: their tail is here.
-    for pending in state.pending:
-        at = 0
-        until = min(count, pending.voice.size - pending.skip)
-        if until <= at:
-            continue
-        block[at:until, 0] += pending.voice[pending.skip : pending.skip + (until - at)] * pending.left
-        block[at:until, 1] += pending.voice[pending.skip : pending.skip + (until - at)] * pending.right
+    _mix_pending(state.pending, block, count)
 
     carried: list[PendingHit] = []
     for hit in event.hits[cursor:]:
@@ -220,17 +243,10 @@ def render_drum_block(
             continue
         index = (frame * CONTROL_RATE) // sample_rate - low
         drift = _clip(float(velocity_control[index])) * event.velocity_depth_millibels
-        gain = math.pow(10.0, (hit.velocity_millibels + drift) / 2000.0)
+        gain = millibels_to_gain(hit.velocity_millibels + drift)
         pan = event.pan_permille + int(round(_clip(float(pan_control[index])) * event.pan_drift_permille))
         left, right = pan_gains(pan)
-        if isinstance(event, BassEvent):
-            voice = render_bass(event, cast(BassHit, hit), sample_rate, gain)
-        elif isinstance(event, KickEvent):
-            voice = render_kick(event, cast(DrumHit, hit), sample_rate, gain)
-        elif isinstance(event, SnareEvent):
-            voice = render_snare(event, cast(DrumHit, hit), sample_rate, gain)
-        else:
-            voice = render_hat(event, cast(DrumHit, hit), sample_rate, gain)
+        voice = _drum_voice(event, hit, sample_rate, gain)
         at = frame - start
         until = min(count, at + voice.size)
         if until <= at:

@@ -7,6 +7,7 @@ import math
 import numpy as np
 from scipy.signal import lfilter
 
+from indiegen.gain import millibels_to_gain_array
 from indiegen.plan import EventBase, Plan
 
 DC_BLOCKER_HZ: float = 20.0
@@ -146,7 +147,7 @@ def section_gain(plan: Plan, start: int, count: int) -> np.ndarray:
         block_high = min(stop, high)
         if block_high > block_low:
             levels[block_low - start : block_high - start] = ramp[block_low - low : block_high - low]
-    return np.power(10.0, levels / 2000.0)
+    return millibels_to_gain_array(levels)
 
 
 def fade_gain(plan: Plan, start: int, count: int) -> np.ndarray:
@@ -164,9 +165,3 @@ def fade_gain(plan: Plan, start: int, count: int) -> np.ndarray:
         mask = index >= plan.duration_frames - plan.fade_out_frames
         gain[mask] = (plan.duration_frames - 1 - index[mask]) / plan.fade_out_frames
     return np.clip(gain, 0.0, 1.0)
-
-
-def fade_weight(plan: Plan) -> np.ndarray:
-    """One where the track is not inside a fade, zero where it is."""
-    gain = fade_gain(plan, 0, plan.duration_frames)
-    return (gain >= 1.0).astype(np.float64)

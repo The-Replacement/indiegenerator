@@ -36,6 +36,7 @@ reverb, the gains - carries its state from one block to the next.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 
@@ -44,17 +45,16 @@ from indiegen.fx.delay import DelayState, delay_state, render_delay
 from indiegen.fx.dub import DubChainState, dub_chain_state, render_dub_chain
 from indiegen.fx.frippertronics import FrippertronicsState, frippertronics_state, render_frippertronics
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
+from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import bus_gains, pan_gains, trim
 from indiegen.mix.sidechain import SidechainState, render_sidechain, sidechain_state
 from indiegen.plan import (
     BassEvent,
-    DroneEvent,
     Event,
     HatEvent,
     KickEvent,
     Plan,
     PluckEvent,
-    PolyPeriodEvent,
     SnareEvent,
 )
 from indiegen.synth.drone import DroneState, drone_state, render_drone_block
@@ -103,15 +103,19 @@ def schedule(plan: Plan) -> list[Event]:
 
 def _voice_state(event: Event, sample_rate: int) -> VoiceState:
     """The zero state of one event's voice."""
-    if isinstance(event, PluckEvent):
-        return pluck_state(event, sample_rate)
-    if isinstance(event, PolyPeriodEvent):
-        return poly_period_state(event)
-    if isinstance(event, DroneEvent):
-        return drone_state(event)
-    if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
-        return drum_state(event)
-    return pad_state(event)
+    match event.kind:
+        case "pluck":
+            return pluck_state(event, sample_rate)
+        case "poly_period":
+            return poly_period_state(event)
+        case "drone":
+            return drone_state(event)
+        case "kick" | "snare" | "hat" | "bass":
+            return drum_state(event)
+        case "pad":
+            return pad_state(event)
+        case unknown:
+            raise PlanError(f"unknown event kind {unknown!r}")
 
 
 def _voice_block(
@@ -121,22 +125,26 @@ def _voice_block(
     stop: int,
     state: VoiceState,
 ) -> tuple[np.ndarray, VoiceState]:
-    """The mono voice of one event, over its own frames ``[start, stop)``."""
-    if isinstance(event, PluckEvent):
-        assert isinstance(state, PluckState)
-        return render_pluck_block(event, sample_rate, start, stop, state)
-    if isinstance(event, PolyPeriodEvent):
-        assert isinstance(state, PolyPeriodState)
-        return render_poly_period_block(event, sample_rate, start, stop, state)
-    if isinstance(event, DroneEvent):
-        assert isinstance(state, DroneState)
-        return render_drone_block(event, sample_rate, start, stop, state)
-    if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
-        assert isinstance(state, DrumState)
-        stereo, new_state = render_drum_block(event, sample_rate, start, stop, state)
-        return stereo, new_state
-    assert isinstance(state, PadState)
-    return render_pad_block(event, sample_rate, start, stop, state)
+    """The mono voice of one event, over its own frames ``[start, stop)``.
+
+    The dispatch is on the event's own tag and the state is ``cast`` rather
+    than ``assert``ed: an ``assert`` is stripped under ``python -O``, and a
+    mismatched state must not reach the renderer just because optimisation is
+    on. The cast is a static promise, checked by the tests at every block.
+    """
+    match event.kind:
+        case "pluck":
+            return render_pluck_block(event, sample_rate, start, stop, cast(PluckState, state))
+        case "poly_period":
+            return render_poly_period_block(event, sample_rate, start, stop, cast(PolyPeriodState, state))
+        case "drone":
+            return render_drone_block(event, sample_rate, start, stop, cast(DroneState, state))
+        case "kick" | "snare" | "hat" | "bass":
+            return render_drum_block(event, sample_rate, start, stop, cast(DrumState, state))
+        case "pad":
+            return render_pad_block(event, sample_rate, start, stop, cast(PadState, state))
+        case unknown:
+            raise PlanError(f"unknown event kind {unknown!r}")
 
 
 def _bus_state(plan: Plan, events: list[Event]) -> BusState:
@@ -172,21 +180,24 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
     )
 
 
-def _render_block(
+def _mix_voices(
     plan: Plan,
     events: list[Event],
     voices: list[VoiceState],
-    bus: BusState,
+    trims: dict[str, float],
     start: int,
     stop: int,
-    kick_hits: list[int],
-) -> tuple[np.ndarray, BusState]:
-    """One block of the bus graph."""
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sum this block's voices into the main, kick and Karplus-Strong buses.
+
+    The kick is kept apart because the sidechain ducks everything else with
+    it; the plucks are kept apart because the delay and the dub chain are fed
+    from them and not from the whole mix.
+    """
     count = stop - start
     main = np.zeros((count, plan.channels), dtype=np.float64)
     kick_bus = np.zeros((count, plan.channels), dtype=np.float64)
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
-    trims = bus.trims
 
     for index, event in enumerate(events):
         if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
@@ -222,6 +233,23 @@ def _render_block(
             main[offset:end, 0] += voice * left
             main[offset:end, 1] += voice * right
 
+    return main, kick_bus, ks_bus
+
+
+def _render_block(
+    plan: Plan,
+    events: list[Event],
+    voices: list[VoiceState],
+    bus: BusState,
+    start: int,
+    stop: int,
+    kick_hits: list[int],
+) -> tuple[np.ndarray, BusState]:
+    """One block of the bus graph: the voices, then the effect chain."""
+    count = stop - start
+    main, kick_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
+    trims = bus.trims
+
     delay = bus.delay
     filter_state = bus.filter
     reverb = bus.reverb
@@ -232,13 +260,13 @@ def _render_block(
     if dub is not None and plan.dub_chain is not None:
         # T10: the stabs are bit-reduced and bandpassed before the delay.
         ks_bus, dub = render_dub_chain(ks_bus, dub, plan.dub_chain, plan.sample_rate)
-        level = float(np.power(10.0, plan.dub_chain.send_millibels / 2000.0))
+        level = millibels_to_gain(plan.dub_chain.send_millibels)
         ks_bus = ks_bus * level
 
     if delay is not None and plan.delay_sends:
         # The send's level is the level of the send: the delay is fed at the
         # declared level and its wet comes back at unity.
-        level = float(np.power(10.0, plan.delay_sends[0].send_millibels / 2000.0))
+        level = millibels_to_gain(plan.delay_sends[0].send_millibels)
         wet, delay = render_delay(ks_bus * level, delay, plan.delay_sends[0])
         main += wet
 
@@ -253,19 +281,19 @@ def _render_block(
                 seed=plan.seed,
                 block_index=start // BLOCK_SIZE,
             )
-        level = float(np.power(10.0, send.send_millibels / 2000.0))
+        level = millibels_to_gain(send.send_millibels)
         main = main + (filtered - main) * level
 
     if frippertronics is not None and plan.frippertronics is not None:
         # T3: the long feedback delay, summed back into the main bus.
         wet, frippertronics = render_frippertronics(main, frippertronics, plan.frippertronics, plan.sample_rate)
-        level = float(np.power(10.0, plan.frippertronics.send_millibels / 2000.0))
+        level = millibels_to_gain(plan.frippertronics.send_millibels)
         main = main + wet * level
 
     if reverb is not None and plan.reverb is not None:
         # The tap is the send: it is taken at the declared level, and the
         # reverb's wet comes back at unity.
-        level = float(np.power(10.0, plan.reverb.send_millibels / 2000.0))
+        level = millibels_to_gain(plan.reverb.send_millibels)
         wet, reverb = render_reverb(main * level, reverb, plan.reverb, plan.sample_rate)
         main = main + wet
 

@@ -15,8 +15,9 @@ one is a function over the plan and nothing else.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from indiegen.errors import PlanError
 from indiegen.plan import (
@@ -232,77 +233,116 @@ def _ending(plan: Plan) -> int:
 
 def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
     """Apply one move. ``None`` means it changed nothing."""
-    events = list(plan.events)
-    appearances = list(plan.motif_appearances)
-    sections = list(plan.sections)
-    delay_sends = list(plan.delay_sends)
+    handler = _HANDLERS.get(move.strategy)
+    if handler is None:
+        raise PlanError(f"unknown director strategy {move.strategy!r}", preset=plan.preset, seed=plan.seed)
+    parts = Arrangement(
+        events=list(plan.events),
+        appearances=list(plan.motif_appearances),
+        sections=list(plan.sections),
+        delay_sends=list(plan.delay_sends),
+    )
+    return handler(move, plan, parts)
 
-    if move.strategy == TRANSPOSE_UP_FOURTH:
-        new_events = _split_and_transpose(events, move)
-        if new_events == events:
-            return None
-        return Arrangement(new_events, appearances, sections, delay_sends)
 
-    if move.strategy in (TRANSPOSE_MOTIF, INVERT_MOTIF, RETROGRADE_MOTIF):
-        if "motif" not in move.applies_to:
-            return None
-        if move.strategy == TRANSPOSE_MOTIF:
+def _transpose_up_fourth(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    events = _split_and_transpose(parts.events, move)
+    if events == parts.events:
+        return None
+    return Arrangement(events, parts.appearances, parts.sections, parts.delay_sends)
 
-            def reshape(appearance: MotifAppearance, notes: list[int]) -> list[int]:
-                return [note + move.parameter for note in notes]
 
-        elif move.strategy == INVERT_MOTIF:
+def _motif(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    if "motif" not in move.applies_to:
+        return None
+    shape = _MOTIF_SHAPES.get(move.strategy)
+    if shape is None:
+        raise PlanError(f"unknown director strategy {move.strategy!r}", preset=plan.preset, seed=plan.seed)
+    events, appearances = _reshape_motif(
+        parts.events, parts.appearances, move, lambda appearance, notes: shape(plan, appearance, notes, move)
+    )
+    if appearances == parts.appearances:
+        return None
+    return Arrangement(events, appearances, parts.sections, parts.delay_sends)
 
-            def reshape(appearance: MotifAppearance, notes: list[int]) -> list[int]:
-                # The axis is the harmonic centre of the section the
-                # appearance is in, the same axis the composer used.
-                section = plan.sections[min(appearance.section_index, len(plan.sections) - 1)]
-                axis = section.root_midi if plan.sections else 0
-                return [2 * axis - note for note in notes]
 
-        else:
+def _drop(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    instruments = tuple(move.applies_to)
+    if not instruments:
+        return None
+    events = _drop_hits(parts.events, move, instruments, _ending(plan))
+    if events == parts.events:
+        return None
+    return Arrangement(events, parts.appearances, parts.sections, parts.delay_sends)
 
-            def reshape(appearance: MotifAppearance, notes: list[int]) -> list[int]:
-                return list(reversed(notes))
 
-        new_events, new_appearances = _reshape_motif(events, appearances, move, reshape)
-        if new_appearances == appearances:
-            return None
-        return Arrangement(new_events, new_appearances, sections, delay_sends)
+def _half_time_move(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    if plan.frames_per_beat <= 0:
+        return None
+    events = _half_time(parts.events, move, plan.frames_per_beat, _ending(plan))
+    if events == parts.events:
+        return None
+    return Arrangement(events, parts.appearances, parts.sections, parts.delay_sends)
 
-    if move.strategy in (DROP_DRUMS, DROP_KICK, DROP_BASS, SOLO_TEXTURE):
-        instruments = tuple(move.applies_to)
-        if not instruments:
-            return None
-        new_events = _drop_hits(events, move, instruments, _ending(plan))
-        if new_events == events:
-            return None
-        return Arrangement(new_events, appearances, sections, delay_sends)
 
-    if move.strategy == HALF_TIME:
-        if plan.frames_per_beat <= 0:
-            return None
-        new_events = _half_time(events, move, plan.frames_per_beat, _ending(plan))
-        if new_events == events:
-            return None
-        return Arrangement(new_events, appearances, sections, delay_sends)
+def _triplets(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    if not parts.delay_sends or plan.frames_per_beat <= 0:
+        return None
+    triplets = plan.frames_per_beat * 2 // 3
+    if triplets <= 0 or parts.delay_sends[0].delay_frames == triplets:
+        return None
+    delay_sends = [parts.delay_sends[0].model_copy(update={"delay_frames": triplets}), *parts.delay_sends[1:]]
+    return Arrangement(parts.events, parts.appearances, parts.sections, delay_sends)
 
-    if move.strategy == SWAP_DELAY_TO_TRIPLETS:
-        if not delay_sends or plan.frames_per_beat <= 0:
-            return None
-        triplets = plan.frames_per_beat * 2 // 3
-        if triplets <= 0 or delay_sends[0].delay_frames == triplets:
-            return None
-        delay_sends = [delay_sends[0].model_copy(update={"delay_frames": triplets}), *delay_sends[1:]]
-        return Arrangement(events, appearances, sections, delay_sends)
 
-    if move.strategy == REHARMONIZE_RELATIVE:
-        new_events, new_sections = _reharmonize(events, sections, move)
-        if new_sections == sections:
-            return None
-        return Arrangement(new_events, appearances, new_sections, delay_sends)
+def _reharmonize_relative(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    events, sections = _reharmonize(parts.events, parts.sections, move)
+    if sections == parts.sections:
+        return None
+    return Arrangement(events, parts.appearances, sections, parts.delay_sends)
 
-    raise PlanError(f"unknown director strategy {move.strategy!r}", preset=plan.preset, seed=plan.seed)
+
+def _shape_transpose(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
+    return [note + move.parameter for note in notes]
+
+
+def _shape_invert(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
+    # The axis is the harmonic centre of the section the appearance is in,
+    # the same axis the composer used.
+    axis = plan.sections[min(appearance.section_index, len(plan.sections) - 1)].root_midi if plan.sections else 0
+    return [2 * axis - note for note in notes]
+
+
+def _shape_retrograde(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
+    return list(reversed(notes))
+
+
+# One entry per strategy: the name a preset declares, and the function that
+# realises it. A strategy that is missing here is a preset error that the
+# Director reports, not a move that is silently ignored.
+_MOTIF_SHAPES: Mapping[str, Callable[[Plan, MotifAppearance, list[int], DirectorMove], list[int]]] = MappingProxyType(
+    {
+        TRANSPOSE_MOTIF: _shape_transpose,
+        INVERT_MOTIF: _shape_invert,
+        RETROGRADE_MOTIF: _shape_retrograde,
+    }
+)
+
+_HANDLERS: Mapping[str, Callable[[DirectorMove, Plan, Arrangement], Arrangement | None]] = MappingProxyType(
+    {
+        TRANSPOSE_UP_FOURTH: _transpose_up_fourth,
+        TRANSPOSE_MOTIF: _motif,
+        INVERT_MOTIF: _motif,
+        RETROGRADE_MOTIF: _motif,
+        DROP_DRUMS: _drop,
+        DROP_KICK: _drop,
+        DROP_BASS: _drop,
+        SOLO_TEXTURE: _drop,
+        HALF_TIME: _half_time_move,
+        SWAP_DELAY_TO_TRIPLETS: _triplets,
+        REHARMONIZE_RELATIVE: _reharmonize_relative,
+    }
+)
 
 
 def director(plan: Plan) -> Plan:

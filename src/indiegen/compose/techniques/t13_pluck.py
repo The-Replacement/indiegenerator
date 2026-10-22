@@ -32,10 +32,7 @@ def plan_plucks(card: PluckCard, rng: SplitMix64, ctx: TechniqueContext) -> list
             break
         length = min(duration, ctx.duration_frames - start)
         # The layer only plays in the sections the arrangement has reached.
-        section = 0
-        for index, boundary in enumerate(ctx.section_boundaries):
-            if start >= boundary:
-                section = index
+        section = ctx.section_at(start)
         densities = ctx.section_densities
         if densities and densities[min(section, len(densities) - 1)] < card.min_density:
             start += spacing

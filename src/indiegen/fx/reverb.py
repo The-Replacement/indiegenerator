@@ -56,7 +56,7 @@ def render_reverb(
     block: np.ndarray,
     state: ReverbState,
     spec: ReverbSpec,
-    sample_rate: int = 44100,
+    sample_rate: int,
 ) -> tuple[np.ndarray, ReverbState]:
     """Filter one block of the main bus through the reverb."""
     feedback = spec.comb_feedback.numerator / spec.comb_feedback.denominator

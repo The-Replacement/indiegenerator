@@ -25,8 +25,7 @@ TAGS: dict[str, str] = {
 
 def _pcm(frames: int = 4410) -> np.ndarray:
     generator = np.random.default_rng(0)
-    data = generator.integers(-3000, 3000, size=(frames, 2), dtype=np.int16)
-    return data
+    return generator.integers(-3000, 3000, size=(frames, 2), dtype=np.int16)
 
 
 def test_the_happy_path_leaves_the_staging_directory_empty(tmp_path: Path) -> None:

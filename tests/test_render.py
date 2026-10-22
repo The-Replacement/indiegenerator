@@ -27,9 +27,8 @@ def test_block_size_is_defined_once_in_the_package() -> None:
                 for target in node.targets:
                     if isinstance(target, ast.Name) and target.id == "BLOCK_SIZE":
                         found.append(path.name)
-            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-                if node.target.id == "BLOCK_SIZE":
-                    found.append(path.name)
+            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == "BLOCK_SIZE":
+                found.append(path.name)
     assert len(found) == 1
 
 

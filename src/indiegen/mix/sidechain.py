@@ -11,10 +11,11 @@ exponential per second of audio rather than one per sample.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 import numpy as np
+
+from indiegen.gain import millibels_to_gain
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,7 @@ def sidechain_state() -> SidechainState:
 
 def duck_level(depth_millibels: int) -> float:
     """The gain the envelope falls to at a hit."""
-    return math.pow(10.0, depth_millibels / 2000.0)
+    return millibels_to_gain(depth_millibels)
 
 
 def render_sidechain(

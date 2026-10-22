@@ -18,16 +18,10 @@ from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64
 from indiegen.config import DejaVuCard
 from indiegen.plan import PluckEvent, Rational
+from indiegen.theory.scales import nearest_scale_note
 
 REPLAY_START_PERMILLE: int = 150
 REPLAY_END_PERMILLE: int = 850
-
-
-def _nearest_scale_note(scale: list[int], target: int) -> int:
-    """The scale note nearest to the target, within the scale's own range."""
-    if not scale:
-        return target
-    return min(scale, key=lambda note: (abs(note - target), note))
 
 
 def replay_permille(card: DejaVuCard, section: int, section_count: int) -> int:
@@ -63,10 +57,7 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
     densities = ctx.section_densities
     for step in range(total_steps):
         frame = step * step_frames
-        section = 0
-        for index, boundary in enumerate(boundaries):
-            if frame >= boundary:
-                section = index
+        section = ctx.section_at(frame)
         # The layer only plays in the sections the arrangement has reached.
         if densities and densities[min(section, len(densities) - 1)] < card.min_density:
             continue
@@ -77,7 +68,7 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
             midi = buffer[rng.below(len(buffer))]
         else:
             offset = card.bias + rng.between(-card.spread, card.spread)
-            midi = _nearest_scale_note(scale, root + offset)
+            midi = nearest_scale_note(scale, root + offset)
             buffer.append(midi)
             if len(buffer) > card.buffer_size:
                 buffer.pop(0)

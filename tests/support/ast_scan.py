@@ -8,15 +8,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 PACKAGE_DIR: Path = Path(__file__).resolve().parents[2] / "src" / "indiegen"
-RENDER_PATH_MODULES: tuple[str, ...] = (
-    "render.py",
-    "plan.py",
-    "synth",
-    "mix",
-    "master",
-    "metadata.py",
-    "writer.py",
-)
 
 
 def source_files(package_dir: Path = PACKAGE_DIR) -> list[Path]:
@@ -109,23 +100,3 @@ def module_level_mutables(tree: ast.Module) -> list[tuple[str, str]]:
 def relative_to_package(path: Path, package_dir: Path = PACKAGE_DIR) -> str:
     """The module path of a file, relative to the package root."""
     return path.relative_to(package_dir).as_posix()
-
-
-def imports_compose(tree: ast.Module) -> bool:
-    """Whether the module imports anything from the compose package."""
-    for name in imported_names(tree):
-        if name.startswith("indiegen.compose") or name.startswith("compose"):
-            return True
-    return False
-
-
-def imports_render_packages(tree: ast.Module) -> list[str]:
-    """Whether the module imports synth, mix or master."""
-    hits: set[str] = set()
-    for name in imported_names(tree):
-        parts = name.split(".")
-        if len(parts) > 1 and parts[0] == "indiegen" and parts[1] in {"synth", "mix", "master"}:
-            hits.add(parts[1])
-        elif len(parts) > 1 and parts[0] in {"synth", "mix", "master"}:
-            hits.add(parts[0])
-    return sorted(hits)

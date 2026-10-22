@@ -49,7 +49,8 @@ def test_the_artist_and_album_come_from_the_lane(reference_plan: Any) -> None:
 
 def test_the_written_file_carries_the_tags(rendered: dict[str, Any]) -> None:
     flac = FLAC(rendered["flac"])
-    keys = {key.lower() for key in flac.keys()}
+    # mutagen's FLAC is dict-like, not a dict: the attribute is the interface.
+    keys = {key.lower() for key in flac.keys()}  # noqa: SIM118
     assert {"title", "artist", "album", "date", "genre", "comment", "tracknumber"} <= keys
     assert flac["artist"] == [reference_alias(rendered)]
     assert DATE_PATTERN.match(flac["date"][0])

@@ -65,7 +65,11 @@ def test_every_dependency_is_pinned(repo_root: Path) -> None:
 def test_the_tool_configuration(repo_root: Path) -> None:
     data = _pyproject(repo_root)
     assert data["tool"]["ruff"]["line-length"] == 120
-    assert data["tool"]["ruff"]["lint"]["select"] == ["E", "F", "I", "N", "W", "UP", "B"]
+    assert data["tool"]["ruff"]["lint"]["select"] == ["E", "F", "I", "N", "W", "UP", "B", "S", "RET", "SIM", "C90"]
+    # No mccabe override: ruff's default ceiling of 10 applies, so the number
+    # in the config cannot drift away from the number in the linter.
+    assert "mccabe" not in data["tool"]["ruff"]["lint"]
+    assert "S101" in data["tool"]["ruff"]["lint"]["per-file-ignores"]["tests/*"]
     assert "slow" in data["tool"]["pytest"]["ini_options"]["markers"][0]
     assert data["tool"]["mypy"]["strict"] is True
     assert data["tool"]["mypy"]["files"] == ["src"]

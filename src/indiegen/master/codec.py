@@ -52,7 +52,9 @@ def ebur128(path: Path) -> dict[str, float]:
     for every tenth of a second.
     """
     try:
-        result = subprocess.run(
+        # A fixed argv list, no shell: FFMPEG is a constant name and every
+        # argument below is ours. S603 flags any subprocess call.
+        result = subprocess.run(  # noqa: S603
             [
                 FFMPEG,
                 "-hide_banner",
@@ -90,7 +92,7 @@ def mp3_roundtrip(path: Path) -> CodecComparison:
     with tempfile.TemporaryDirectory() as directory:
         encoded = Path(directory) / "roundtrip.mp3"
         try:
-            subprocess.run(
+            subprocess.run(  # noqa: S603 - fixed argv, no shell
                 [
                     FFMPEG,
                     "-hide_banner",

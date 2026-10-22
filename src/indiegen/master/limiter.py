@@ -34,6 +34,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import resample_poly
 
+from indiegen.gain import decibels_to_gain
+
 OVERSAMPLE: int = 4
 MARGIN_FRAMES: int = 64
 LOOKAHEAD_FRAMES: int = 256
@@ -150,7 +152,7 @@ def limit(
     frames = mix.shape[0]
     out = np.empty_like(mix)
     decay = math.exp(-1.0 / RELEASE_FRAMES)
-    limit_ceiling = ceiling * math.pow(10.0, -MODEL_MARGIN_DB / 20.0)
+    limit_ceiling = ceiling * decibels_to_gain(-MODEL_MARGIN_DB)
     carry = state.deficit if state is not None else 0.0
     deepest = 1.0
     for start in range(0, frames, block):

@@ -9,7 +9,6 @@ directory until it is complete.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -17,8 +16,9 @@ from typing import Any
 import numpy as np
 import soundfile as sf
 
-from indiegen.errors import RenderError
+from indiegen.errors import DecodeError, RenderError
 from indiegen.metadata import apply_tags
+from indiegen.plan import canonical_bytes
 
 TEMP_DIR_NAME: str = ".tmp"
 
@@ -32,15 +32,55 @@ def _fsync_dir(path: Path) -> None:
         os.close(handle)
 
 
+def _checked_target(out_dir: Path, name: str, *, preset: str, seed: int) -> Path:
+    """The final path of ``name``, refusing anything that leaves ``out_dir``.
+
+    The name is built from the plan, and a plan can come from a file
+    (``--from-plan``) or from a preset. ``Path`` discards the directory when
+    the right hand side is absolute, so an unsanitised token is an arbitrary
+    file write; this is the last line of defence behind the slug.
+    """
+    if not name or Path(name).name != name:
+        raise RenderError(f"refusing a path as a track name: {name!r}", preset=preset, seed=seed, block_index=0)
+    target = out_dir / name
+    if not target.resolve().is_relative_to(out_dir.resolve()):
+        raise RenderError(f"refusing to write outside {out_dir}: {name}", preset=preset, seed=seed, block_index=0)
+    return target
+
+
 def read_pcm(path: Path) -> np.ndarray:
-    """Decode a file to interleaved int16."""
-    data, _ = sf.read(path, dtype="int16", always_2d=True)
+    """Decode a file to interleaved int16, or say which file would not decode."""
+    try:
+        data, _ = sf.read(path, dtype="int16", always_2d=True)
+    except (OSError, RuntimeError) as exc:
+        raise DecodeError(f"cannot decode {path}: {exc}") from exc
     return np.ascontiguousarray(data, dtype="<i2")
 
 
 def pcm_sha256(samples: np.ndarray) -> str:
     """SHA-256 of the interleaved little endian int16 samples."""
     return hashlib.sha256(np.ascontiguousarray(samples, dtype="<i2").tobytes()).hexdigest()
+
+
+def staging_dir(out_dir: Path) -> Path:
+    """The directory a file is written to before it is published."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = out_dir / TEMP_DIR_NAME
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir
+
+
+def publish_atomically(temp_path: Path, target: Path) -> None:
+    """Fsync the staged file, then rename it into place and fsync the directory.
+
+    The one write discipline of the program: Liquidsoap watches the target
+    directory, so nothing is visible there until it is complete and durable.
+    """
+    with open(temp_path, "rb") as handle:
+        os.fsync(handle.fileno())
+    _fsync_dir(temp_path.parent)
+    os.replace(temp_path, target)
+    _fsync_dir(target.parent)
 
 
 def write_flac_atomic(
@@ -54,19 +94,12 @@ def write_flac_atomic(
     seed: int = 0,
 ) -> Path:
     """Write the master, atomically, and return its final path."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = out_dir / TEMP_DIR_NAME
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = temp_dir / name
-    target = out_dir / name
+    target = _checked_target(out_dir, name, preset=preset, seed=seed)
+    temp_path = staging_dir(out_dir) / target.name
     try:
         sf.write(temp_path, pcm, sample_rate, subtype="PCM_16", format="FLAC")
         apply_tags(temp_path, tags)
-        with open(temp_path, "rb") as handle:
-            os.fsync(handle.fileno())
-        _fsync_dir(temp_dir)
-        os.replace(temp_path, target)
-        _fsync_dir(out_dir)
+        publish_atomically(temp_path, target)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
         raise RenderError(f"cannot write {name}: {exc}", preset=preset, seed=seed, block_index=0) from exc
@@ -82,20 +115,15 @@ def write_sidecar_atomic(
     seed: int = 0,
 ) -> Path:
     """Write the JSON sidecar next to the master, atomically."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = out_dir / TEMP_DIR_NAME
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / f"{Path(name).stem}.json"
-    temp_path = temp_dir / f"{Path(name).stem}.json"
-    data = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    sidecar = f"{Path(name).stem}.json"
+    target = _checked_target(out_dir, sidecar, preset=preset, seed=seed)
+    temp_path = staging_dir(out_dir) / target.name
+    data = canonical_bytes(payload)
     try:
         with open(temp_path, "wb") as handle:
             handle.write(data)
             handle.flush()
-            os.fsync(handle.fileno())
-        _fsync_dir(temp_dir)
-        os.replace(temp_path, target)
-        _fsync_dir(out_dir)
+        publish_atomically(temp_path, target)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
         raise RenderError(f"cannot write sidecar for {name}: {exc}", preset=preset, seed=seed, block_index=0) from exc

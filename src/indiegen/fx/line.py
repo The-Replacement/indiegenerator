@@ -92,10 +92,13 @@ def allpass_line(
         carry = buffer[index]
     flat = buffer.reshape(-1)
     if count >= delay:
-        previous = np.concatenate([state, flat[: len(padded) - delay]])
+        previous = np.concatenate([state, flat[: len(padded) - delay]])[:count]
         new_state = flat[count - delay : count]
     else:
-        previous = state[::-1][:count]
+        # The block is shorter than the delay, so every sample it needs is
+        # already in the state: the state is ordered oldest first, and the
+        # first `count` entries are exactly v[n-N .. n-N+count-1].
+        previous = state[:count]
         keep = delay - count
         new_state = np.concatenate([state[len(state) - keep :], flat[:count]])
-    return (previous - padded)[:count], new_state
+    return previous - padded[:count], new_state

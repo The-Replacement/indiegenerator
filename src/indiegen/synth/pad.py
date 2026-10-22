@@ -10,11 +10,11 @@ frequency, so every partial carries a running total.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 import numpy as np
 
+from indiegen.gain import millibels_to_gain
 from indiegen.plan import PadEvent
 from indiegen.synth.osc import cumulative_sum, midi_to_hz
 
@@ -53,7 +53,7 @@ def render_pad_block(
         frequency = base * partial * np.power(2.0, drift / 1200.0)
         phase, carries[index] = cumulative_sum(carries[index], frequency)
         voice += np.sin(2.0 * np.pi * phase / sample_rate)
-    amplitude = math.pow(10.0, event.amplitude_millibels / 2000.0)
+    amplitude = millibels_to_gain(event.amplitude_millibels)
     return voice * amplitude, PadState(carries=tuple(carries))
 
 

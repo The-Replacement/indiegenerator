@@ -10,10 +10,10 @@ from __future__ import annotations
 import pytest
 
 from indiegen.compose import compose, director
-from indiegen.compose.techniques.t5_dejavu import _nearest_scale_note
 from indiegen.compose.techniques.t6_drums import euclid, rotate
 from indiegen.config import load_preset
 from indiegen.plan import BassEvent, BassHit, HatEvent, KickEvent, PluckEvent, SnareEvent
+from indiegen.theory.scales import nearest_scale_note
 
 RATE: int = 44100
 SEED: int = 1042
@@ -173,9 +173,9 @@ def test_the_deja_vu_remembers(motorik_plan: object) -> None:
 
 def test_the_nearest_scale_note_is_in_the_scale() -> None:
     scale = [38, 40, 41, 43, 45]
-    assert _nearest_scale_note(scale, 39) in scale
-    assert _nearest_scale_note(scale, 100) == 45
-    assert _nearest_scale_note([], 7) == 7
+    assert nearest_scale_note(scale, 39) in scale
+    assert nearest_scale_note(scale, 100) == 45
+    assert nearest_scale_note([], 7) == 7
 
 
 def test_the_drums_carry_the_one_over_f_signals(motorik_plan: object) -> None:

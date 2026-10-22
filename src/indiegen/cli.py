@@ -1,8 +1,13 @@
 """The CLI: render, batch, validate, catalog, install, explain.
 
-Five commands, and the write path is the same for all of them: a temp file,
-an fsync and an atomic rename, because Liquidsoap is watching the
-directory the tracks land in.
+Six commands, and the write path is the same for all of them: a temp file,
+an fsync and an atomic rename, because Liquidsoap is watching the directory
+the tracks land in.
+
+Every domain failure leaves through ``_fail``: plan errors, render errors and
+files that will not decode are one line on stderr and a non-zero status, never
+a traceback. ``validate`` exits 2 when a gate failed and 1 when a file could
+not be read at all.
 """
 
 from __future__ import annotations
@@ -10,7 +15,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, NoReturn
 
 import typer
 from pydantic import ValidationError
@@ -21,7 +26,7 @@ from indiegen.batch import render_track
 from indiegen.catalog import build_catalog, write_catalog
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
-from indiegen.errors import PlanError, RenderError
+from indiegen.errors import DecodeError, PlanError, RenderError
 from indiegen.filecheck import check_file
 from indiegen.install import install as run_install
 from indiegen.plan import SAMPLE_RATE, Plan, canonical_json, plan_sha256
@@ -48,7 +53,7 @@ def main() -> None:
     app()
 
 
-def _fail(exc: Exception) -> None:
+def _fail(exc: Exception) -> NoReturn:
     """Report an error on stderr and leave with a non-zero status."""
     typer.echo(f"error: {exc}", err=True)
     raise typer.Exit(code=1)
@@ -183,9 +188,8 @@ def batch(
     try:
         loaded = load_preset(preset, presets_dir=presets_dir)
         result = run_batch(loaded, count, seed_base, out)
-    except (PlanError, RenderError) as exc:
+    except (DecodeError, PlanError, RenderError, OSError) as exc:
         _fail(exc)
-        return
     for track in result.tracks:
         typer.echo(
             f"track: {track.path.name} seed={track.seed} lane={track.lane} form={track.form} "
@@ -206,8 +210,11 @@ def catalog(
     if not directory.is_dir():
         typer.echo(f"error: {directory} is not a directory", err=True)
         raise typer.Exit(code=1)
-    built = build_catalog(directory)
-    path = write_catalog(directory, built)
+    try:
+        built = build_catalog(directory)
+        path = write_catalog(directory, built)
+    except (PlanError, RenderError, OSError) as exc:
+        _fail(exc)
     typer.echo(f"catalog: {path}")
     typer.echo(f"tracks: {len(built.entries)}")
     typer.echo(f"total_bytes: {built.total_bytes}")
@@ -224,8 +231,14 @@ def validate(
 ) -> None:
     """Check tracks that are already on disk."""
     failed = False
+    broken = False
     for path in files:
-        check = check_file(path, with_codec=not no_codec)
+        try:
+            check = check_file(path, with_codec=not no_codec)
+        except (DecodeError, OSError) as exc:
+            typer.echo(f"error: {path.name}: {exc}", err=True)
+            broken = True
+            continue
         for reason in check.skipped:
             typer.echo(f"skipped: {path.name}: {reason}")
         for failure in check.failures:
@@ -240,6 +253,8 @@ def validate(
             failed = True
     if failed:
         raise typer.Exit(code=2)
+    if broken:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -251,15 +266,17 @@ def install(
     """Validate the tracks of a directory and copy the valid ones into the target."""
     try:
         result = run_install(directory, to, with_codec=not no_codec)
-    except (PlanError, RenderError, FileNotFoundError) as exc:
+    except (DecodeError, PlanError, RenderError, OSError) as exc:
         _fail(exc)
-        return
     for path, reason in result.refused:
         typer.echo(f"refused: {path.name}: {reason}", err=True)
+    for path, reason in result.skipped:
+        typer.echo(f"skipped: {path.name}: {reason}", err=True)
     for path in result.installed:
         typer.echo(f"installed: {path}")
     typer.echo(f"installed: {len(result.installed)}")
     typer.echo(f"refused: {len(result.refused)}")
+    typer.echo(f"skipped: {len(result.skipped)}")
     if not result.ok:
         raise typer.Exit(code=2)
 
@@ -277,7 +294,6 @@ def explain(
         plan = _composed_plan(preset, seed, _frames(minutes, seconds), presets_dir)
     except (PlanError, RenderError) as exc:
         _fail(exc)
-        return
     payload = canonical_json(plan)
     typer.echo(payload.decode("utf-8"), nl=False)
     typer.echo(f"plan_sha256: {plan_sha256(plan)}", err=True)

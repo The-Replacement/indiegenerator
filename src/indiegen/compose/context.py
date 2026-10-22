@@ -31,10 +31,14 @@ class TechniqueContext(BaseModel):
     section_roots: list[int]
     section_functions: list[str]
 
-    def section_index(self, frame: int) -> int:
-        """The section a frame falls in."""
+    def section_at(self, frame: int) -> int:
+        """The section a frame falls in, from the boundaries alone."""
         index = 0
         for position, boundary in enumerate(self.section_boundaries):
             if frame >= boundary:
                 index = position
-        return min(index, max(0, len(self.section_densities) - 1))
+        return index
+
+    def section_index(self, frame: int) -> int:
+        """The section a frame falls in, clamped to the declared sections."""
+        return min(self.section_at(frame), max(0, len(self.section_densities) - 1))

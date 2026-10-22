@@ -16,11 +16,12 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from indiegen.catalog import Catalog, build_catalog, write_catalog
 from indiegen.compose import compose, director
 from indiegen.compose.planner import Form
+from indiegen.config import FormCard, Preset
 from indiegen.errors import PlanError
 from indiegen.master.chain import master
 from indiegen.master.loudness import measure
@@ -76,7 +77,7 @@ class BatchResult:
     seconds: float = 0.0
 
 
-def form_slots(forms: list[Any]) -> list[str]:
+def form_slots(forms: list[FormCard]) -> list[str]:
     """The forms of a batch, in the proportions the station declares.
 
     The weights are percentages, so the station's three forms are a hundred
@@ -88,7 +89,7 @@ def form_slots(forms: list[Any]) -> list[str]:
     return slots
 
 
-def batch_forms(forms: list[Any], count: int) -> list[Form]:
+def batch_forms(forms: list[FormCard], count: int) -> list[Form]:
     """The forms of a batch: the station's proportions, spread over the seeds.
 
     The slots are sampled every len(slots) / count of the way, so a batch of
@@ -98,9 +99,7 @@ def batch_forms(forms: list[Any], count: int) -> list[Form]:
     slots = form_slots(forms)
     if not slots or count <= 0:
         return ["full"] * max(0, count)
-    return [
-        cast(Form, slots[(index * len(slots)) // count]) for index in range(count)
-    ]
+    return [cast(Form, slots[(index * len(slots)) // count]) for index in range(count)]
 
 
 def render_track(plan: Plan, out_dir: Path) -> RenderResult:
@@ -178,7 +177,7 @@ def render_track(plan: Plan, out_dir: Path) -> RenderResult:
 
 
 def batch(
-    preset: Any,
+    preset: Preset,
     count: int,
     seed_base: int,
     out_dir: Path,

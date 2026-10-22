@@ -23,6 +23,26 @@ from indiegen.errors import PlanError
 
 SAMPLE_RATE: int = 44100
 CHANNELS: int = 2
+INT16_MIN: int = -32768
+INT16_MAX: int = 32767
+# The station's own ceiling: the longest form is fifteen minutes. A plan is
+# data that can arrive from a file, and every buffer in the render is sized by
+# `duration_frames`, so an unbounded duration is an unbounded allocation.
+MAX_DURATION_FRAMES: int = 15 * 60 * SAMPLE_RATE
+MAX_EVENTS: int = 50_000
+MAX_HITS: int = 500_000
+
+_NON_INTEGER_LEAVES: tuple[type, ...] = (bool, float, Decimal)
+
+
+class FrozenModel(BaseModel):
+    """The one configuration of every data model: frozen, strict, closed.
+
+    Inherited rather than repeated: a model that forgets ``strict=True`` would
+    accept a float from a JSON sidecar and break the Plan's integer promise.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
 
 def reject_non_integer_leaves(value: Any, path: str = "plan") -> None:
@@ -31,39 +51,37 @@ def reject_non_integer_leaves(value: Any, path: str = "plan") -> None:
     Strings are legal leaves (names, ids, title words). ``bool`` is rejected
     even though it is an ``int`` subclass: the Plan declares no boolean field,
     and ``strict=True`` cannot catch a bool that lands in a bool-typed field.
+
+    One ``isinstance`` call over a tuple, not three over the same value: this
+    walk is the largest single cost of validating a plan, and a triple test is
+    measured at twice the price of a single one.
     """
-    if isinstance(value, bool) or isinstance(value, float) or isinstance(value, Decimal):
+    if isinstance(value, _NON_INTEGER_LEAVES):
         raise PlanError(f"plan contains a non-integer leaf at {path}: {value!r}")
     if isinstance(value, dict):
         for key, item in value.items():
             reject_non_integer_leaves(item, f"{path}.{key}")
-    elif isinstance(value, list | tuple):
+    elif isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
             reject_non_integer_leaves(item, f"{path}[{index}]")
 
 
-class Rational(BaseModel):
+class Rational(FrozenModel):
     """An exact integer ratio, e.g. an LFO rate of 1/8 Hz."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     numerator: int = Field(gt=0)
     denominator: int = Field(gt=0)
 
 
-class LaneWeight(BaseModel):
+class LaneWeight(FrozenModel):
     """One lane of the station blend and its relative weight."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     lane: str
     weight: int = Field(ge=0)
 
 
-class FxSend(BaseModel):
+class FxSend(FrozenModel):
     """A send from a bus into an effect, with the effect's integer parameters."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     name: str
     send_millibels: int
@@ -72,7 +90,7 @@ class FxSend(BaseModel):
     q_den: int = Field(gt=0)
 
 
-class SectionProfile(BaseModel):
+class SectionProfile(FrozenModel):
     """One node of the station's section graph.
 
     A node declares what it is (the function), where it can go (the
@@ -80,8 +98,6 @@ class SectionProfile(BaseModel):
     it lasts (the bars) and, when it reprises an earlier section, which one
     and under which transform.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     function: str
     next: list[str]
@@ -93,7 +109,7 @@ class SectionProfile(BaseModel):
     texture: str
 
 
-class BusGain(BaseModel):
+class BusGain(FrozenModel):
     """One instrument's trim on the mix bus.
 
     The key is the event's kind, so the motif's plucks are trimmed with the
@@ -101,16 +117,12 @@ class BusGain(BaseModel):
     level in the Plan.
     """
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: str
     gain_millibels: int
 
 
-class DirectorMove(BaseModel):
+class DirectorMove(FrozenModel):
     """A strategy from the deck, and - in the log - a move the Director made."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     sample: int = Field(ge=0)
     strategy: str
@@ -120,29 +132,23 @@ class DirectorMove(BaseModel):
     applies_to: list[str]
 
 
-class Partial(BaseModel):
+class Partial(FrozenModel):
     """One partial of an additive voice, with its exact ratio."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     ratio: Rational
     amplitude_millibels: int
     detune_cents: int
 
 
-class DetuneLfo(BaseModel):
+class DetuneLfo(FrozenModel):
     """The slow drift of a partial's detune, in cents."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     rate: Rational
     depth_cents: int = Field(ge=0)
 
 
-class AmplitudeLfo(BaseModel):
+class AmplitudeLfo(FrozenModel):
     """The slow drift of a partial's amplitude, in millibels."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     rate: Rational
     depth_millibels: int = Field(ge=0)
@@ -151,16 +157,12 @@ class AmplitudeLfo(BaseModel):
 class DriftingPartial(Partial):
     """A partial with its own independent drift on detune and on amplitude."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     detune_lfo: DetuneLfo
     amplitude_lfo: AmplitudeLfo
 
 
-class EventBase(BaseModel):
+class EventBase(FrozenModel):
     """What every scheduled event carries, whatever instrument plays it."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     instrument: str
     start_frame: int = Field(ge=0)
@@ -175,8 +177,6 @@ class EventBase(BaseModel):
 class PadEvent(EventBase):
     """A sustained additive pad. The S0 instrument, unchanged."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: Literal["pad"]
     partials: int = Field(ge=1)
     partial_detune_cents: list[int]
@@ -184,10 +184,8 @@ class PadEvent(EventBase):
     lfo_depth_cents: int
 
 
-class PolyPeriodVoice(BaseModel):
+class PolyPeriodVoice(FrozenModel):
     """One voice of a poly-period loop: its own period, on-window and pitch."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     period_frames: int = Field(gt=0)
     on_frames: int = Field(gt=0)
@@ -198,8 +196,6 @@ class PolyPeriodVoice(BaseModel):
 class PolyPeriodEvent(EventBase):
     """A poly-period loop: several voices, each on its own distinct period."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: Literal["poly_period"]
     voices: list[PolyPeriodVoice]
     partials: list[Partial]
@@ -207,8 +203,6 @@ class PolyPeriodEvent(EventBase):
 
 class DroneEvent(EventBase):
     """A spectral drone stack: near-unison partials drifting against each other."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["drone"]
     partials: list[DriftingPartial]
@@ -218,8 +212,6 @@ class DroneEvent(EventBase):
 class PluckEvent(EventBase):
     """A plucked string. The station's signature timbre."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: Literal["pluck"]
     feedback: Rational
     brightness: Rational
@@ -228,10 +220,8 @@ class PluckEvent(EventBase):
     excitation_seed: int
 
 
-class HitBase(BaseModel):
+class HitBase(FrozenModel):
     """What every hit carries: where it lands and how hard it is."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     frame: int = Field(ge=0)
     velocity_millibels: int
@@ -255,8 +245,6 @@ class RhythmEvent(EventBase):
     arrangement, and the renderer only plays what the plan says.
     """
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     noise_seed: int
     velocity_depth_millibels: int
     micro_timing_frames: int
@@ -265,8 +253,6 @@ class RhythmEvent(EventBase):
 
 class KickEvent(RhythmEvent):
     """A kick drum: a round body with a fast pitch drop and a soft transient."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["kick"]
     hits: list[DrumHit]
@@ -279,8 +265,6 @@ class KickEvent(RhythmEvent):
 class SnareEvent(RhythmEvent):
     """A snare drum: a body tone and a noise burst, decaying apart."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: Literal["snare"]
     hits: list[DrumHit]
     body_hz: int
@@ -291,8 +275,6 @@ class SnareEvent(RhythmEvent):
 class HatEvent(RhythmEvent):
     """A closed hat: a short burst of high-passed noise."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
     kind: Literal["hat"]
     hits: list[DrumHit]
     cutoff_hz: int
@@ -301,8 +283,6 @@ class HatEvent(RhythmEvent):
 
 class BassEvent(RhythmEvent):
     """A bass line: a filtered saw on the lane's root, with octave jumps."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     kind: Literal["bass"]
     hits: list[BassHit]
@@ -316,10 +296,8 @@ Event = Annotated[
 ]
 
 
-class DelaySend(BaseModel):
+class DelaySend(FrozenModel):
     """A delay send: the station's dotted-eighth delay lives here."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     name: str
     delay_frames: int = Field(gt=0)
@@ -328,10 +306,8 @@ class DelaySend(BaseModel):
     send_millibels: int
 
 
-class ReverbSpec(BaseModel):
+class ReverbSpec(FrozenModel):
     """A short Schroeder reverb: parallel combs into series allpasses."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     comb_delays_frames: list[int]
     comb_feedback: Rational
@@ -342,7 +318,7 @@ class ReverbSpec(BaseModel):
     send_millibels: int
 
 
-class SectionPlan(BaseModel):
+class SectionPlan(FrozenModel):
     """One section of the arrangement.
 
     The section carries the five dimensions BRIEF 6 asks a section to differ
@@ -351,8 +327,6 @@ class SectionPlan(BaseModel):
     the texture. The centroid is the timbre the composer predicted for the
     section, and gate 6 compares the delivered audio with it.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     index: int
     function: str
@@ -371,31 +345,25 @@ class SectionPlan(BaseModel):
     centroid_hz: int = Field(gt=0)
 
 
-class MotifNote(BaseModel):
+class MotifNote(FrozenModel):
     """One note of the motif cell: its pitch and how long it lasts."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     midi: int
     duration_frames: int = Field(gt=0)
 
 
-class MotifCell(BaseModel):
+class MotifCell(FrozenModel):
     """The motif: three to seven notes, one cell."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     notes: list[MotifNote]
 
 
-class MotifAppearance(BaseModel):
+class MotifAppearance(FrozenModel):
     """One appearance of the motif, and the transform it wears.
 
     The appearance is what gate 13 counts: the motif has to come back at
     least three times in a transformed form.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     section_index: int = Field(ge=0)
     transform: str
@@ -405,15 +373,13 @@ class MotifAppearance(BaseModel):
     durations: list[int]
 
 
-class FrippertronicsSpec(BaseModel):
+class FrippertronicsSpec(FrozenModel):
     """T3: a long feedback delay whose passes darken and die.
 
     The number of passes a sample has made is exact, not an approximation:
     the render path keeps a counter beside the audio line, so the cutoff
     really does fall by the declared step on every pass.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     delay_frames: int = Field(gt=0)
     feedback_permille: int = Field(ge=0, le=1000)
@@ -426,10 +392,8 @@ class FrippertronicsSpec(BaseModel):
     send_millibels: int
 
 
-class DubChainSpec(BaseModel):
+class DubChainSpec(FrozenModel):
     """T10: the dub chain, from the bit reduction to the sidechain."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     bit_depth: int = Field(ge=1, le=16)
     bandpass_hz: int = Field(gt=0)
@@ -442,14 +406,12 @@ class DubChainSpec(BaseModel):
     sidechain_release_frames: int = Field(gt=0)
 
 
-class Plan(BaseModel):
+class Plan(FrozenModel):
     """Everything a render needs, and nothing else.
 
     There is no date, no clock and no float in here. The audio is a pure
     function of this object.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     version: int
     format_version: int
@@ -500,19 +462,38 @@ class Plan(BaseModel):
     director_log: list[DirectorMove]
 
     @model_validator(mode="after")
+    def _bounded_inputs(self) -> Self:
+        """Refuse a plan whose size would allocate more than the station holds."""
+        if not 0 < self.duration_frames <= MAX_DURATION_FRAMES:
+            raise PlanError(
+                f"duration_frames {self.duration_frames} is outside 1..{MAX_DURATION_FRAMES}: "
+                "the station's ceiling is fifteen minutes"
+            )
+        if len(self.events) > MAX_EVENTS:
+            raise PlanError(f"plan carries {len(self.events)} events; the ceiling is {MAX_EVENTS}")
+        hits = sum(len(getattr(event, "hits", ())) for event in self.events)
+        if hits > MAX_HITS:
+            raise PlanError(f"plan carries {hits} drum hits; the ceiling is {MAX_HITS}")
+        return self
+
+    @model_validator(mode="after")
     def _enforce_integer_leaves(self) -> Self:
         reject_non_integer_leaves(self.model_dump(), "plan")
         return self
 
 
+def canonical_bytes(value: Any) -> bytes:
+    """The one serialisation that may enter a hash.
+
+    Sorted keys, no whitespace, ASCII only: the byte string cannot drift with
+    a Python version, a dict order or a locale.
+    """
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+
+
 def canonical_json(plan: Plan) -> bytes:
     """The one serialisation of the Plan that may enter a hash."""
-    return json.dumps(
-        plan.model_dump(mode="json"),
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-    ).encode("utf-8")
+    return canonical_bytes(plan.model_dump(mode="json"))
 
 
 def plan_sha256(plan: Plan) -> str:

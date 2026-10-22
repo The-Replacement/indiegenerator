@@ -8,14 +8,13 @@ version = "0.1.0"
 description = "Batch, offline, deterministic music generator for a private internet radio."
 readme = "README.md"
 requires-python = ">=3.15,<3.16"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Juan Manuel Daza", email = "juanmanueldaza@gmail.com" }]
 keywords = ["music", "generative", "dsp", "systems-music", "offline"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: End Users/Desktop",
-  "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.15",
   "Topic :: Multimedia :: Sound/Audio :: Sound Synthesis",
 ]
@@ -50,10 +49,13 @@ line-length = 120
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "B"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "S", "RET", "SIM", "C90"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["N802"]
+# Tests assert by design, call ffmpeg by name (S603/S607), and write the
+# attack payloads a security test needs (S106/S108). None of that is
+# production code, and the production copies of those rules stay on.
+"tests/*" = ["N802", "S101", "S106", "S108", "S603", "S607"]
 
 [tool.mypy]
 strict = true

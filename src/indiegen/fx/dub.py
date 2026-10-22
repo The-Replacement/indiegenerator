@@ -22,12 +22,9 @@ is about a twentieth of unity, so it is scaled by its own deviation before it
 is used: the plan's depth is the width of the drift, not a nominal bound.
 
 The band is twelve decibels an octave: two second-order sections in series,
-from ``scipy.signal.butter`` at order two. Its width is a fixed fraction of
-the centre - the half width is 0.6 of the centre, so the band is 1.2 times
-the centre wide - and the edges follow the drifting centre, so the whole band
-travels with it. The width rule fixes the band's Q at five sixths, in the
-usual sense of Q = centre / bandwidth; the plan's Q is the composer's
-declaration of the band and this module realises the width rule.
+from ``scipy.signal.butter`` at order two. Its width comes from the plan's
+own Q - the half width is the centre over twice the Q - and the edges follow
+the drifting centre, so the whole band travels with it.
 
 The coefficients are rebuilt every ``CONTROL_RATE`` samples - ten times a
 second at forty-four-one-one hundred hertz - and the biquad's state is
@@ -63,9 +60,6 @@ from indiegen.synth.noise import (
     pink_state,
     stream_key,
 )
-
-BAND_HALF_WIDTH: float = 0.6
-"""The half width of the band, as a fraction of the drifting centre."""
 
 MIN_CENTRE_HZ: float = 20.0
 """The lowest centre the band may take, so the lower edge stays above zero."""

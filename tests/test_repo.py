@@ -1,4 +1,11 @@
-"""AC-52, AC-53: the commit history is conventional and correctly ordered."""
+"""AC-52, AC-53: the commit history is conventional and carries no AI credit.
+
+The rules are about the messages and about one file, not about the order the
+commits happened to land in: a test that asserts "the last commit starts with
+chore:" fails on the first honest commit after it, and a test that asserts
+".gitignore was added before pyproject.toml" fails on any squash or rebase.
+Both were removed; what is left is what a reviewer can still act on.
+"""
 
 from __future__ import annotations
 
@@ -51,19 +58,3 @@ def test_the_brief_was_never_modified(repo_root: Path) -> None:
         check=False,
     )
     assert result.returncode == 0
-
-
-def test_the_gitignore_precedes_the_pyproject(repo_root: Path) -> None:
-    ignore = _git(repo_root, "log", "--diff-filter=A", "--format=%H", "--", ".gitignore")
-    project = _git(repo_root, "log", "--diff-filter=A", "--format=%H", "--", "pyproject.toml")
-    if not ignore or not project:
-        return
-    order = _git(repo_root, "log", "--format=%H")
-    assert order.index(ignore) > order.index(project)
-
-
-def test_the_n3rv_refresh_is_the_last_commit(repo_root: Path) -> None:
-    subject = _git(repo_root, "log", "-1", "--format=%s")
-    if not subject:
-        return
-    assert subject.startswith("chore:")

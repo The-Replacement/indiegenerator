@@ -71,15 +71,6 @@ def _condition_holds(
     return True
 
 
-def _section_of(ctx: TechniqueContext, frame: int) -> int:
-    """The section a frame falls in."""
-    index = 0
-    for position, boundary in enumerate(ctx.section_boundaries):
-        if frame >= boundary:
-            index = position
-    return index
-
-
 def _hit_frames(
     card: PatternCard,
     rng: SplitMix64,
@@ -98,7 +89,7 @@ def _hit_frames(
     patterns: dict[int, list[bool]] = {}
     for bar in range(first_bar, last_bar + 1):
         bar_start = bar * frames_per_bar
-        section = _section_of(ctx, bar_start)
+        section = ctx.section_at(bar_start)
         # The layers come and go with the sections: a voice that the
         # arrangement has not reached yet does not play.
         if densities and densities[min(section, len(densities) - 1)] < card.min_density:
@@ -227,7 +218,7 @@ def plan_bass(card: BassCard, rng: SplitMix64, ctx: TechniqueContext, pink: Pink
     hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
     bass: list[BassHit] = []
     for frame, velocity in hits:
-        root = ctx.section_roots[_section_of(ctx, frame)] if ctx.section_roots else ctx.root_midi
+        root = ctx.section_roots[ctx.section_at(frame)] if ctx.section_roots else ctx.root_midi
         midi = root - 12
         if rng.below(1000) < card.octave_jump_permille:
             midi += 12

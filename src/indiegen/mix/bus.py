@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 
+from indiegen.gain import millibels_to_gain
 from indiegen.plan import BusGain
 
 
@@ -23,7 +24,7 @@ def bus_gains(gains: list[BusGain]) -> dict[str, float]:
 
     A kind that is not in the list is not trimmed.
     """
-    return {gain.kind: math.pow(10.0, gain.gain_millibels / 2000.0) for gain in gains}
+    return {gain.kind: millibels_to_gain(gain.gain_millibels) for gain in gains}
 
 
 def trim(lookup: dict[str, float], kind: str) -> float:

@@ -94,10 +94,7 @@ def pink_stream_block(
         total += weight * filtered
         weight_sum += weight
         filters.append(carry)
-    if weight_sum <= 0.0:
-        values = total
-    else:
-        values = total / weight_sum
+    values = total if weight_sum <= 0.0 else total / weight_sum
     history = state.history
     if count > 0:
         history = np.concatenate((state.history, values))[-HISTORY:]
@@ -127,10 +124,7 @@ def control_slice(
     have = state.position - low
     if have > HISTORY:
         raise ValueError("the control stream is too far ahead of the block")
-    if have > 0:
-        prefix = state.history[HISTORY - have :]
-    else:
-        prefix = np.zeros(0, dtype=np.float64)
+    prefix = state.history[HISTORY - have :] if have > 0 else np.zeros(0, dtype=np.float64)
     count = high - state.position + 1
     if count <= 0:
         return prefix, state
@@ -169,8 +163,7 @@ def interpolate_block(
     lower_index = (lower - offset).astype(np.int64)
     upper = (np.minimum(lower + 1, total - 1) - offset).astype(np.int64)
     fraction = remainder.astype(np.float64) / sample_rate
-    values = control[lower_index] * (1.0 - fraction) + control[upper] * fraction
-    return values
+    return control[lower_index] * (1.0 - fraction) + control[upper] * fraction
 
 
 def interpolate_to(control: np.ndarray, count: int, sample_rate: int) -> np.ndarray:

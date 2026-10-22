@@ -26,8 +26,15 @@ def title_slug(title: str) -> str:
 
 
 def filename_for(plan: Plan) -> str:
-    """The output filename: lane token, slug and seed. No date, ever."""
-    return f"{plan.file_token}_{title_slug(plan.title)}_s{plan.seed}.flac"
+    """The output filename: lane token, slug and seed. No date, ever.
+
+    Both components are slugged: ``file_token`` and ``title`` reach a ``Plan``
+    from preset YAML and from ``--from-plan`` JSON, and an unsanitised token is
+    an arbitrary path (``Path("/out/.tmp") / "/etc/x"`` is ``/etc/x``). The
+    filename is a name, never a path.
+    """
+    token = title_slug(plan.file_token)
+    return f"{token}_{title_slug(plan.title)}_s{plan.seed}.flac"
 
 
 def build_tags(plan: Plan) -> dict[str, str]:

@@ -6,10 +6,11 @@ A seed goes in; a finished, tagged track comes out. Every run of the same
 `(preset, seed)` produces the same plan, and on the same machine the same
 audio, byte for byte.
 
-> **Status: slice S4 (`s4-mix-master`).** The mix bus, the limiter, the
-> loudness normalisation, the true peak, the codec round trip, and every gate
-> of BRIEF §11 in force. Eight minutes of music per lane, delivered at
-> −16 LUFS and at most −1.5 dBTP. See
+> **Status: slice S5 (`s5-batch-station`).** The batch, the catalog, the file
+> check, the install, and the station's three forms. The mix bus, the
+> limiter, the loudness normalisation, the true peak, the codec round trip,
+> and every gate of BRIEF §11 in force. Eight minutes of music per lane,
+> delivered at −16 LUFS and at most −1.5 dBTP. See
 > [What is not built yet](#what-is-not-built-yet).
 
 ---
@@ -23,23 +24,26 @@ python3.15 -m venv .venv          # Python 3.15.0 (mise: python@3.15)
 .venv/bin/indiegen render --preset ambient --seed 1042 --seconds 90 --out out/
 ```
 
-The render prints thirteen lines and leaves two files in `out/`: the tagged
-FLAC and a JSON sidecar holding the plan and the measurements.
+The render prints fourteen lines and leaves two files in `out/`: the tagged
+FLAC and a JSON sidecar holding the plan and the measurements. The numbers
+below are this command's real output on the development machine; the hash is
+the audio and the hash is the point.
 
 ```
-path: out/ambient_signal_iron_s1042.flac
-sidecar: out/ambient_signal_iron_s1042.json
+path: out/ambient_signal_signal_s1042.flac
+sidecar: out/ambient_signal_signal_s1042.json
 duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
-peak: -1.871 dBFS
-true_peak: -1.866 dBTP
-loudness: -16.000 LUFS
-loudness_range: 11.834 LU
+form: interlude
+peak: -4.305 dBFS
+true_peak: -4.300 dBTP
+loudness: -16.136 LUFS
+loudness_range: 12.565 LU
 sections: 3
 techniques: poly_period,drone,pluck
-plan_sha256: 63e0a607564f4ad4be05ed6eeee2cea54b3e4ef640aa31775b1438709a67ecb2
-pcm_sha256: e224d8e0a19e673f11fdbf9c43b2214d25dafb2fe1fd45a867eca1a36c3b70dd
-render_seconds: 18.859
+plan_sha256: 74fa252cc6de3300933a3344eb4b9588d5943e1044d880f0897b14e503f5f532
+pcm_sha256: 9b12b71ac91d500650cc764556b99c489db482fa9e7526fb1b115ac7496f369c
+render_seconds: 26.202
 ```
 
 Other commands:
@@ -122,8 +126,9 @@ seconds. The mix itself is the one array that still spans the whole track
 
 `src/indiegen/validate.py` implements **every gate of BRIEF §11**, and declares
 that with `GATES_IN_FORCE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)`. A gate
-that is not in force is not implemented and does not fail the render; since
-S4 there is no such gate.
+that is not in force is not implemented and does not fail the render; there
+is no such gate today. The tuple is also the seam the test suite uses to run
+a track through the fast gates only.
 
 - **Gate 1** — the delivered loudness is −16 ± 1 LUFS and the delivered true
   peak is at most −1.5 dBTP. The loudness is the gated integrated loudness of
@@ -362,7 +367,7 @@ This slice is the arranger, not the last one. Everything below is
   arrangement, not whether it is any good. That is S6's job, and it needs
   human ears.
 
-The next slices are `s5-batch-station` and `s6-taste-pass`.
+The next slice is `s6-taste-pass`.
 
 ---
 

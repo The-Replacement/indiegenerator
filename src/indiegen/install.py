@@ -12,13 +12,12 @@ can take a station down.
 
 from __future__ import annotations
 
-import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from indiegen.filecheck import FileCheck, check_file
-from indiegen.writer import TEMP_DIR_NAME, _fsync_dir
+from indiegen.writer import publish_atomically, staging_dir
 
 
 @dataclass
@@ -37,18 +36,11 @@ class InstallResult:
 
 def _copy_atomic(source: Path, target_dir: Path) -> Path:
     """Copy a file into a watched directory, atomically."""
-    target_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = target_dir / TEMP_DIR_NAME
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = temp_dir / source.name
     target = target_dir / source.name
+    temp_path = staging_dir(target_dir) / source.name
     try:
         shutil.copyfile(source, temp_path)
-        with open(temp_path, "rb") as handle:
-            os.fsync(handle.fileno())
-        _fsync_dir(temp_dir)
-        os.replace(temp_path, target)
-        _fsync_dir(target_dir)
+        publish_atomically(temp_path, target)
     except OSError:
         temp_path.unlink(missing_ok=True)
         raise
