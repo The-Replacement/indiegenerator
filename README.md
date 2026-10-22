@@ -67,19 +67,19 @@ Eight-minute pieces, seed 1042, one process each, measured on 2026-10-21:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 78.2 s | 152.1 s | 92.2 s | 82.5 s | 122.5 s |
-| Faster than realtime | 6.1× | 3.2× | 5.2× | 5.8× | 3.9× |
-| Peak RSS | 1199 MB | 1196 MB | 1182 MB | 1293 MB | 1175 MB (budget 1500 MB) |
+| Render time (whole command) | 75.0 s | 97.6 s | 81.2 s | 76.4 s | 116.1 s |
+| Faster than realtime | 6.4× | 4.9× | 5.9× | 6.3× | 4.1× |
+| Peak RSS | 1182 MB | 1180 MB | 1182 MB | 1289 MB | 1252 MB (budget 1500 MB) |
 | Integrated loudness | −16.000 LUFS | −16.002 LUFS | −16.001 LUFS | −16.120 LUFS | −16.007 LUFS |
 | True peak (4× oversampled) | −1.891 dBTP | −1.800 dBTP | −1.800 dBTP | −1.778 dBTP | −1.800 dBTP |
 | Loudness range | 9.68 LU | 9.37 LU | 12.50 LU | 9.10 LU | 11.39 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `pcm_sha256` | `2177008b…` | `ce1c0c80…` | `083890d3…` | `42a286c9…` | `518ececa…` |
+| `pcm_sha256` | `2177008b…` | `803b5291…` | `083890d3…` | `42a286c9…` | `518ececa…` |
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the kosmische is the slowest lane at 152.1 s, and the
+both hold with room: the slowest lane is the ambient at 116.1 s, and the
 master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
-at eight minutes, below the render's own 1199 MB.
+at eight minutes, below the render's own 1182 MB.
 
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
@@ -87,10 +87,13 @@ ceiling on four lanes, which is what a limiter that works looks like; the
 `indie-noise` lane's crest factor is 27 dB, so its limiter does real work
 (measured, see the handoff).
 
-The kosmische's line is the slow part: the Frippertronics' delay is walked one
-sample at a time in Python, at about 0.18 s per second of stereo. The mix
-itself is the one array that still spans the whole track (605 MB at fifteen
-minutes).
+The kosmische's line was the slow part: the Frippertronics' delay was
+walked one sample at a time in Python, at about 0.1 s per second of stereo,
+and the lane spent a minute and a half of its render in that loop. The loop
+is vectorised now (the read is a gather, the filter is a run of stretches of
+constant coefficient) and it is ten times quicker; the lane renders in 97.6
+seconds. The mix itself is the one array that still spans the whole track
+(605 MB at fifteen minutes).
 
 ### The gates in force
 

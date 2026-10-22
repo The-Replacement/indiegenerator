@@ -36,14 +36,14 @@ drop the board integration. It is not this slice's job.
 
 | Lane | Wall | Peak RSS | Loudness | True peak | LRA | Low band |
 |---|---|---|---|---|---|---|
-| `motorik` | 78.2 s | 1199 MB | −16.000 LUFS | −1.891 dBTP | 9.68 LU | 0.00 dB |
-| `kosmische` | 152.1 s | 1196 MB | −16.002 LUFS | −1.800 dBTP | 9.37 LU | 0.00 dB |
-| `ambient` | 122.5 s | 1175 MB | −16.007 LUFS | −1.800 dBTP | 11.39 LU | −0.32 dB |
-| `dub-electronic` | 92.2 s | 1182 MB | −16.001 LUFS | −1.800 dBTP | 12.50 LU | 0.00 dB |
-| `indie-noise` | 82.5 s | 1293 MB | −16.120 LUFS | −1.778 dBTP | 9.10 LU | −0.06 dB |
+| `motorik` | 75.0 s | 1182 MB | −16.000 LUFS | −1.891 dBTP | 9.68 LU | 0.00 dB |
+| `kosmiche` | 97.6 s | 1180 MB | −16.002 LUFS | −1.800 dBTP | 9.37 LU | 0.00 dB |
+| `ambient` | 116.1 s | 1252 MB | −16.007 LUFS | −1.800 dBTP | 11.39 LU | −0.32 dB |
+| `dub-electronic` | 81.2 s | 1182 MB | −16.001 LUFS | −1.800 dBTP | 12.50 LU | 0.00 dB |
+| `indie-noise` | 76.4 s | 1289 MB | −16.120 LUFS | −1.778 dBTP | 9.10 LU | −0.06 dB |
 
-The budget is three minutes and 1.5 GB: the kosmische is the slowest lane at
-152.1 s and the indie-noise the hungriest at 1293 MB. Every lane passes every
+The budget is three minutes and 1.5 GB: the ambient is the slowest lane at
+116.1 s and the indie-noise the hungriest at 1289 MB. Every lane passes every
 gate in force.
 
 **The seed sweep** (four seeds per lane, 420 s pieces, every gate measured):
@@ -216,11 +216,34 @@ starts with the three tracks above and the notes on them.
    to do and it needs human ears.
 2. **The mix balance has never been judged by an ear** — the measured
    balance is in §6, and the trims are the knobs.
-3. **The kosmische is at 152.1 s of a 180 s budget** for an eight-minute
-   piece, and the Frippertronics' line is walked one sample at a time in
-   Python. It is the first thing to optimise if S5 needs the headroom: the
-   batch is twenty tracks in sixty minutes.
+3. **The Frippertronics' loop is vectorised** (§4.6). It was the whole cost
+   of the kosmische lane: 0.098 s per second of stereo, walked one sample at
+   a time in Python, and the lane spent a minute and a half of its render
+   there. It is 0.010 s per second now, and the lane renders in 97.6 s.
 4. **The board does not track this project** (see §2).
+
+## 4.6 The Frippertronics' loop
+
+The effect was the whole cost of the kosmische lane: a second of stereo
+took 0.098 s, walked one sample at a time in Python, and a five-minute
+kosmische render spent a minute and a half in it.
+
+Three facts make the walk exact and vectorised:
+
+- The read at sample `t` reads the value written at `t - delay`, and the
+  line holds more than `delay` samples of history. Every read in a chunk is
+  therefore older than the chunk, and the chunk is never longer than the
+  delay: the reads are a gather over the state as it was.
+- The pass counter of a read only changes when the write laps the ring, so
+  the one-pole's coefficient is constant over long stretches and the filter
+  is a run of `lfilter` calls over those stretches.
+- The wow's phase is a function of the absolute sample index, so the same
+  sample gets the same offset however the signal is cut into blocks.
+
+A block-wise render is still bit-identical to a single-shot one, and the
+measured darkening of the repeats is unchanged (4714, 4390, 3990, 3614 and
+3267 Hz over five repeats). The arithmetic is not the old arithmetic, so
+the kosmische's PCM hash moved; the commit says so.
 
 ## 10. The measurements this slice is judged by
 
