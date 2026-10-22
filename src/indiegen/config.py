@@ -325,7 +325,6 @@ class LanePreset(BaseModel):
     techniques: list[TechniqueCard]
     section_count_range: list[int]
     duration_range_seconds: list[int]
-    full_track_range_seconds: list[int]
     bus_gains: list[BusGain] = []
     attack_frames: int | None = None
     release_frames: int | None = None
@@ -342,6 +341,22 @@ class LaneEntry(BaseModel):
     parameters: LanePreset
 
 
+class FormCard(BaseModel):
+    """One of the station's track forms, and how many of them there are.
+
+    BRIEF 15: "A 20-track batch is not 20 tracks: ~60% full tracks (4-10
+    min), ~25% longform (10-15 min), ~15% interludes (45-120 s)". The
+    forms are the station's release policy, so they are the same for every
+    lane.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    form: Literal["full", "longform", "interlude"]
+    weight: int = Field(ge=0)
+    duration_range_seconds: list[int]
+
+
 class StationPreset(BaseModel):
     """The shared station signature: what makes three tracks the same station."""
 
@@ -349,6 +364,7 @@ class StationPreset(BaseModel):
 
     kind: Literal["station"]
     lane_weights: list[LaneWeight]
+    forms: list[FormCard]
     palette: list[str]
     motif_bank: list[list[int]]
     motif_rhythm: list[int]

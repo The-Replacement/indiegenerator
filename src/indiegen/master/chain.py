@@ -58,12 +58,26 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
     measured = integrated_lufs(stereo, plan.sample_rate)
     gain = math.pow(10.0, (target - measured) / 20.0) if math.isfinite(measured) else 1.0
     limited = stereo
+    best: tuple[float, np.ndarray] | None = None
+    previous_error = 0.0
     for _ in range(MAX_ITERATIONS):
         limited, _, _ = limit(stereo, gain, peaks, ceiling, block)
-        error = target - integrated_lufs(limited, plan.sample_rate)
+        measured = integrated_lufs(limited, plan.sample_rate)
+        if best is None or abs(target - measured) < abs(target - best[0]):
+            best = (measured, limited)
+        error = target - measured
         if abs(error) <= LOUDNESS_TOLERANCE_LU or not math.isfinite(error):
             break
+        if previous_error and abs(error) >= abs(previous_error):
+            # The limiter is holding the level down, and raising the gain
+            # makes it hold harder: the loudness falls as the gain rises.
+            # The ceiling is the limit and the target is a wish, so the
+            # loudest the ceiling allows is what gets delivered.
+            break
+        previous_error = error
         gain *= math.pow(10.0, error / 20.0)
+    if best is not None:
+        limited = best[1]
 
     out = np.empty(stereo.shape, dtype="<i2")
     for start in range(0, stereo.shape[0], block):

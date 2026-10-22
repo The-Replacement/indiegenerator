@@ -464,6 +464,7 @@ class Plan(BaseModel):
     channels: int
     duration_frames: int
     duration_range_frames: list[int]
+    form: Literal["full", "longform", "interlude"]
     tempo_bpm: int
     frames_per_beat: int
     meter_numerator: int

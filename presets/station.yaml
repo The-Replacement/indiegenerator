@@ -9,6 +9,15 @@ lane_weights:
   - {lane: dub-electronic, weight: 15}
   - {lane: indie-noise, weight: 10}
 
+# THE THREE FORMS of a release. BRIEF 15: a batch is not twenty tracks of
+# the same length - about 60% full tracks, 25% longform, 15% interludes.
+# The forms are the station's release policy, so they are the same for
+# every lane.
+forms:
+  - {form: full, weight: 60, duration_range_seconds: [360, 480]}
+  - {form: longform, weight: 25, duration_range_seconds: [600, 900]}
+  - {form: interlude, weight: 15, duration_range_seconds: [45, 120]}
+
 # The instrument palette every lane draws from. Nothing outside it without a
 # reason in the README.
 palette:
@@ -105,9 +114,15 @@ section_crossfade_frames: 2205
 
 # The master. The loudness target is the delivered integrated loudness in
 # thousandths of a LU (-16 LUFS) and the ceiling is the true peak in
-# millibels (-1.5 dBTP).
+# millibels. The ceiling is four decibels below the gate's -1.5 dBTP
+# limit, and the reason is the radio: it re-encodes to MP3 128, and the
+# encoder overshoots by up to two decibels on a sharp transient (measured
+# on the ten-track batch: -0.5 dB on most of them and +2.07 dB on the
+# indie-noise lane's plucks). A master delivered at -1.8 dBFS clips in the
+# radio's own encoder, and the codec gate refuses the file. The headroom
+# is the difference between a track that plays and a track that clicks.
 target_lufs_millibels: -16000
-ceiling_millibels: -150
+ceiling_millibels: -400
 
 dither_lsb: 1
 track_number: 1

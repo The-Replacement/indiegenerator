@@ -124,7 +124,11 @@ section_count_range: [4, 6]
 # The durations this lane may be rendered at: the full tracks, the
 # longforms and the interludes of BRIEF 15's batch.
 duration_range_seconds: [45, 900]
-# The full tracks, which is what a render without a duration draws.
-full_track_range_seconds: [360, 480]
+# The mix bus. The pad is the constant note under the whole lane, and at
+# the level the composition gives it it drowns the drums: the pad measured
+# a decibel under the whole mix, the kick eight under it and the bass
+# sixteen. Six decibels down puts the pad level with the kick.
+bus_gains:
+  - {kind: pad, gain_millibels: -600}
 attack_frames: 8820
 release_frames: 13230

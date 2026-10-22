@@ -15,6 +15,7 @@ BRIEF 6 names.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
@@ -39,6 +40,7 @@ from indiegen.config import (
     PolyPeriodCard,
     Preset,
     SnareCard,
+    StationPreset,
     StrategyCard,
 )
 from indiegen.errors import PlanError
@@ -65,6 +67,9 @@ from indiegen.plan import (
     SnareEvent,
 )
 from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES, mode_scale
+
+# The three forms of a release: a full track, a longform and an interlude.
+Form = Literal["full", "longform", "interlude"]
 
 # The dimensions two consecutive sections have to differ in.
 DIMENSIONS: tuple[str, ...] = ("instrumentation", "harmonic_center", "rhythm", "density", "texture")
@@ -573,7 +578,25 @@ def _dub_chain_spec(card: DubChainCard, rng: SplitMix64) -> DubChainSpec:
     )
 
 
-def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Plan:
+def _form_for(station: StationPreset, duration_frames: int | None) -> Form:
+    """The form of a track, when the caller did not name one.
+
+    A render without a duration is a full track. A render with one is the
+    form whose range holds it, and a duration that no form covers (a test's
+    sixty seconds, say) is a full track: the form is a statement about the
+    release, not about the length alone.
+    """
+    if duration_frames is None:
+        return station.forms[0].form
+    seconds = duration_frames // SAMPLE_RATE
+    for card in station.forms:
+        low, high = card.duration_range_seconds
+        if low <= seconds <= high:
+            return card.form
+    return station.forms[0].form
+
+
+def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:
     """Build the frozen Plan from a preset and a seed.
 
     The PRNG is seeded from the preset's *identity* and the seed, not from
@@ -588,9 +611,13 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     lane_name = pick_lane(preset, rng)
     lane = next(entry.parameters for entry in preset.lanes if entry.lane == lane_name)
 
+    if form is None:
+        form = _form_for(station, duration_frames)
+    form_card = next(entry for entry in station.forms if entry.form == form)
+
     if duration_frames is None:
-        low, high = lane.full_track_range_seconds
-        # A lane with a single declared duration does not draw one: the plan
+        low, high = form_card.duration_range_seconds
+        # A form with a single declared duration does not draw one: the plan
         # must not depend on whether the caller passed the duration or not.
         frames = low * SAMPLE_RATE if low == high else rng.between(low, high) * SAMPLE_RATE
     else:
@@ -772,6 +799,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
             lane.duration_range_seconds[0] * SAMPLE_RATE,
             lane.duration_range_seconds[1] * SAMPLE_RATE,
         ],
+        form=form,
         tempo_bpm=tempo,
         frames_per_beat=frames_per_beat,
         meter_numerator=lane.meter[0],
