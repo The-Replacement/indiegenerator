@@ -67,7 +67,13 @@ def test_a_move_applies_only_to_the_instruments_it_lists(composed_plan: Plan) ->
 
 
 def test_a_move_that_matched_nothing_is_not_logged(composed_plan: Plan) -> None:
-    from indiegen.plan import PluckEvent, Rational
+    """A move that has nothing to move is not in the log.
+
+    The moves are the ones the composer drew, so the test draws its own: a
+    plan with a single pluck and a drop of the drums has nothing to drop,
+    and the log stays empty.
+    """
+    from indiegen.plan import DirectorMove, PluckEvent, Rational
 
     only_pluck = PluckEvent(
         kind="pluck",
@@ -85,7 +91,15 @@ def test_a_move_that_matched_nothing_is_not_logged(composed_plan: Plan) -> None:
         detune_cents=0,
         excitation_seed=1,
     )
-    padded = composed_plan.model_copy(update={"events": [only_pluck]})
+    move = DirectorMove(
+        sample=0,
+        strategy="drop_drums",
+        detail="take the drums out for a while",
+        parameter=0,
+        crossfade_frames=44100,
+        applies_to=["kick", "snare", "hat"],
+    )
+    padded = composed_plan.model_copy(update={"events": [only_pluck], "strategy_deck": [move]})
     directed = director(padded)
     assert directed.director_log == []
 
