@@ -18,9 +18,23 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
+from pydantic import BaseModel, ConfigDict
 
 from indiegen.master.loudness import integrated_lufs, sample_peak_dbfs
-from indiegen.validate import CodecComparison
+
+
+class CodecComparison(BaseModel):
+    """What the codec roundtrip measured."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    lufs_before: float
+    lufs_after: float
+    peak_before: float
+    peak_after: float
+    correlation: float
+    clipped: int
+
 
 FFMPEG: str = "ffmpeg"
 MP3_BITRATE: str = "128k"

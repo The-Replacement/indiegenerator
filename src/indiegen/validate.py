@@ -444,6 +444,22 @@ def _planned_per_second(plan: Plan, count: int, values: list[int], start_frame: 
     return curve
 
 
+def energy_correlation(plan: Plan, mix: np.ndarray) -> float:
+    """The correlation of the delivered energy with the planned curve.
+
+    A plan that planned a flat curve has no correlation to give: the
+    measurement is one, and the gate does not fail a flat plan.
+    """
+    measured = per_second_rms(mix, plan.sample_rate, plan.fade_in_frames)
+    if measured.size < 2:
+        return 1.0
+    levels = [section.level_millibels for section in plan.sections]
+    planned = _planned_per_second(plan, measured.size, levels, _first_second(plan))
+    if float(np.std(planned)) <= 0.0:
+        return 1.0
+    return pearson(measured, planned)
+
+
 def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     """Gate 5: the energy trajectory follows the planned curve.
 
@@ -453,14 +469,7 @@ def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     a flat curve is not failed for being flat.
     """
     results: list[GateResult] = []
-    measured = per_second_rms(mix, plan.sample_rate, plan.fade_in_frames)
-    if measured.size < 2:
-        return results
-    levels = [section.level_millibels for section in plan.sections]
-    planned = _planned_per_second(plan, measured.size, levels, _first_second(plan))
-    if float(np.std(planned)) <= 0.0:
-        return results
-    correlation = pearson(measured, planned)
+    correlation = energy_correlation(plan, mix)
     if correlation < ENERGY_CORRELATION_LIMIT:
         results.append(
             GateResult(
@@ -490,6 +499,29 @@ def _section_means(plan: Plan, measured: np.ndarray, start_frame: int) -> np.nda
     return means
 
 
+def timbre_measurement(plan: Plan, mix: np.ndarray) -> tuple[float, float]:
+    """The timbre trajectory's measurement: the correlation, or the variance.
+
+    A plan that predicted movement is measured by the correlation of the
+    delivered per-section centroid with the planned curve. A plan that
+    declared a static timbre is measured by the relative variance of the
+    delivered one, and the second number says which of the two it is.
+    """
+    measured = per_second_centroid(mix, plan.sample_rate, plan.fade_in_frames)
+    if measured.size < 2 or not plan.sections:
+        return 1.0, 0.0
+    start = _first_second(plan)
+    per_section = _section_means(plan, measured, start)
+    planned = np.array([float(section.centroid_hz) for section in plan.sections], dtype=np.float64)
+    spread = float(np.max(planned) - np.min(planned))
+    mean = float(np.mean(planned))
+    if mean <= 0.0:
+        return 1.0, 0.0
+    if spread <= STATIC_CENTROID_TOLERANCE * mean:
+        return float(np.std(per_section) / mean), 1.0
+    return pearson(per_section, planned), 0.0
+
+
 def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     """Gate 6: the timbre trajectory follows the planned one.
 
@@ -500,18 +532,9 @@ def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     exists to catch.
     """
     results: list[GateResult] = []
-    measured = per_second_centroid(mix, plan.sample_rate, plan.fade_in_frames)
-    if measured.size < 2 or not plan.sections:
-        return results
-    start = _first_second(plan)
-    per_section = _section_means(plan, measured, start)
-    planned = np.array([float(section.centroid_hz) for section in plan.sections], dtype=np.float64)
-    spread = float(np.max(planned) - np.min(planned))
-    mean = float(np.mean(planned))
-    if mean <= 0.0:
-        return results
-    if spread <= STATIC_CENTROID_TOLERANCE * mean:
-        relative = float(np.std(per_section) / mean)
+    correlation, static = timbre_measurement(plan, mix)
+    if static:
+        relative = correlation
         if relative > STATIC_CENTROID_LIMIT:
             results.append(
                 GateResult(
@@ -522,7 +545,6 @@ def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
                 )
             )
         return results
-    correlation = pearson(per_section, planned)
     if correlation < TIMBRE_CORRELATION_LIMIT:
         results.append(
             GateResult(
@@ -754,23 +776,15 @@ def check_gate_11(internal_lufs: float, ebur128_lufs: float) -> list[GateResult]
     ]
 
 
-class CodecComparison(BaseModel):
-    """What the codec roundtrip measured."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-
-    lufs_before: float
-    lufs_after: float
-    peak_before: float
-    peak_after: float
-    correlation: float
-    clipped: int
-
-
-def check_gate_12(comparison: CodecComparison) -> list[GateResult]:
+def check_gate_12(
+    lufs_before: float,
+    lufs_after: float,
+    clipped: int,
+    correlation: float,
+) -> list[GateResult]:
     """Gate 12: the MP3 128 roundtrip changes little."""
     results: list[GateResult] = []
-    difference = abs(comparison.lufs_after - comparison.lufs_before)
+    difference = abs(lufs_after - lufs_before)
     if difference > CODEC_LUFS_TOLERANCE_LU:
         results.append(
             GateResult(
@@ -780,20 +794,20 @@ def check_gate_12(comparison: CodecComparison) -> list[GateResult]:
                 check="the loudness through the codec",
             )
         )
-    if comparison.clipped:
+    if clipped:
         results.append(
             GateResult(
                 gate=12,
-                measured=float(comparison.clipped),
+                measured=float(clipped),
                 limit=0.0,
                 check="new clipping through the codec",
             )
         )
-    if comparison.correlation < CODEC_CORRELATION_LIMIT:
+    if correlation < CODEC_CORRELATION_LIMIT:
         results.append(
             GateResult(
                 gate=12,
-                measured=comparison.correlation,
+                measured=correlation,
                 limit=CODEC_CORRELATION_LIMIT,
                 check="the correlation through the codec",
             )

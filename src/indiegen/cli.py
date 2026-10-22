@@ -1,4 +1,9 @@
-"""The CLI. Four entry points: render, explain, --help, --version."""
+"""The CLI: render, batch, validate, catalog, install, explain.
+
+Five commands, and the write path is the same for all of them: a temp file,
+an fsync and an atomic rename, because Liquidsoap is watching the
+directory the tracks land in.
+"""
 
 from __future__ import annotations
 
@@ -11,16 +16,15 @@ import typer
 from pydantic import ValidationError
 
 from indiegen import __version__
+from indiegen.batch import batch as run_batch
+from indiegen.batch import render_track
+from indiegen.catalog import build_catalog, write_catalog
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
 from indiegen.errors import PlanError, RenderError
-from indiegen.master.chain import master
-from indiegen.master.loudness import measure
-from indiegen.metadata import build_tags, filename_for
+from indiegen.filecheck import check_file
+from indiegen.install import install as run_install
 from indiegen.plan import SAMPLE_RATE, Plan, canonical_json, plan_sha256
-from indiegen.render import BLOCK_SIZE, render_plan
-from indiegen.validate import check_gate_10, run_gates, stereo_correlation
-from indiegen.writer import pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
 
 app = typer.Typer(add_completion=False, name="indiegen", no_args_is_help=True)
 
@@ -78,6 +82,23 @@ def _plan_from_file(path: Path) -> Plan:
     return plan
 
 
+def _composed_plan(
+    preset: str | None,
+    seed: int | None,
+    frames: int | None,
+    presets_dir: Path | None,
+) -> Plan:
+    """Compose and direct a plan, or fail with a message that says why."""
+    name = preset if preset is not None else "station"
+    if seed is None:
+        raise PlanError("a seed is required", preset=name)
+    try:
+        loaded = load_preset(name, presets_dir=presets_dir)
+    except PlanError as exc:
+        raise exc.with_context(preset=name, seed=seed) from exc
+    return director(compose(loaded, seed, frames))
+
+
 @app.command()
 def render(
     preset: Annotated[str | None, typer.Option("--preset", help="Preset name. Defaults to station.")] = None,
@@ -116,95 +137,131 @@ def _render(
         if seed is not None and seed != plan.seed:
             raise PlanError(
                 f"seed {seed} disagrees with the plan's {plan.seed}",
-                preset=plan.preset,
+                preset=preset,
                 seed=seed,
             )
     else:
-        name = preset if preset is not None else "station"
-        if seed is None:
-            raise PlanError("a seed is required", preset=name)
-        try:
-            loaded = load_preset(name, presets_dir=presets_dir)
-        except PlanError as exc:
-            raise exc.with_context(preset=name, seed=seed) from exc
-        plan = director(compose(loaded, seed, frames))
+        plan = _composed_plan(preset, seed, frames, presets_dir)
 
     started = time.perf_counter()
-    mix = render_plan(plan)
-    pcm = master(plan, mix, BLOCK_SIZE)
+    rendered = render_track(plan, out)
     render_seconds = time.perf_counter() - started
-
-    failure = run_gates(plan, mix, pcm)
-    if failure is not None:
-        for result in failure.failures:
+    if rendered.failure is not None or rendered.outcome is None:
+        for result in rendered.failure.failures if rendered.failure else []:
             typer.echo(
                 f"gate {result.gate}: {result.check}: measured {result.measured:.6f} limit {result.limit:.6f}",
                 err=True,
             )
         raise typer.Exit(code=2)
+    outcome = rendered.outcome
 
-    # The gates have looked at the mix; from here on the master is the only
-    # copy of the audio that has to be held, and at fifteen minutes the mix
-    # is 605 MB of it.
-    del mix
-
-    filename = filename_for(plan)
-    tags = build_tags(plan)
-    path = write_flac_atomic(out, filename, pcm, plan.sample_rate, tags, preset=plan.preset, seed=plan.seed)
-    decoded = read_pcm(path)
-    measurements = measure(decoded, plan.sample_rate)
-    digest = pcm_sha256(decoded)
-
-    # Gate 10: the file on disk has to be the audio that was rendered. The
-    # re-run half of the gate is in the tests, where two processes render
-    # the same plan and compare their hashes.
-    mismatched = check_gate_10(pcm_sha256(pcm), digest)
-    if mismatched:
-        for result in mismatched:
-            typer.echo(
-                f"gate {result.gate}: {result.check}: measured {result.measured:.6f} limit {result.limit:.6f}",
-                err=True,
-            )
-        raise typer.Exit(code=2)
-
-    sidecar = write_sidecar_atomic(
-        out,
-        filename,
-        {
-            "schema": "indiegen/sidecar/1",
-            "preset": plan.preset,
-            "seed": plan.seed,
-            "lane": plan.lane,
-            "plan": plan.model_dump(mode="json"),
-            "plan_sha256": plan_sha256(plan),
-            "pcm_sha256": digest,
-            "measurements": {
-                "duration_seconds": plan.duration_frames / plan.sample_rate,
-                "integrated_lufs": measurements["integrated_lufs"],
-                "sample_peak_dbfs": measurements["sample_peak_dbfs"],
-                "true_peak_dbtp": measurements["true_peak_dbtp"],
-                "loudness_range_lu": measurements["loudness_range_lu"],
-                "stereo_correlation": stereo_correlation(decoded),
-                "render_seconds": render_seconds,
-            },
-        },
-        preset=plan.preset,
-        seed=plan.seed,
-    )
-
-    typer.echo(f"path: {path}")
-    typer.echo(f"sidecar: {sidecar}")
+    typer.echo(f"path: {outcome.path}")
+    typer.echo(f"sidecar: {outcome.sidecar}")
     typer.echo(f"duration: {plan.duration_frames / plan.sample_rate:.6f}")
     typer.echo(f"format: FLAC {plan.sample_rate}Hz PCM_16 {plan.channels}ch")
-    typer.echo(f"peak: {measurements['sample_peak_dbfs']:.3f} dBFS")
-    typer.echo(f"true_peak: {measurements['true_peak_dbtp']:.3f} dBTP")
-    typer.echo(f"loudness: {measurements['integrated_lufs']:.3f} LUFS")
-    typer.echo(f"loudness_range: {measurements['loudness_range_lu']:.3f} LU")
+    typer.echo(f"form: {plan.form}")
+    typer.echo(f"peak: {outcome.sample_peak_dbfs:.3f} dBFS")
+    typer.echo(f"true_peak: {outcome.true_peak_dbtp:.3f} dBTP")
+    typer.echo(f"loudness: {outcome.integrated_lufs:.3f} LUFS")
+    typer.echo(f"loudness_range: {outcome.loudness_range_lu:.3f} LU")
     typer.echo(f"sections: {plan.section_count}")
     typer.echo(f"techniques: {','.join(plan.techniques)}")
     typer.echo(f"plan_sha256: {plan_sha256(plan)}")
-    typer.echo(f"pcm_sha256: {digest}")
+    typer.echo(f"pcm_sha256: {outcome.pcm_sha256}")
     typer.echo(f"render_seconds: {render_seconds:.3f}")
+
+
+@app.command()
+def batch(
+    preset: Annotated[str, typer.Option("--preset", help="Preset name.")] = "station",
+    count: Annotated[int, typer.Option("--count", help="How many tracks.")] = 10,
+    seed_base: Annotated[int, typer.Option("--seed-base", help="The first seed.")] = 1000,
+    out: Annotated[Path, typer.Option("--out", help="Output directory.")] = Path("out"),
+    presets_dir: Annotated[Path | None, typer.Option("--presets-dir", help="Directory holding the presets.")] = None,
+) -> None:
+    """Render a batch of tracks and write the catalog."""
+    try:
+        loaded = load_preset(preset, presets_dir=presets_dir)
+        result = run_batch(loaded, count, seed_base, out)
+    except (PlanError, RenderError) as exc:
+        _fail(exc)
+        return
+    for track in result.tracks:
+        typer.echo(
+            f"track: {track.path.name} seed={track.seed} lane={track.lane} form={track.form} "
+            f"duration={track.duration_seconds:.1f}s loudness={track.integrated_lufs:.3f}LUFS"
+        )
+    typer.echo(f"tracks: {len(result.tracks)}")
+    typer.echo(f"catalog: {out / 'catalog.json'}")
+    typer.echo(f"total_bytes: {result.catalog.total_bytes}")
+    typer.echo(f"duplicate_hashes: {len(result.catalog.duplicate_hashes)}")
+    typer.echo(f"batch_seconds: {result.seconds:.3f}")
+
+
+@app.command()
+def catalog(
+    directory: Annotated[Path, typer.Option("--dir", help="The directory holding the tracks.")] = Path("out"),
+) -> None:
+    """Read the sidecars of a directory and write its catalog."""
+    if not directory.is_dir():
+        typer.echo(f"error: {directory} is not a directory", err=True)
+        raise typer.Exit(code=1)
+    built = build_catalog(directory)
+    path = write_catalog(directory, built)
+    typer.echo(f"catalog: {path}")
+    typer.echo(f"tracks: {len(built.entries)}")
+    typer.echo(f"total_bytes: {built.total_bytes}")
+    typer.echo(f"duplicate_seeds: {len(built.duplicate_seeds)}")
+    typer.echo(f"duplicate_hashes: {len(built.duplicate_hashes)}")
+    for duplicate in built.duplicate_hashes:
+        typer.echo(f"duplicate: {duplicate['pcm_sha256']} seeds={duplicate['seeds']}")
+
+
+@app.command()
+def validate(
+    files: Annotated[list[Path], typer.Argument(help="The tracks to check.")],
+    no_codec: Annotated[bool, typer.Option("--no-codec", help="Skip the gates that need ffmpeg.")] = False,
+) -> None:
+    """Check tracks that are already on disk."""
+    failed = False
+    for path in files:
+        check = check_file(path, with_codec=not no_codec)
+        for reason in check.skipped:
+            typer.echo(f"skipped: {path.name}: {reason}")
+        for failure in check.failures:
+            typer.echo(
+                f"gate {failure.gate}: {path.name}: {failure.check}: "
+                f"measured {failure.measured:.6f} limit {failure.limit:.6f}",
+                err=True,
+            )
+        if check.ok:
+            typer.echo(f"ok: {path.name}")
+        else:
+            failed = True
+    if failed:
+        raise typer.Exit(code=2)
+
+
+@app.command()
+def install(
+    directory: Annotated[Path, typer.Option("--dir", help="The directory holding the tracks.")] = Path("out"),
+    to: Annotated[Path, typer.Option("--to", help="The directory to install into.")] = Path("out/installed"),
+    no_codec: Annotated[bool, typer.Option("--no-codec", help="Skip the gates that need ffmpeg.")] = False,
+) -> None:
+    """Validate the tracks of a directory and copy the valid ones into the target."""
+    try:
+        result = run_install(directory, to, with_codec=not no_codec)
+    except (PlanError, RenderError, FileNotFoundError) as exc:
+        _fail(exc)
+        return
+    for path, reason in result.refused:
+        typer.echo(f"refused: {path.name}: {reason}", err=True)
+    for path in result.installed:
+        typer.echo(f"installed: {path}")
+    typer.echo(f"installed: {len(result.installed)}")
+    typer.echo(f"refused: {len(result.refused)}")
+    if not result.ok:
+        raise typer.Exit(code=2)
 
 
 @app.command()
@@ -217,14 +274,7 @@ def explain(
 ) -> None:
     """Print the plan and its hash, and render nothing."""
     try:
-        name = preset if preset is not None else "station"
-        if seed is None:
-            raise PlanError("a seed is required", preset=name)
-        try:
-            loaded = load_preset(name, presets_dir=presets_dir)
-        except PlanError as exc:
-            raise exc.with_context(preset=name, seed=seed) from exc
-        plan = director(compose(loaded, seed, _frames(minutes, seconds)))
+        plan = _composed_plan(preset, seed, _frames(minutes, seconds), presets_dir)
     except (PlanError, RenderError) as exc:
         _fail(exc)
         return
