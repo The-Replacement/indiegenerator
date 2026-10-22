@@ -6,10 +6,10 @@ A seed goes in; a finished, tagged track comes out. Every run of the same
 `(preset, seed)` produces the same plan, and on the same machine the same
 audio, byte for byte.
 
-> **Status: slice S3 (`s3-arranger`).** The arranger, the section graph, the
-> tension curve, the motif and its transforms, the Director as an arranger,
-> the modal shifts, the Frippertronics and the dub chain, and the three gates
-> that measure them. Seven minutes of music per lane. See
+> **Status: slice S4 (`s4-mix-master`).** The mix bus, the limiter, the
+> loudness normalisation, the true peak, the codec round trip, and every gate
+> of BRIEF §11 in force. Eight minutes of music per lane, delivered at
+> −16 LUFS and at most −1.5 dBTP. See
 > [What is not built yet](#what-is-not-built-yet).
 
 ---
@@ -23,22 +23,23 @@ python3.15 -m venv .venv          # Python 3.15.0 (mise: python@3.15)
 .venv/bin/indiegen render --preset ambient --seed 1042 --seconds 90 --out out/
 ```
 
-The render prints twelve lines and leaves two files in `out/`: the tagged
+The render prints thirteen lines and leaves two files in `out/`: the tagged
 FLAC and a JSON sidecar holding the plan and the measurements.
 
 ```
 path: out/ambient_signal_iron_s1042.flac
 sidecar: out/ambient_signal_iron_s1042.json
-duration: 180.000000
+duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
-peak: -18.001 dBFS
-true_peak: -17.995 dBTP
-loudness: -32.829 LUFS
-sections: 4
+peak: -1.871 dBFS
+true_peak: -1.866 dBTP
+loudness: -16.000 LUFS
+loudness_range: 11.834 LU
+sections: 3
 techniques: poly_period,drone,pluck
-plan_sha256: 063846bf02d63d94c41867874e9914fec9b21997a4fd41434e8f754f5227b3d5
-pcm_sha256: 69487365aa97d0d5b4b9d1f7de1a1c2ba5c0ee2e5f1a8a1f3b7c0d4e9a2f6b3c8
-render_seconds: 19.094
+plan_sha256: 63e0a607564f4ad4be05ed6eeee2cea54b3e4ef640aa31775b1438709a67ecb2
+pcm_sha256: e224d8e0a19e673f11fdbf9c43b2214d25dafb2fe1fd45a867eca1a36c3b70dd
+render_seconds: 18.859
 ```
 
 Other commands:
@@ -62,39 +63,50 @@ Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
 best of three runs on an otherwise idle host; the host is shared, and under
 load a render has been observed to take three times as long.
 
-Seven-minute pieces, seed 1042, one process each:
+Eight-minute pieces, seed 1042, one process each, measured on 2026-10-21:
 
-| Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient (8 min) |
+| Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (audio only) | 18.6 s | 71.5 s | 30.7 s | 9.1 s | 52.5 s |
-| Faster than realtime | 22× | 10× | 14× | 46× | 9.1× |
-| Peak RSS | 1045 MB | 1113 MB | 1113 MB | 1113 MB | 1180 MB (budget 1500 MB) |
-| Integrated loudness | −31.610 LUFS | −31.979 LUFS | −33.071 LUFS | −44.568 LUFS | −34.845 LUFS |
-| Sample peak | −18.003 dBFS | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS | −18.001 dBFS |
-| True peak (4× oversampled) | −17.758 dBTP | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP | −17.995 dBTP |
+| Render time (whole command) | 72.4 s | 136.5 s | 86.7 s | 76.2 s | 110.1 s |
+| Faster than realtime | 6.6× | 3.5× | 5.5× | 6.3× | 4.4× |
+| Peak RSS | 1184 MB | 1185 MB | 1179 MB | 1274 MB | 1204 MB (budget 1500 MB) |
+| Integrated loudness | −16.001 LUFS | −16.002 LUFS | −16.002 LUFS | −16.131 LUFS | −16.012 LUFS |
+| True peak (4× oversampled) | −1.800 dBTP | −1.800 dBTP | −1.800 dBTP | −1.778 dBTP | −1.800 dBTP |
+| Loudness range | 9.85 LU | 9.37 LU | 14.75 LU | 10.13 LU | 10.83 LU |
+| Low band under the mono fold-down | 0.00 dB | 0.00 dB | 0.00 dB | −0.06 dB | −2.17 dB |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| Frames | 18 522 000 | 18 522 000 | 18 522 000 | 18 522 000 | 21 168 000 |
-| `plan_sha256` stable across runs | yes | yes | yes | yes | yes |
-| `pcm_sha256` stable across runs | yes | yes | yes | yes | yes |
+| `pcm_sha256` | `09aa89e1…` | `ce1c0c80…` | `c5cab21c…` | `b51ef9b0…` | `551d7dd4…` |
 
-The budget is an eight-minute track in three minutes and 1.5 GB of RSS. The
-kosmische is the slowest lane and the ambient the biggest: the Frippertronics'
-line is walked one sample at a time in Python, at about 0.18 s per second of
-stereo, and the mix itself is the one array that still spans the whole track
-(605 MB at fifteen minutes).
+The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
+both hold with room: the kosmische is the slowest lane at 136.5 s, and the
+master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
+at eight minutes, below the render's own 1184 MB.
 
-Loudness and peak are **printed, not enforced** except by the gates below.
-The `indie-noise` lane is 13 LUFS quieter than the others: it is a noise wall
-with a guitar over it, and the loudness gate is S4's business.
+The loudness is the target, not an accident: the master measures the loudness
+of the finished mix and gains it onto −16 LUFS. The true peak sits at the
+ceiling on four lanes, which is what a limiter that works looks like; the
+`indie-noise` lane's crest factor is 27 dB, so its limiter does real work
+(measured, see the handoff).
+
+The kosmische's line is the slow part: the Frippertronics' delay is walked one
+sample at a time in Python, at about 0.18 s per second of stereo. The mix
+itself is the one array that still spans the whole track (605 MB at fifteen
+minutes).
 
 ### The gates in force
 
-`src/indiegen/validate.py` implements **gates 2, 4, 5, 6, 7, 8 and 13 only**,
-and declares that with `GATES_IN_FORCE = (2, 4, 5, 6, 7, 8, 13)`. A gate that
-is not in force is not implemented and does not fail the render.
+`src/indiegen/validate.py` implements **every gate of BRIEF §11**, and declares
+that with `GATES_IN_FORCE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)`. A gate
+that is not in force is not implemented and does not fail the render; since
+S4 there is no such gate.
 
+- **Gate 1** — the delivered loudness is −16 ± 1 LUFS and the delivered true
+  peak is at most −1.5 dBTP. The loudness is the gated integrated loudness of
+  BS.1770-4 and the peak is the inter-sample peak, both measured on the
+  delivered file.
 - **Gate 2** — no non-finite sample in the mix, no DC offset in the delivered
   master (≤ 0.001 of full scale), and nothing at the digital rails.
+- **Gate 3** — the duration is inside the preset's declared range.
 - **Gate 4** — the planned section count is realized: at least the lane's
   minimum (4, or 2 for the ambient), the sections tile the track, and every
   one of them holds something.
@@ -115,6 +127,24 @@ is not in force is not implemented and does not fail the render.
   above the peaks it is looking for.
 - **Gate 8** — no leading silence (≤ 4 s for the ambient lane, ≤ 1 s
   otherwise) and no trailing silence (≤ 3 s).
+- **Gate 9** — the low band survives the mono fold-down: below 200 Hz the
+  mid's energy is at most 3 dB under the mid's and the side's together. The
+  band is measured in the frequency domain, so the mid band's decorrelation
+  (the ambient's reverb) is not measured as if it were bass. The brief's
+  second clause, the full-band L/R correlation, is measured and reported in
+  the sidecar and not a threshold: the brief's own caveat says a decorrelated
+  delay must not fail this gate, and the ambient's reverb measures a
+  correlation of 0.16.
+- **Gate 10** — the same seed gives the same decoded PCM. The render path
+  compares the hash of the file on disk with the hash of the buffer it
+  rendered; the test renders the same plan twice in two processes and
+  compares their hashes.
+- **Gate 11** — our meter against `ffmpeg -af ebur128`, within 0.2 LU. The
+  test measures it on a test signal; ffmpeg is a dev tool and the render
+  path never calls it.
+- **Gate 12** — the MP3 128 round trip: the loudness moves at most 0.5 LU,
+  nothing new clips, and the correlation stays at 0.2 or above. Also a dev
+  gate: ffmpeg is not a runtime dependency.
 - **Gate 13** — three plan-level checks, none of which looks at the audio:
   the motif has to come back in at least three transformed forms, the
   Director has to fire at least once every 32 bars in a pulsed lane, and the
@@ -161,8 +191,12 @@ preset.yaml + seed ──compose()──▶ Plan ──director()──▶ Plan 
   sidechain, the master chain and the loudness meter all carry their state
   across the block boundary as values, and a block is the same audio whatever
   the block size is. Only the mix itself spans the whole track.
-- **The master chain** stages the mix to a declared target peak, applies a
-  safety limiter and a seeded TPDF dither, and quantises to int16.
+- **The master chain measures the loudness of the finished mix, gains it onto
+  −16 LUFS, limits the true peak at −1.5 dBTP and quantises to int16.** The
+  gain is measured and not declared, because the loudness of a lane moves
+  1.3 to 5.1 dB from seed to seed and a declared gain cannot hold the gate.
+  The limiter reads a 4× oversampled peak per sample, so the ceiling holds
+  on the inter-sample peaks, and its gain may only fall.
 - **The write path** is `out/.tmp/<name>.flac` → `fsync` → `os.replace` into
   `out/`. The radio is watching that directory; a half-written FLAC would get
   played.
@@ -181,7 +215,7 @@ MAIN BUS ──▶ bus lowpass ──▶ [Frippertronics send] ──▶ wet ─
                 ▼     ▼                                    │
         [sidechain: ducked by the kick] ◀── kick bus        │
                 │                                           │
-                ▼                                           │
+                ▼                                           ▼
         section_gain × fade_gain ──▶ master() ──▶ int16 ◀──┘
 ```
 
@@ -191,6 +225,12 @@ taps the bus after the lowpass, and its wet is summed back before the
 section and fade gains, so the tail is faded with the music and cannot create
 trailing silence. When a lane declares no KS events, no delay send or no
 reverb, those stages are skipped entirely — not "added as zeros".
+
+Every send has a level and every level is read: the delay's and the
+reverb's send millibels scale what goes into the effect, so a send declared
+at −6 dB is a send at −6 dB and not at unity. The kick is kept apart so the
+sidechain can duck everything else, and it is summed in every lane — a lane
+without a dub chain has no sidechain and still has a kick.
 
 ### The two promises, stated honestly
 
@@ -203,10 +243,13 @@ reverb, those stages are skipped entirely — not "added as zeros".
   bits survive the int16 quantiser. That is why the BLAS and OpenMP thread
   caps are set in code, before numpy is imported.
 
-The S0 artifact is preserved bit-exactly through the S1 refactor: its
-committed plan bytes are migrated field by field into the new model, without
-changing a value the renderer reads, and re-render it still produces
-`892cb06a…`. That migration is a test, not a claim.
+The S0 artifact is preserved through every refactor: its committed plan bytes
+are migrated field by field into the new model, without changing a value the
+renderer reads, and re-rendering it still produces the recorded
+`pcm_sha256`. That migration is a test, not a claim. The hash moved in S4
+(`f97584b6…`), because the master chain now measures the loudness and
+delivers at −16 LUFS instead of staging to a peak; the migration itself still
+changes nothing the renderer reads.
 
 ### Why the compose PRNG is not numpy
 
@@ -261,26 +304,27 @@ This slice is the arranger, not the last one. Everything below is
   sidechain), T11 (spectral drone stack), T13 (Karplus–Strong), T14 (the
   Director) and T16 (the modal shifts) exist. T2, T4, T8, T9, T12 and T15 do
   not.
-- **No gates beyond 2, 4, 5, 6, 7, 8 and 13.** Loudness, duration, the
-  sub-bass balance, the meter agreement, the reproducibility check and the
-  codec round trip are all unmeasured, and none of them fails a render.
 - **No `batch`, no `catalog`, no `install`, no `validate` command.** The gate
   functions exist and are enforced inside `render`; there is no command that
   validates a file on disk.
-- **The mix is still two buses and a master.** There is no limiter as a
-  mastering stage, no loudness normalisation, no sub-bass control, and the
-  codec gate is S4's job.
+- **The mix bus has no compressor and no EQ.** The bus carries the
+  per-instrument trims and the send levels; a bus compressor was left out on
+  purpose, because the brief's delivers line does not ask for one and a fast
+  bus compressor would flatten the tension curve that gate 5 measures. The
+  limiter is the peak control.
 - **The lanes are 6–8 minutes, not the 6–15 the ambient recipe asks for.**
   The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
   budget. What still grows with the track is the mix itself — one stereo
-  float64 array, 605 MB at fifteen minutes — because the master chain needs
-  the peak of the whole mix before it can stage it.
+  float64 array, 605 MB at fifteen minutes — and the master's peak envelope.
+- **The loudness range is out of the brief's 4–12 LU on the dub lane**
+  (14.7 LU measured). The range is a range with a documented exception, not
+  a gate; the brief's own text says "ambient lower, documented", and the
+  dub's lane is the one with the widest dynamics.
 - **Nobody has listened to it.** The gates measure the shape of the
   arrangement, not whether it is any good. That is S6's job, and it needs
   human ears.
 
-The next slices are `s4-mix-master` (all of §11), `s5-batch-station`,
-`s6-taste-pass`.
+The next slices are `s5-batch-station` and `s6-taste-pass`.
 
 ---
 
@@ -345,6 +389,6 @@ src/indiegen/
 ├── theory/         the modes, the scales and the motif transforms
 ├── synth/          oscillators, envelopes, biquads, noise, the KS string
 ├── fx/             the reverb, the delays, the Frippertronics, the dub chain
-├── mix/            the bus, the pan law, the sidechain
-└── master/         loudness, true peak, dither, the master chain
+├── mix/            the bus, the pan law, the trims, the sidechain
+└── master/         loudness, true peak, the limiter, the dither, the codec
 ```
