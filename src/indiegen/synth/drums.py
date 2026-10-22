@@ -33,6 +33,21 @@ TIMING_STREAM: int = 2
 
 
 @dataclass(frozen=True)
+class PendingHit:
+    """A hit whose voice runs past the end of the block.
+
+    The voice is carried, not its parameters: the 1/f control signals were
+    read at the hit's own frame, and that frame is in the block that has
+    already gone by.
+    """
+
+    voice: np.ndarray
+    left: float
+    right: float
+    skip: int
+
+
+@dataclass(frozen=True)
 class DrumState:
     """The 1/f control signals of a drum pattern, and the hit cursor.
 
@@ -45,6 +60,7 @@ class DrumState:
     pan: PinkState
     timing: PinkState
     cursor: int
+    pending: tuple[PendingHit, ...] = ()
 
 
 def _highpass(signal: np.ndarray, cutoff_hz: float, sample_rate: int) -> np.ndarray:
@@ -136,7 +152,7 @@ def voice_frames(event: KickEvent | SnareEvent | HatEvent | BassEvent) -> int:
 
 def drum_state(event: RhythmEvent) -> DrumState:
     """The zero state of a drum pattern."""
-    return DrumState(velocity=pink_state(), pan=pink_state(), timing=pink_state(), cursor=0)
+    return DrumState(velocity=pink_state(), pan=pink_state(), timing=pink_state(), cursor=0, pending=())
 
 
 def _clip(value: float) -> float:
@@ -176,9 +192,23 @@ def render_drum_block(
     while cursor < len(event.hits) and event.hits[cursor].frame + length <= start:
         cursor += 1
 
+    # The hits whose voice began in the last block: their tail is here.
+    for pending in state.pending:
+        at = 0
+        until = min(count, pending.voice.size - pending.skip)
+        if until <= at:
+            continue
+        block[at:until, 0] += pending.voice[pending.skip : pending.skip + (until - at)] * pending.left
+        block[at:until, 1] += pending.voice[pending.skip : pending.skip + (until - at)] * pending.right
+
+    carried: list[PendingHit] = []
     for hit in event.hits[cursor:]:
         if hit.frame >= stop:
             break
+        if hit.frame < start:
+            # Its voice began in the block that has gone by, and it is
+            # already carried.
+            continue
         offset = int(
             round(
                 _clip(float(timing_control[(hit.frame * CONTROL_RATE) // sample_rate - low]))
@@ -207,5 +237,14 @@ def render_drum_block(
             continue
         block[at:until, 0] += voice[: until - at] * left
         block[at:until, 1] += voice[: until - at] * right
+        if until < at + voice.size:
+            # The tail is in the next block.
+            carried.append(PendingHit(voice=voice, left=left, right=right, skip=until - at))
 
-    return block, DrumState(velocity=velocity_state, pan=pan_state, timing=timing_state, cursor=cursor)
+    return block, DrumState(
+        velocity=velocity_state,
+        pan=pan_state,
+        timing=timing_state,
+        cursor=cursor,
+        pending=tuple(carried),
+    )
