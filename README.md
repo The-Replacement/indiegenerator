@@ -100,6 +100,11 @@ both hold with room: the slowest lane is the ambient at 116.1 s, and the
 master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
 at eight minutes, below the render's own 1182 MB.
 
+The budget does not scale with the track, so the lanes do not either. The same
+ambient lane at fifteen minutes, seed 1042: 254.1 s (3.5× realtime) and
+**2177 MB** peak RSS. Time still holds; memory is what the eight-minute lane
+ceiling is protecting.
+
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
 ceiling on every lane, which is what a limiter that works looks like; the
@@ -356,9 +361,12 @@ This slice is the arranger, not the last one. Everything below is
   bus compressor would flatten the tension curve that gate 5 measures. The
   limiter is the peak control.
 - **The lanes are 6–8 minutes, not the 6–15 the ambient recipe asks for.**
-  The render no longer stops it: a fifteen-minute piece fits the 1.5 GB
-  budget. What still grows with the track is the mix itself — one stereo
-  float64 array, 605 MB at fifteen minutes — and the master's peak envelope.
+  The render does not stop a fifteen-minute piece: the ambient lane renders
+  seed 1042 in 254 s. Memory does. Measured at fifteen minutes: **2177 MB
+  peak RSS** against the 1.5 GB budget, because every array that spans the
+  track scales with it — the mix (one stereo float64 array, 605 MB), the
+  peak envelope, the limited mix, the 4× oversampled peak. The budget is an
+  eight-minute budget.
 - **The loudness range is out of the brief's 4–12 LU on the dub lane**
   (12.5 LU measured). The range is a range with a documented exception, not
   a gate; the brief's own text says "ambient lower, documented", and the
