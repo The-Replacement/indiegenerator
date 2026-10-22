@@ -21,6 +21,7 @@ from scipy.signal import lfilter
 
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, RhythmEvent, SnareEvent
+from indiegen.synth.env import dc_block
 from indiegen.synth.noise import CONTROL_RATE, PinkState, control_slice, pink_state, stream_key, uniform_stream
 
 SNARE_STREAM: int = 0
@@ -80,6 +81,9 @@ def render_kick(event: KickEvent, hit: DrumHit, sample_rate: int, velocity: floa
     click = uniform_stream(event.noise_seed, hit.frame, CLICK_STREAM, count)
     click = click * np.exp(-times * np.float64(sample_rate) / 88.0)
     voice = body * envelope + click * 0.2
+    # The click is a burst of noise and carries an offset with it; the
+    # blocker takes the offset and leaves the click.
+    voice = dc_block(voice, sample_rate)
     return np.asarray(voice * velocity, dtype=np.float64)
 
 
@@ -106,13 +110,20 @@ def render_hat(event: HatEvent, hit: DrumHit, sample_rate: int, velocity: float)
 
 
 def render_bass(event: BassEvent, hit: BassHit, sample_rate: int, velocity: float) -> np.ndarray:
-    """One bass note: a filtered saw with a soft edge."""
+    """One bass note: a filtered saw with a soft edge.
+
+    The saw is not centred: a ramp that starts at zero has a mean that
+    depends on where it stopped, and a bass that carries a DC offset puts
+    the whole mix's offset over the gate's limit. The blocker is the same
+    one the plucked strings get.
+    """
     count = event.decay_frames
     frequency = 440.0 * math.pow(2.0, (hit.midi - 69) / 12.0)
     phase = np.cumsum(np.full(count, frequency, dtype=np.float64)) / np.float64(sample_rate)
     saw = 2.0 * (phase - np.floor(phase)) - 1.0
     shaped = _lowpass(saw, float(event.cutoff_hz), sample_rate)
     voice = shaped * _envelope(count, event.decay_frames, sample_rate)
+    voice = dc_block(voice, sample_rate)
     return np.asarray(voice * velocity, dtype=np.float64)
 
 
