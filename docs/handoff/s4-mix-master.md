@@ -36,15 +36,22 @@ drop the board integration. It is not this slice's job.
 
 | Lane | Wall | Peak RSS | Loudness | True peak | LRA | Low band |
 |---|---|---|---|---|---|---|
-| `motorik` | 72.4 s | 1184 MB | −16.001 LUFS | −1.800 dBTP | 9.85 LU | 0.00 dB |
-| `kosmische` | 136.5 s | 1185 MB | −16.002 LUFS | −1.800 dBTP | 9.37 LU | 0.00 dB |
-| `ambient` | 110.1 s | 1204 MB | −16.012 LUFS | −1.800 dBTP | 10.83 LU | −2.17 dB |
-| `dub-electronic` | 86.7 s | 1179 MB | −16.002 LUFS | −1.800 dBTP | 14.75 LU | 0.00 dB |
-| `indie-noise` | 76.2 s | 1274 MB | −16.131 LUFS | −1.778 dBTP | 10.13 LU | −0.06 dB |
+| `motorik` | 78.2 s | 1199 MB | −16.000 LUFS | −1.891 dBTP | 9.68 LU | 0.00 dB |
+| `kosmische` | 152.1 s | 1196 MB | −16.002 LUFS | −1.800 dBTP | 9.37 LU | 0.00 dB |
+| `ambient` | 122.5 s | 1175 MB | −16.007 LUFS | −1.800 dBTP | 11.39 LU | −0.32 dB |
+| `dub-electronic` | 92.2 s | 1182 MB | −16.001 LUFS | −1.800 dBTP | 12.50 LU | 0.00 dB |
+| `indie-noise` | 82.5 s | 1293 MB | −16.120 LUFS | −1.778 dBTP | 9.10 LU | −0.06 dB |
 
 The budget is three minutes and 1.5 GB: the kosmische is the slowest lane at
-136.5 s and the indie-noise the hungriest at 1274 MB. Every lane passes every
+152.1 s and the indie-noise the hungriest at 1293 MB. Every lane passes every
 gate in force.
+
+**The seed sweep** (four seeds per lane, 420 s pieces, every gate measured):
+twenty renders, and **every one of them passes every gate**. The novelty
+gate, the one S2 recorded as seed-sensitive, passes at every lane and every
+seed at full length: the two novelty peaks it found were a ninety-second
+artifact, and a short piece does not have the room for the detector to fire.
+The sweep found four real defects, and they are all fixed (§5).
 
 ## 4. The decisions that matter, and why
 
@@ -79,6 +86,10 @@ gate in force.
   chain: the kick bus was only summed inside the sidechain branch. The
   motorik lane had **no kick at all** — the brief's "kick on quarters" was
   silent. Fixed, with a test.
+- **The bass carried a DC offset of −0.0015** — the gate's limit is 0.001,
+  and the loudness normalisation multiplied it. The saw is not centred, and
+  the lowpass that shapes the bass passes DC. The bass and the kick's
+  click are blocked now; the delivered offset is 0.0001.
 - **The reverb's and the delay's send levels were dead** (above).
 - **The limiter's peak envelope took the maximum instead of the maximum
   absolute value**, and the block's context was offset by the wrong number
@@ -94,6 +105,12 @@ gate in force.
 - **The `indie-noise` lane's timbre map was stale** (it had no `return` and
   its `plateau` was 390 Hz off), and gate 6 failed on it. The map is now the
   median of twenty renders, one per seed.
+- **The ambient lane's reverb took the bass out of the mono fold-down.** The
+  stereo spread (23 frames) is the decorrelation between the channels, and
+  at the low end it is what the mono fold-down loses: the low band's
+  balance measured −4.20 dB against the gate's −3 dB limit on one seed in
+  four. The spread is eight frames now (−0.32 dB), which is a fifth of a
+  millisecond: the width comes from the combs, not from the spread.
 
 ## 6. The per-lane balance, measured on the mix
 
@@ -107,11 +124,23 @@ The loudest voice of each kind against the whole mix, in dB, 90 s renders:
 | `dub-electronic` | kick −1.6, bass −5.2, snare −12.0, pluck −19.6, hat silent |
 | `indie-noise` | pluck −0.1, hat (the wall) −15.5 |
 
-The **dub lane's hat is silent**: its card asks for a section density of 70
-and the walk that this seed took never reached one. The **motorik's hat**
-(min_density 70 as well) plays in one section only. Lowering both to 55 was
-tried and reverted: it changes the arrangement, and it broke the dub lane's
-novelty gate. It is a candidate for the taste pass, not for a mix slice.
+The **hats were the debt**: the dub lane's hat card asks for a section
+density of 70, and half the walks never reached one, so half the dub tracks
+had no hats at all — and the lane's recipe says the hats are a layer. Two
+defects were behind it, and both are fixed:
+
+- **The walk did not have to reach a dense section.** A four-section walk
+  can go intro → build → break → outro and never visit the plateau, the
+  peak or the return. Every arrangement now reaches a section of density 70
+  or more, so the track has an arc and the dense-only layers are in it.
+- **The Director's drops could empty a layer.** The hats play in one
+  section; a drop of eight bars in that section took all of them, and the
+  lane had no hats for the whole track. A drop that would silence the
+  instrument it drops is not drawn any more.
+
+The measurement after the fixes: the dub lane's hats play in every seed
+(239, 194, 303 and 174 hits over four seeds), the motorik's in every seed,
+and the indie-noise's noise wall in every seed.
 
 The `indie-noise` lane's crest factor is **27 dB**: the wall alone measures a
 13.7 dB crest and the plucks alone 27.4 dB. Reaching −16 LUFS and
@@ -140,29 +169,60 @@ net; §11's gate 1 says −16 ± 1 LUFS. The gate wins, and the work is measured
   delay must not fail the gate, and the ambient's reverb measures a
   correlation of 0.16.
 
-## 8. The open items, in the order they matter
+## 8. The listening protocol (the debt only ears can pay)
 
-1. **Nobody has listened to any of it.** The gates measure the shape of the
-   arrangement, not whether it is any good. The brief's listening protocol
-   (S6) needs human ears, and the first thing to ask for is the three
-   tracks with timestamps.
-2. **Gate 7 is still seed-sensitive.** The dub lane gave 14 novelty peaks for
-   seed 1042 and 2 for seed 1046 against a limit of 3 in S2, and the
-   `indie-noise` lane still fails gate 6 on some arrangements. The arranger
-   gives the piece real section-level changes now, which is the root cause,
-   but the seed sweep has not been re-measured over the full pieces.
-3. **The mix balance has never been judged by an ear.** §6 is the measurement;
-   the balance is a judgement call, and the bus's trims
-   (`bus_gains` in the lane presets) are the knobs for it.
-4. **The dub lane's hat is silent** in the arrangements whose walk never
-   reaches a density of 70 (above).
-5. **The kosmische is at 136.5 s of a 180 s budget** for an eight-minute
+Nobody has listened to any of this. The gates measure the shape of the
+arrangement, not whether it is any good, and the mix balance has never been
+judged by anybody but a meter. This is the protocol, and it is BRIEF §15's,
+spelled out for these three tracks.
+
+**The tracks** (in `out/`, seed 1042, full length, tagged FLAC):
+
+| Lane | What it is made of | The thing to listen for |
+|---|---|---|
+| `motorik` | the drums, the sub, the deja-vu stabs, the pad, the 1/f, the motif | the groove: the kick on the quarters, the hats that only come in with the density |
+| `kosmische` | the T11 drone, the T5 arp, the T3 Frippertronics send | the tape haze: the delay's passes getting darker, the drift |
+| `ambient` | the T1 poly-period loops, the T11 drone, the T13 clusters, the motif | the long form: the loops that never line up, the ending |
+
+**What to send back, per track:**
+
+1. **Timestamp + what happened.** "At 2:14 the bass disappears and nothing
+   replaces it." The timestamp and the observation, not a verdict.
+2. **Groove / timbre / structure / space / fatigue, 1–5 each.**
+3. **One thing to keep and one thing to cut.**
+4. **Would you leave it on as background radio? yes / no.**
+
+**The three questions the meters cannot answer:**
+
+- **The balance.** Which voice is too loud and which is too quiet? The mix
+  bus carries a per-instrument trim for every kind (`bus_gains` in the lane
+  presets), so "the guitar is too loud against the wall" is a one-line
+  change — and I cannot hear it, so I cannot make it.
+- **The limiter's work.** The `indie-noise` lane needs 12.8 dB of gain
+  reduction to reach −16 LUFS under a −1.5 dBTP ceiling: the guitar's
+  transients are squashed. If that sounds wrong, the answer is not a
+  quieter limiter but a different arrangement (a louder noise wall, a
+  softer guitar), and that is a decision to make with ears.
+- **The ending.** Every track ends composed (no fade-out). Does the ending
+  feel like an ending or like a stop?
+
+The next slice after this one (`s5-batch-station`) builds the catalog and
+`install`; the taste pass (`s6-taste-pass`) is the ten-track EP, and it
+starts with the three tracks above and the notes on them.
+
+## 9. The open items, in the order they matter
+
+1. **Nobody has listened to any of it** — see §8. This is the first thing
+   to do and it needs human ears.
+2. **The mix balance has never been judged by an ear** — the measured
+   balance is in §6, and the trims are the knobs.
+3. **The kosmische is at 152.1 s of a 180 s budget** for an eight-minute
    piece, and the Frippertronics' line is walked one sample at a time in
-   Python. It is the first thing to optimise if S5 needs the headroom.
-6. **The board does not track this project** (see §2).
-7. **S5** is the catalog and `install`. **S6** is the taste pass.
+   Python. It is the first thing to optimise if S5 needs the headroom: the
+   batch is twenty tracks in sixty minutes.
+4. **The board does not track this project** (see §2).
 
-## 9. The measurements this slice is judged by
+## 10. The measurements this slice is judged by
 
 Eight-minute pieces, seed 1042, one process each, on an otherwise idle host.
 The README carries the same table with the hashes.

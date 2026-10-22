@@ -67,20 +67,19 @@ Eight-minute pieces, seed 1042, one process each, measured on 2026-10-21:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 72.4 s | 136.5 s | 86.7 s | 76.2 s | 110.1 s |
-| Faster than realtime | 6.6× | 3.5× | 5.5× | 6.3× | 4.4× |
-| Peak RSS | 1184 MB | 1185 MB | 1179 MB | 1274 MB | 1204 MB (budget 1500 MB) |
-| Integrated loudness | −16.001 LUFS | −16.002 LUFS | −16.002 LUFS | −16.131 LUFS | −16.012 LUFS |
-| True peak (4× oversampled) | −1.800 dBTP | −1.800 dBTP | −1.800 dBTP | −1.778 dBTP | −1.800 dBTP |
-| Loudness range | 9.85 LU | 9.37 LU | 14.75 LU | 10.13 LU | 10.83 LU |
-| Low band under the mono fold-down | 0.00 dB | 0.00 dB | 0.00 dB | −0.06 dB | −2.17 dB |
+| Render time (whole command) | 78.2 s | 152.1 s | 92.2 s | 82.5 s | 122.5 s |
+| Faster than realtime | 6.1× | 3.2× | 5.2× | 5.8× | 3.9× |
+| Peak RSS | 1199 MB | 1196 MB | 1182 MB | 1293 MB | 1175 MB (budget 1500 MB) |
+| Integrated loudness | −16.000 LUFS | −16.002 LUFS | −16.001 LUFS | −16.120 LUFS | −16.007 LUFS |
+| True peak (4× oversampled) | −1.891 dBTP | −1.800 dBTP | −1.800 dBTP | −1.778 dBTP | −1.800 dBTP |
+| Loudness range | 9.68 LU | 9.37 LU | 12.50 LU | 9.10 LU | 11.39 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `pcm_sha256` | `09aa89e1…` | `ce1c0c80…` | `c5cab21c…` | `b51ef9b0…` | `551d7dd4…` |
+| `pcm_sha256` | `2177008b…` | `ce1c0c80…` | `083890d3…` | `42a286c9…` | `518ececa…` |
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the kosmische is the slowest lane at 136.5 s, and the
+both hold with room: the kosmische is the slowest lane at 152.1 s, and the
 master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
-at eight minutes, below the render's own 1184 MB.
+at eight minutes, below the render's own 1199 MB.
 
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
@@ -317,7 +316,7 @@ This slice is the arranger, not the last one. Everything below is
   budget. What still grows with the track is the mix itself — one stereo
   float64 array, 605 MB at fifteen minutes — and the master's peak envelope.
 - **The loudness range is out of the brief's 4–12 LU on the dub lane**
-  (14.7 LU measured). The range is a range with a documented exception, not
+  (12.5 LU measured). The range is a range with a documented exception, not
   a gate; the brief's own text says "ambient lower, documented", and the
   dub's lane is the one with the widest dynamics.
 - **Nobody has listened to it.** The gates measure the shape of the
