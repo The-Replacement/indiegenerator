@@ -78,39 +78,54 @@ is never started or restarted by anything here.
 ## Measured on this machine
 
 Not aspirations. ThinkPad Yoga 260 (i5-6300U, 2 cores / 4 threads, Intel HD
-520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS. The times are the
-best of three runs on an otherwise idle host; the host is shared, and under
-load a render has been observed to take three times as long.
+520, 15 GB RAM), Linux, Python 3.15.0, single-threaded BLAS. One run each:
+the numbers are what the machine does, not a benchmark. The host is shared and
+repeat runs of the same command have differed by up to 30%, so read the times
+as an order of magnitude and the hashes as the fact.
 
-Eight-minute pieces, seed 1042, one process each, measured on 2026-10-21:
+Eight-minute pieces, measured on 2026-10-22 with exactly this command, one
+process each:
+
+```bash
+.venv/bin/indiegen render --preset <lane> --seed 1042 --seconds 480 --out out/
+```
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 75.0 s | 97.6 s | 81.2 s | 76.4 s | 116.1 s |
-| Faster than realtime | 6.4× | 4.9× | 5.9× | 6.3× | 4.1× |
-| Peak RSS | 1182 MB | 1180 MB | 1182 MB | 1289 MB | 1252 MB (budget 1500 MB) |
-| Integrated loudness | −16.000 LUFS | −16.002 LUFS | −16.001 LUFS | −16.120 LUFS | −16.007 LUFS |
-| True peak (4× oversampled) | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP |
-| Loudness range | 9.68 LU | 9.37 LU | 12.50 LU | 9.10 LU | 11.39 LU |
+| Render time (whole command) | 84.4 s | 116.8 s | 107.4 s | 84.5 s | 155.7 s |
+| Faster than realtime | 5.7× | 4.1× | 4.5× | 5.7× | 3.1× |
+| Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
+| Integrated loudness | −16.145 LUFS | −16.091 LUFS | −16.116 LUFS | −16.129 LUFS | −16.120 LUFS |
+| True peak (4× oversampled) | −4.298 dBTP | −4.219 dBTP | −4.299 dBTP | −4.265 dBTP | −4.300 dBTP |
+| Loudness range | 10.69 LU | 9.13 LU | 12.23 LU | 9.70 LU | 11.18 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `pcm_sha256` | `2177008b…` | `803b5291…` | `083890d3…` | `42a286c9…` | `518ececa…` |
+| `plan_sha256` | `6efe546b…` | `de033c86…` | `1b538fa0…` | `819504c0…` | `ca3541a5…` |
+| `pcm_sha256` | `e23a49af…` | `9cdbd015…` | `3b7050c5…` | `96dcca86…` | `5ae5e2d3…` |
+
+The hashes are the sidecar's, so the audio column is reproducible on any
+machine that runs the command above; the other columns are this one.
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the slowest lane is the ambient at 116.1 s, and the
-master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
-at eight minutes, below the render's own 1182 MB.
+both hold with room: the slowest lane is the ambient at 155.7 s even on a run
+this loaded, and the master chain's peak memory (the peak envelope plus the
+limited mix) is 850 MB at eight minutes, below the render's own 1182 MB.
 
 The budget does not scale with the track, so the lanes do not either. The same
 ambient lane at fifteen minutes, seed 1042: 254.1 s (3.5× realtime) and
 **2177 MB** peak RSS. Time still holds; memory is what the eight-minute lane
 ceiling is protecting.
 
-The table was re-checked after the audit refactor, which rewrote every
-dispatch path and left the arithmetic alone. The audio is hash-identical, so
-the only things the refactor could have moved are time and memory, and the
-spot check says it moved neither: ambient at eight minutes measured 1257 MB
-against the table's 1252, and interleaved before/after runs of the old and new
-code differed by 0.2% in wall time against a ±7 s run-to-run spread.
+The table's hash column is from this build. It was carried forward once by
+mistake: the arranger's form work changed the plan for every lane, and the
+timings were refreshed while the hashes were not, so the column described an
+older arrangement. The hashes above come from the command printed above them.
+
+On the refactor that followed the audit: it rewrote every dispatch path and
+left the arithmetic alone, so time and memory were the only things it could
+have moved. Ambient at eight minutes was rendered five times, twice from the
+commit before the refactor and three times from the one after: same plan
+hash, same PCM hash, and within 0.2% on wall time against a ±7 s spread.
+The other four lanes were measured once each, after the change.
 
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
@@ -130,9 +145,10 @@ The kosmische's line was the slow part: the Frippertronics' delay was
 walked one sample at a time in Python, at about 0.1 s per second of stereo,
 and the lane spent a minute and a half of its render in that loop. The loop
 is vectorised now (the read is a gather, the filter is a run of stretches of
-constant coefficient) and it is ten times quicker; the lane renders in 97.6
-seconds. The mix itself is the one array that still spans the whole track
-(605 MB at fifteen minutes).
+constant coefficient) and it is ten times quicker, which took the lane off the
+top of the table: it is no longer the slowest lane, the ambient is. The mix
+itself is the one array that still spans the whole track (605 MB at fifteen
+minutes).
 
 ### The gates in force
 
@@ -375,7 +391,7 @@ This slice is the arranger, not the last one. Everything below is
   peak envelope, the limited mix, the 4× oversampled peak. The budget is an
   eight-minute budget.
 - **The loudness range is out of the brief's 4–12 LU on the dub lane**
-  (12.5 LU measured). The range is a range with a documented exception, not
+  (12.2 LU measured). The range is a range with a documented exception, not
   a gate; the brief's own text says "ambient lower, documented", and the
   dub's lane is the one with the widest dynamics.
 - **Nobody has listened to it.** The gates measure the shape of the
