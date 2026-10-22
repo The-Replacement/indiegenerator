@@ -13,18 +13,26 @@ concurrency:
 
 jobs:
   gate:
-    runs-on: ubuntu-latest
+    # Pinned, not -latest: the label migrates to Ubuntu 26 from 2026-10-19 and
+    # the python-versions manifest has to carry 3.15 for the new image first.
+    # A gate that moves under you is a gate whose red means nothing.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
-          # pyproject pins >=3.15,<3.16. The manifest has 3.15.1 for
-          # ubuntu-24.04, so this resolves to a real release, not an rc.
+          # pyproject pins >=3.15,<3.16.
           python-version: "3.15"
           cache: pip
           cache-dependency-path: pyproject.toml
+
+      # Six tests compare the loudness meter and the codec against ffmpeg and
+      # skip without it. Without this step CI is green while never running the
+      # one test that checks the meter against an independent implementation.
+      - name: ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
       - name: Install
         run: pip install -e '.[dev]'
