@@ -11,12 +11,17 @@ The bus graph:
     MAIN BUS --> [Frippertronics send] --> wet --> MAIN BUS
     MAIN BUS --> [reverb tap] --> reverb --> wet --> MAIN BUS
     MAIN BUS --> [sidechain: ducked by the kick] --> + kick
+    MAIN BUS --> [the bus trims] --> [the mono low end]
 
 The KS bus's dry output is never summed: the delay *is* the instrument's
 voice, which is what makes the signature a per-instrument fact. The reverb
 taps the main bus after the bus lowpass, and its wet is summed back before
 the section and fade gains, so the tail is faded with the music and cannot
 create trailing silence.
+
+Every send has a level and every level is read: the delay's and the
+reverb's send millibels scale what goes into the effect, so a send declared
+at -6 dB is a send at -6 dB and not at unity.
 
 When a lane declares no KS events, no delay send or no reverb, those stages
 are skipped entirely - not "added as zeros" - so the signal never passes
@@ -39,7 +44,7 @@ from indiegen.fx.delay import DelayState, delay_state, render_delay
 from indiegen.fx.dub import DubChainState, dub_chain_state, render_dub_chain
 from indiegen.fx.frippertronics import FrippertronicsState, frippertronics_state, render_frippertronics
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
-from indiegen.mix.bus import pan_gains
+from indiegen.mix.bus import bus_gains, pan_gains, trim
 from indiegen.mix.sidechain import SidechainState, render_sidechain, sidechain_state
 from indiegen.plan import (
     BassEvent,
@@ -82,6 +87,7 @@ class BusState:
     frippertronics: FrippertronicsState | None
     dub: DubChainState | None
     sidechain: SidechainState | None
+    trims: dict[str, float]
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -162,6 +168,7 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
         frippertronics=frippertronics,
         dub=dub,
         sidechain=sidechain,
+        trims=bus_gains(plan.bus_gains),
     )
 
 
@@ -179,18 +186,20 @@ def _render_block(
     main = np.zeros((count, plan.channels), dtype=np.float64)
     kick_bus = np.zeros((count, plan.channels), dtype=np.float64)
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
+    trims = bus.trims
 
     for index, event in enumerate(events):
         if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
             # A drum pattern plays itself: the hits carry their own pan, so
             # the block is already stereo.
             stereo, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
+            level = trim(trims, event.kind)
             if isinstance(event, KickEvent):
                 # The kick is kept apart: the sidechain ducks everything
                 # else, and the kick is what ducks it.
-                kick_bus += stereo
+                kick_bus += stereo * level
             else:
-                main += stereo
+                main += stereo * level
             continue
         event_start = event.start_frame
         event_stop = event_start + event.duration_frames
@@ -202,6 +211,7 @@ def _render_block(
         local_stop = overlap_stop - event_start
         voice, voices[index] = _voice_block(event, plan.sample_rate, local_start, local_stop, voices[index])
         voice = voice * note_envelope_block(event, local_start, local_stop)
+        voice = voice * trim(trims, event.kind)
         left, right = pan_gains(event.pan_permille)
         offset = overlap_start - start
         end = offset + voice.size
@@ -226,7 +236,10 @@ def _render_block(
         ks_bus = ks_bus * level
 
     if delay is not None and plan.delay_sends:
-        wet, delay = render_delay(ks_bus, delay, plan.delay_sends[0])
+        # The send's level is the level of the send: the delay is fed at the
+        # declared level and its wet comes back at unity.
+        level = float(np.power(10.0, plan.delay_sends[0].send_millibels / 2000.0))
+        wet, delay = render_delay(ks_bus * level, delay, plan.delay_sends[0])
         main += wet
 
     if filter_state is not None and plan.fx_sends:
@@ -250,7 +263,10 @@ def _render_block(
         main = main + wet * level
 
     if reverb is not None and plan.reverb is not None:
-        wet, reverb = render_reverb(main, reverb, plan.reverb, plan.sample_rate)
+        # The tap is the send: it is taken at the declared level, and the
+        # reverb's wet comes back at unity.
+        level = float(np.power(10.0, plan.reverb.send_millibels / 2000.0))
+        wet, reverb = render_reverb(main * level, reverb, plan.reverb, plan.sample_rate)
         main = main + wet
 
     if sidechain is not None and plan.dub_chain is not None:
@@ -264,16 +280,23 @@ def _render_block(
             plan.dub_chain.sidechain_depth_millibels,
         )
         main = main * gain[:, np.newaxis]
-        main += kick_bus
+
+    # The kick is kept apart so that the sidechain can duck everything else,
+    # and it is summed here: a lane without a dub chain has no sidechain and
+    # still has a kick.
+    main += kick_bus
 
     gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
-    return main * gain[:, np.newaxis], BusState(
+    main = main * gain[:, np.newaxis]
+
+    return main, BusState(
         delay=delay,
         filter=filter_state,
         reverb=reverb,
         frippertronics=frippertronics,
         dub=dub,
         sidechain=sidechain,
+        trims=trims,
     )
 
 

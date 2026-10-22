@@ -124,4 +124,8 @@ techniques:
     min_density: 40
 
 section_count_range: [4, 6]
-duration_range_seconds: [360, 480]
+# The durations this lane may be rendered at: the full tracks, the
+# longforms and the interludes of BRIEF 15's batch.
+duration_range_seconds: [45, 900]
+# The full tracks, which is what a render without a duration draws.
+full_track_range_seconds: [360, 480]

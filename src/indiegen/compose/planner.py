@@ -536,7 +536,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
     lane = next(entry.parameters for entry in preset.lanes if entry.lane == lane_name)
 
     if duration_frames is None:
-        low, high = lane.duration_range_seconds
+        low, high = lane.full_track_range_seconds
         # A lane with a single declared duration does not draw one: the plan
         # must not depend on whether the caller passed the duration or not.
         frames = low * SAMPLE_RATE if low == high else rng.between(low, high) * SAMPLE_RATE
@@ -739,8 +739,9 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None) -> Pl
         lane_weights=list(station.lane_weights),
         dither_seed=dither_seed,
         dither_lsb=station.dither_lsb,
-        master_gain_millibels=station.target_peak_millibels,
+        target_lufs_millibels=station.target_lufs_millibels,
         ceiling_millibels=station.ceiling_millibels,
+        bus_gains=list(lane.bus_gains),
         fade_in_frames=station.fade_in_frames,
         fade_out_frames=station.fade_out_frames,
         section_crossfade_frames=station.section_crossfade_frames,

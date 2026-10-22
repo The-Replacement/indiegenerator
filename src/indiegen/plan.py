@@ -93,6 +93,20 @@ class SectionProfile(BaseModel):
     texture: str
 
 
+class BusGain(BaseModel):
+    """One instrument's trim on the mix bus.
+
+    The key is the event's kind, so the motif's plucks are trimmed with the
+    guitar and not separately. The trim is in millibels, like every other
+    level in the Plan.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    kind: str
+    gain_millibels: int
+
+
 class DirectorMove(BaseModel):
     """A strategy from the deck, and - in the log - a move the Director made."""
 
@@ -470,8 +484,9 @@ class Plan(BaseModel):
     lane_weights: list[LaneWeight]
     dither_seed: int
     dither_lsb: int
-    master_gain_millibels: int
+    target_lufs_millibels: int
     ceiling_millibels: int
+    bus_gains: list[BusGain]
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int

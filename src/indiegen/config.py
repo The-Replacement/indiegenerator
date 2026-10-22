@@ -16,7 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from indiegen.errors import PlanError
-from indiegen.plan import FxSend, LaneWeight, Rational, SectionProfile
+from indiegen.plan import BusGain, FxSend, LaneWeight, Rational, SectionProfile
 
 LANE_NAMES: tuple[str, ...] = ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise")
 
@@ -325,6 +325,8 @@ class LanePreset(BaseModel):
     techniques: list[TechniqueCard]
     section_count_range: list[int]
     duration_range_seconds: list[int]
+    full_track_range_seconds: list[int]
+    bus_gains: list[BusGain] = []
     attack_frames: int | None = None
     release_frames: int | None = None
     reverb: ReverbCard | None = None
@@ -356,7 +358,7 @@ class StationPreset(BaseModel):
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int
-    target_peak_millibels: int
+    target_lufs_millibels: int
     ceiling_millibels: int
     dither_lsb: int
     track_number: int

@@ -102,8 +102,13 @@ delay:
 fade_in_frames: 13230
 fade_out_frames: 22050
 section_crossfade_frames: 2205
-target_peak_millibels: -1800
+
+# The master. The loudness target is the delivered integrated loudness in
+# thousandths of a LU (-16 LUFS) and the ceiling is the true peak in
+# millibels (-1.5 dBTP).
+target_lufs_millibels: -16000
 ceiling_millibels: -150
+
 dither_lsb: 1
 track_number: 1
 format_version: 1

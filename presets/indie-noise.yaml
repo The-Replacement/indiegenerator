@@ -19,8 +19,9 @@ pulse: bars
 
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
-# and asserted by gate 6.
-timbre: {break: 7286, build: 7380, drift: 7079, intro: 7428, outro: 7361, plateau: 7945}
+# and asserted by gate 6. The numbers are the medians of twenty renders
+# of the lane, one per seed.
+timbre: {break: 7345, build: 7343, drift: 7213, intro: 7363, outro: 7364, peak: 7506, plateau: 7817, return: 8165}
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}
@@ -66,4 +67,8 @@ techniques:
     decay_frames: 3400
 
 section_count_range: [4, 6]
-duration_range_seconds: [360, 480]
+# The durations this lane may be rendered at: the full tracks, the
+# longforms and the interludes of BRIEF 15's batch.
+duration_range_seconds: [45, 900]
+# The full tracks, which is what a render without a duration draws.
+full_track_range_seconds: [360, 480]
