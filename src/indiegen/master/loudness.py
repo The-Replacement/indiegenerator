@@ -24,10 +24,17 @@ BLOCK_SECONDS: float = 0.4
 HOP_SECONDS: float = 0.1
 ABSOLUTE_GATE_LUFS: float = -70.0
 RELATIVE_GATE_LU: float = -10.0
+# The loudness range has its own relative gate: twenty LU under the mean of
+# the absolute-gated short-term loudness (EBU Tech 3342).
+RELATIVE_GATE_LRA_LU: float = -20.0
 LOUDNESS_OFFSET: float = -0.691
 OVERSAMPLE: int = 4
 MARGIN_FRAMES: int = 64
 MEASURE_BLOCK: int = 65536
+
+# The short-term loudness covers three seconds. The meter's blocks are
+# 0.4 s long and hop 0.1 s, so twenty-seven of them cover exactly 3.0 s.
+SHORT_TERM_BLOCKS: int = 27
 
 
 def _high_shelf(rate: int) -> tuple[list[float], list[float]]:
@@ -82,16 +89,22 @@ class LoudnessMeter:
         self._peak = 0.0
         self._true_peak = 0.0
 
-    def feed(self, block: np.ndarray) -> None:
-        """Feed a block of samples in the range [-1, 1]."""
+    def feed(self, block: np.ndarray, measure_peak: bool = True) -> None:
+        """Feed a block of samples in the range [-1, 1].
+
+        The true peak is the expensive measurement, and the master chain
+        does not always need it: the loudness pass that decides the gain
+        only needs the loudness.
+        """
         if block.size == 0:
             return
         signal = block.astype(np.float64)
         self._count += signal.shape[0]
-        value = float(np.max(np.abs(signal)))
-        if value > self._peak:
-            self._peak = value
-        self._feed_true_peak(signal)
+        if measure_peak:
+            value = float(np.max(np.abs(signal)))
+            if value > self._peak:
+                self._peak = value
+            self._feed_true_peak(signal)
         self._feed_energies(self._k_weight(signal))
 
     def _k_weight(self, signal: np.ndarray) -> np.ndarray:
@@ -190,6 +203,44 @@ class LoudnessMeter:
             return float("-inf")
         return 20.0 * math.log10(max(self._peak, 1e-30))
 
+    def short_term_lufs(self) -> np.ndarray:
+        """The short-term loudness of every three second window, in LUFS.
+
+        The short-term loudness is the mean of the energies over three
+        seconds. The meter's blocks are 0.4 s long and hop 0.1 s, so
+        twenty-seven consecutive blocks cover exactly three seconds and
+        their mean is the short-term loudness of the window that starts at
+        the first of them.
+        """
+        if not self._energies:
+            return np.zeros(0, dtype=np.float64)
+        totals = np.sum(np.array(self._energies, dtype=np.float64), axis=1)
+        if totals.size < SHORT_TERM_BLOCKS:
+            return np.zeros(0, dtype=np.float64)
+        cumulative = np.concatenate(([0.0], np.cumsum(totals)))
+        window = cumulative[SHORT_TERM_BLOCKS:] - cumulative[:-SHORT_TERM_BLOCKS]
+        means = window / SHORT_TERM_BLOCKS
+        return LOUDNESS_OFFSET + 10.0 * np.log10(np.maximum(means, 1e-30))
+
+    def loudness_range(self) -> float:
+        """The loudness range, in LU.
+
+        EBU Tech 3342: the short-term loudness above the absolute gate, then
+        the values above twenty LU under the mean of those, and the
+        difference between the ninety-fifth and the tenth percentile.
+        """
+        short = self.short_term_lufs()
+        if short.size < 2:
+            return 0.0
+        absolute = short[short > ABSOLUTE_GATE_LUFS]
+        if absolute.size < 2:
+            return 0.0
+        reference = float(np.mean(absolute))
+        gated = absolute[absolute > reference + RELATIVE_GATE_LRA_LU]
+        if gated.size < 2:
+            return 0.0
+        return float(np.percentile(gated, 95.0) - np.percentile(gated, 10.0))
+
     def true_peak_dbtp(self) -> float:
         """The inter-sample peak, in dBTP.
 
@@ -206,8 +257,17 @@ def integrated_lufs(samples: np.ndarray, rate: int) -> float:
     meter = LoudnessMeter(rate)
     for start in range(0, samples.shape[0], MEASURE_BLOCK):
         stop = min(samples.shape[0], start + MEASURE_BLOCK)
-        meter.feed(samples[start:stop])
+        meter.feed(samples[start:stop], measure_peak=False)
     return meter.integrated_lufs()
+
+
+def loudness_range(samples: np.ndarray, rate: int) -> float:
+    """The loudness range, in LU."""
+    meter = LoudnessMeter(rate)
+    for start in range(0, samples.shape[0], MEASURE_BLOCK):
+        stop = min(samples.shape[0], start + MEASURE_BLOCK)
+        meter.feed(samples[start:stop], measure_peak=False)
+    return meter.loudness_range()
 
 
 def sample_peak_dbfs(samples: np.ndarray) -> float:
@@ -233,7 +293,7 @@ def to_float(samples: np.ndarray) -> np.ndarray:
 
 
 def measure(samples: np.ndarray, rate: int) -> dict[str, float]:
-    """The three printed numbers: loudness, sample peak and true peak."""
+    """The printed numbers: loudness, sample peak, true peak and the range."""
     meter = LoudnessMeter(rate)
     for start in range(0, samples.shape[0], MEASURE_BLOCK):
         stop = min(samples.shape[0], start + MEASURE_BLOCK)
@@ -244,4 +304,5 @@ def measure(samples: np.ndarray, rate: int) -> dict[str, float]:
         "integrated_lufs": meter.integrated_lufs(),
         "sample_peak_dbfs": sample_peak,
         "true_peak_dbtp": true_peak,
+        "loudness_range_lu": meter.loudness_range(),
     }
