@@ -46,6 +46,10 @@ Other commands:
 
 ```bash
 indiegen render  --preset motorik --seed 1042 --minutes 7 --out out/
+indiegen batch   --preset station --count 20 --seed-base 1000 --out out/
+indiegen catalog --dir out/                       # the library, and its size
+indiegen validate out/<track>.flac                # the gates, on a file
+indiegen install  --dir out/ --to ~/Work/radio/music
 indiegen explain --preset station --seed 1042      # the plan, and its hash
 indiegen render  --from-plan out/<track>.json      # re-render a frozen plan
 ```
@@ -53,6 +57,17 @@ indiegen render  --from-plan out/<track>.json      # re-render a frozen plan
 `explain` writes the canonical plan JSON to stdout and the plan hash to
 stderr. `render --from-plan` starts at the scheduler and rolls nothing: it
 cannot compose, so it cannot invent a different track.
+
+`batch` renders a batch of tracks in the station's three forms - about 60%
+full tracks, 25% longform, 15% interludes - and writes the catalog. It
+refuses a seed that is already in the library: the generator is
+deterministic, so the same seed would render the same bytes again. Two
+different seeds that produce the same audio are reported, not refused:
+that is a fact about the library.
+
+`validate` checks a track that is already on disk, and `install` validates
+first and then copies the valid ones into the target, atomically. The radio
+is never started or restarted by anything here.
 
 ---
 
@@ -71,7 +86,7 @@ Eight-minute pieces, seed 1042, one process each, measured on 2026-10-21:
 | Faster than realtime | 6.4× | 4.9× | 5.9× | 6.3× | 4.1× |
 | Peak RSS | 1182 MB | 1180 MB | 1182 MB | 1289 MB | 1252 MB (budget 1500 MB) |
 | Integrated loudness | −16.000 LUFS | −16.002 LUFS | −16.001 LUFS | −16.120 LUFS | −16.007 LUFS |
-| True peak (4× oversampled) | −1.891 dBTP | −1.800 dBTP | −1.800 dBTP | −1.778 dBTP | −1.800 dBTP |
+| True peak (4× oversampled) | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP | −4.3 dBTP |
 | Loudness range | 9.68 LU | 9.37 LU | 12.50 LU | 9.10 LU | 11.39 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
 | `pcm_sha256` | `2177008b…` | `803b5291…` | `083890d3…` | `42a286c9…` | `518ececa…` |
@@ -83,9 +98,17 @@ at eight minutes, below the render's own 1182 MB.
 
 The loudness is the target, not an accident: the master measures the loudness
 of the finished mix and gains it onto −16 LUFS. The true peak sits at the
-ceiling on four lanes, which is what a limiter that works looks like; the
+ceiling on every lane, which is what a limiter that works looks like; the
 `indie-noise` lane's crest factor is 27 dB, so its limiter does real work
 (measured, see the handoff).
+
+**The ceiling is four decibels below the gate's limit, and the radio is
+why.** The radio re-encodes to MP3 128, and the encoder overshoots: over
+the ten-track batch the round trip measured −0.5 dB on most of the tracks
+and **+2.07 dB** on the `indie-noise` lane's plucks. A master delivered at
+−1.8 dBFS clips in the radio's own encoder, and the codec gate refuses the
+file. The headroom is the difference between a track that plays and a track
+that clicks.
 
 The kosmische's line was the slow part: the Frippertronics' delay was
 walked one sample at a time in Python, at about 0.1 s per second of stereo,
@@ -155,6 +178,19 @@ S4 there is no such gate.
 A failing render exits **2**, prints the failures to stderr, and writes
 **nothing** to the output directory: the radio is watching, and a file that
 failed the gates must not exist.
+
+### The ten-track batch
+
+`indiegen batch --preset station --count 10 --seed-base 2000 --out out/ep`
+measured on 2026-10-22: **ten distinct tagged FLACs in 830 s** (13.8
+minutes, against the brief's thirty), 276 MB of library, and every one of
+them passes `validate` including the codec round trip. The forms are the
+station's proportions spread over the seeds: six full tracks, three
+longforms and an interlude.
+
+A batch refuses a seed that is already in the library - the generator is
+deterministic, so the same seed would render the same bytes again - and it
+reports the hashes that two seeds share.
 
 ---
 
@@ -306,9 +342,9 @@ This slice is the arranger, not the last one. Everything below is
   sidechain), T11 (spectral drone stack), T13 (Karplus–Strong), T14 (the
   Director) and T16 (the modal shifts) exist. T2, T4, T8, T9, T12 and T15 do
   not.
-- **No `batch`, no `catalog`, no `install`, no `validate` command.** The gate
-  functions exist and are enforced inside `render`; there is no command that
-  validates a file on disk.
+- **The install is a copy, not a service.** It validates, copies atomically
+  and stops. It never starts or restarts the radio, and it only runs when
+  it is asked to.
 - **The mix bus has no compressor and no EQ.** The bus carries the
   per-instrument trims and the send levels; a bus compressor was left out on
   purpose, because the brief's delivers line does not ask for one and a fast
@@ -379,12 +415,16 @@ network access at runtime, no ML, no model weights, no samples.
 
 ```
 src/indiegen/
-├── cli.py          render, explain, --version
+├── cli.py          render, batch, catalog, validate, install, explain
 ├── config.py       preset models and the loader
 ├── plan.py         the frozen, integer-only Plan and its canonical hash
 ├── render.py       schedule() and the block renderer
 ├── metadata.py     tags, title slug, filename
 ├── writer.py       the atomic write path
+├── batch.py        the batch, the forms and the duplicate refusal
+├── catalog.py      the library, keyed by the decoded PCM's hash
+├── filecheck.py    the gates a file on disk can answer
+├── install.py      validate, then copy, atomically
 ├── validate.py     the gates, and only the gates in force
 ├── mixing.py       the integer mixer both the PRNG and the dither use
 ├── compose/        the PRNG, compose(), the Director, the techniques
