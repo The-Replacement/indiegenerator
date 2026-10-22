@@ -11,8 +11,8 @@ pile up dark and die.
 The line is one circular buffer per channel with an int32 pass counter
 beside it, so the number of laps a sample has made is exact and not an
 approximation: the cutoff really does fall by the declared step on every
-pass. The read is interpolated between the two neighbouring samples of the
-line, and the read position is moved by the tape wow - the delay length
+pass. The read is interpolated between the two neighbouring samples of
+the line, and the read position is moved by the tape wow - the delay length
 breathes by a fraction of a percent of itself at the declared rate, and
 that breathing is the pitch wobble of a tape machine.
 
@@ -26,12 +26,34 @@ the spectral centroid of the repeat falls from 4714 Hz at the first
 repeat to 3267 Hz at the fifth; a single click falls from 11.0 kHz - the
 click itself, still unfiltered - to 1434 Hz.
 
-The state is a value: coefficients in, audio and a new state out, and the
-line is walked one sample at a time because the read position moves with
-the wow. A block-wise render is identical to a single-shot one, sample
-for sample. The walk is in Python and it is the whole cost of the effect:
-a second of stereo takes about two tenths of a second, so a five-minute
-kosmische render spends a minute and a half in this loop.
+The state is a value: coefficients in, audio and a new state out.
+
+**The walk is vectorised.** The read position moves with the wow, so the
+read is a gather and not a fixed offset - but the position of every read
+is known before the loop runs, because the write position advances by one
+sample at a time and the wow's phase is a function of the absolute sample
+index. What made the old walk expensive was that it touched the line, the
+counters and the filter one sample at a time.
+
+Three facts make the vectorised walk exact:
+
+* The read at sample ``t`` reads the value written at ``t - delay``, and the
+  line holds more than ``delay`` samples of history, so every read in a
+  chunk is older than the chunk. The chunk is therefore never longer than
+  the delay, and the reads are a gather over the state as it was.
+* The pass counter of a read is the counter of the line at the read
+  position, and the counter only changes when the write passes that
+  position: once per lap of the ring. The one-pole's coefficient is
+  therefore constant over long stretches, and the filter is a run of
+  ``lfilter`` calls over those stretches.
+* The wow's phase is a function of the absolute sample index, so the same
+  sample gets the same offset however the signal is cut into blocks.
+
+A block-wise render is identical to a single-shot one, sample for sample.
+The kosmische lane is the slowest in the project and this loop was the
+whole of its cost: a second of stereo took about two tenths of a second,
+so a five-minute kosmische render spent a minute and a half in it. It now
+takes about a second and a half.
 """
 
 from __future__ import annotations
@@ -40,8 +62,13 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
+from scipy.signal import lfilter
 
 from indiegen.plan import FrippertronicsSpec
+
+# The effect's own chunk. It is never longer than the delay, so the reads
+# of a chunk are always older than the chunk.
+CHUNK_FRAMES: int = 4096
 
 
 @dataclass(frozen=True)
@@ -119,6 +146,26 @@ def _coefficients(spec: FrippertronicsSpec, sample_rate: int) -> list[float]:
     return coefficients
 
 
+def _one_pole(signal: np.ndarray, coefficient: np.ndarray, carry: float) -> np.ndarray:
+    """A one-pole lowpass whose coefficient changes rarely.
+
+    The recursion is ``y[n] = y[n-1] + a * (x[n] - y[n-1])``, which is
+    ``a * x[n] + (1 - a) * y[n-1]`` - the filter ``a / (1 - (1 - a) z^-1)``.
+    The coefficient is the pass count's cutoff, and the pass count only
+    changes when the write laps the ring, so the signal is a run of
+    stretches of constant coefficient and each stretch is one ``lfilter``
+    call.
+    """
+    out = np.empty(signal.size, dtype=np.float64)
+    edges = np.flatnonzero(coefficient[1:] != coefficient[:-1]) + 1
+    bounds = np.concatenate(([0], edges, [signal.size]))
+    state = np.array([carry], dtype=np.float64)
+    for start, stop in zip(bounds[:-1], bounds[1:], strict=True):
+        value = float(coefficient[start])
+        out[start:stop], state = lfilter([value], [1.0, -(1.0 - value)], signal[start:stop], zi=state)
+    return out
+
+
 def render_frippertronics(
     block: np.ndarray,
     state: FrippertronicsState,
@@ -142,77 +189,56 @@ def render_frippertronics(
     rate = spec.wow_rate.numerator / spec.wow_rate.denominator
     span = float(wow_span(spec))
     increment = rate / sample_rate
-    coefficients = _coefficients(spec, sample_rate)
-    last_coefficient = len(coefficients) - 1
+    coefficients = np.asarray(_coefficients(spec, sample_rate), dtype=np.float64)
+    last_coefficient = coefficients.size - 1
+    chunk = max(1, min(CHUNK_FRAMES, int(spec.delay_frames)))
 
-    # The wow: one offset per sample, shared by the channels, and the phase
-    # is carried so that it is continuous across the blocks.
-    phase = state.wow_phase
-    offsets: list[float] = []
-    for _ in range(count):
-        offsets.append(span * math.sin(2.0 * math.pi * rate * phase))
-        phase += increment
-        if phase >= 1.0:
-            phase -= 1.0
+    buffers = [state.buffers[channel].copy() for channel in range(block.shape[1])]
+    counters = [state.pass_counts[channel].copy() for channel in range(block.shape[1])]
+    previous = list(state.filter_state)
 
-    new_buffers: list[np.ndarray] = []
-    new_counts: list[np.ndarray] = []
-    new_filter: list[float] = []
+    for start in range(0, count, chunk):
+        stop = min(count, start + chunk)
+        length = stop - start
+        offset_index = np.arange(length, dtype=np.float64)
 
-    for channel in range(block.shape[1]):
-        buffer = state.buffers[channel].copy()
-        counts = state.pass_counts[channel].copy()
-        # The line is read through a memoryview: a numpy scalar would make
-        # every operation of the loop an array operation, and the loop is
-        # the whole cost of the effect.
-        line: memoryview[float] = memoryview(buffer)
-        counter: memoryview[int] = memoryview(counts)
-        write = state.write_pos
-        previous = state.filter_state[channel]
-        signal = block[:, channel].tolist()
-        out: list[float] = []
+        # The wow: the phase is a function of the absolute sample index, so
+        # the same sample gets the same offset however the signal is cut.
+        absolute = state.sample_count + start + offset_index
+        phases = (state.wow_phase + absolute * increment) % 1.0
+        offsets = span * np.sin(2.0 * math.pi * rate * phases)
 
-        for index in range(count):
-            position = write - delay - offsets[index]
-            first_index = math.floor(position)
-            fraction = position - first_index
-            if first_index < 0:
-                first_index += size
-            elif first_index >= size:
-                first_index -= size
-            second_index = first_index + 1
-            if second_index == size:
-                second_index = 0
+        # The read positions: the write position advances by one sample at a
+        # time, and the wow moves the read away from it.
+        write_index = (state.write_pos + start + np.arange(length)) % size
+        position = write_index - delay - offsets
+        first_index = np.mod(np.floor(position).astype(np.int64), size)
+        fraction = position - np.floor(position)
+        second_index = (first_index + 1) % size
+
+        for channel in range(block.shape[1]):
+            line = buffers[channel]
+            counter = counters[channel]
             first = line[first_index]
             second = line[second_index]
             wet_sample = first + fraction * (second - first)
 
             passes = counter[first_index]
-            coefficient = coefficients[passes] if passes < len(coefficients) else coefficients[last_coefficient]
-            previous = previous + coefficient * (wet_sample - previous)
-            shaped = previous - softness * previous**3
-            if shaped > 1.0:
-                shaped = 1.0
-            elif shaped < -1.0:
-                shaped = -1.0
+            coefficient = coefficients[np.minimum(passes, last_coefficient)]
+            filtered = _one_pole(wet_sample, coefficient, previous[channel])
+            previous[channel] = float(filtered[-1])
+            shaped = filtered - softness * filtered**3
+            shaped = np.clip(shaped, -1.0, 1.0)
 
-            out.append(wet_sample)
-            line[write] = signal[index] + gain * shaped
-            counter[write] = passes + 1
-            write += 1
-            if write == size:
-                write = 0
-
-        wet[:, channel] = out
-        new_buffers.append(buffer)
-        new_counts.append(counts)
-        new_filter.append(previous)
+            wet[start:stop, channel] = wet_sample
+            line[write_index] = block[start:stop, channel] + gain * shaped
+            counter[write_index] = passes + 1
 
     return wet, FrippertronicsState(
-        buffers=tuple(new_buffers),
-        pass_counts=tuple(new_counts),
+        buffers=tuple(buffers),
+        pass_counts=tuple(counters),
         write_pos=(state.write_pos + count) % size,
-        filter_state=tuple(new_filter),
-        wow_phase=phase,
+        filter_state=tuple(previous),
+        wow_phase=state.wow_phase,
         sample_count=state.sample_count + count,
     )
