@@ -20,7 +20,7 @@ def _plan(lane: str = "motorik", seconds: int = 30, seed: int = 1042):
 
 
 def test_a_trim_is_applied_to_the_voice_it_names() -> None:
-    plan = _plan()
+    plan = _plan().model_copy(update={"bus_gains": []})
     trimmed = plan.model_copy(update={"bus_gains": [BusGain(kind="pad", gain_millibels=-600)]})
     plain = render_plan(plan)
     cut = render_plan(trimmed)
@@ -29,13 +29,13 @@ def test_a_trim_is_applied_to_the_voice_it_names() -> None:
 
 
 def test_a_trim_of_zero_changes_nothing() -> None:
-    plan = _plan()
+    plan = _plan().model_copy(update={"bus_gains": []})
     same = plan.model_copy(update={"bus_gains": [BusGain(kind="pad", gain_millibels=0)]})
     assert np.array_equal(render_plan(plan), render_plan(same))
 
 
 def test_a_trim_of_the_wrong_kind_changes_nothing() -> None:
-    plan = _plan()
+    plan = _plan().model_copy(update={"bus_gains": []})
     same = plan.model_copy(update={"bus_gains": [BusGain(kind="nothing_like_it", gain_millibels=-600)]})
     assert np.array_equal(render_plan(plan), render_plan(same))
 

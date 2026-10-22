@@ -136,7 +136,8 @@ def test_the_gate_module_exists_and_the_failure_type_is_not_an_exception() -> No
 def test_the_render_path_imports_nothing_from_compose() -> None:
     for path in PACKAGE.rglob("*.py"):
         relative = path.relative_to(PACKAGE).as_posix()
-        if relative.startswith("compose/") or path.name == "cli.py":
+        if relative.startswith("compose/") or path.name in {"cli.py", "batch.py"}:
+            # The callers compose; the render path does not.
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):

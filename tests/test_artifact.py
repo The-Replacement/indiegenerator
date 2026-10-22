@@ -69,7 +69,7 @@ def test_no_internal_dropout(decoded: np.ndarray) -> None:
 
 def test_the_sample_peak_is_in_the_declared_band(decoded: np.ndarray) -> None:
     peak = 20.0 * np.log10(max(float(np.max(np.abs(decoded.astype(np.float64)))) / 32768.0, 1e-12))
-    assert -4.0 <= peak <= -1.5
+    assert -5.0 <= peak <= -3.5
 
 
 def test_the_hashes_agree_with_the_file(rendered: dict[str, Any], decoded: np.ndarray) -> None:

@@ -36,6 +36,12 @@ def station_plan() -> object:
 
 
 @pytest.fixture(scope="module")
+def motorik_plan() -> object:
+    """A short motorik plan: the drums, the pad and the deja-vu."""
+    return director(compose(load_preset("motorik"), SEED, 20 * RATE))
+
+
+@pytest.fixture(scope="module")
 def mix(ambient_plan: object) -> np.ndarray:
     """The ambient plan, rendered once."""
     return render_plan(ambient_plan)
@@ -108,6 +114,24 @@ def test_the_render_is_the_same_in_blocks(ambient_plan: object, monkeypatch: pyt
     whole = render_module.render_plan(ambient_plan)
     monkeypatch.setattr(render_module, "RENDER_BLOCK", 4099)
     pieces = render_module.render_plan(ambient_plan)
+    assert np.array_equal(pieces, whole)
+
+
+def test_a_drum_hit_that_crosses_a_block_boundary_keeps_its_tail(
+    motorik_plan: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A hit whose voice runs past the end of a block is not cut.
+
+    A kick lasts a third of a second and a block is three seconds, so a
+    hit near the end of a block has its tail in the next one. The tails are
+    carried in the state, and the render is the same whatever the block
+    size is - which is what the carried tails are for.
+    """
+    from indiegen import render as render_module
+
+    whole = render_module.render_plan(motorik_plan)
+    monkeypatch.setattr(render_module, "RENDER_BLOCK", 65536)
+    pieces = render_module.render_plan(motorik_plan)
     assert np.array_equal(pieces, whole)
 
 

@@ -14,7 +14,6 @@ from indiegen.validate import (
     GATES_IN_FORCE,
     SILENCE_FLOOR_LSB,
     TRAILING_SILENCE_LIMIT_S,
-    CodecComparison,
     GateFailure,
     GateResult,
     check_gate_1,
@@ -107,35 +106,38 @@ def test_our_loudness_against_ffmpeg_fails_gate_eleven() -> None:
     assert failures and failures[0].gate == 11
 
 
-def _comparison(**overrides: float) -> CodecComparison:
+def _comparison(**overrides: float) -> tuple[float, float, int, float]:
     values = {
         "lufs_before": -16.0,
         "lufs_after": -16.2,
-        "peak_before": -2.0,
-        "peak_after": -2.2,
-        "correlation": 0.99,
         "clipped": 0,
+        "correlation": 0.99,
     }
     values.update(overrides)
-    return CodecComparison(**values)  # type: ignore[arg-type]
+    return (
+        values["lufs_before"],
+        values["lufs_after"],
+        int(values["clipped"]),
+        values["correlation"],
+    )
 
 
 def test_a_clean_roundtrip_passes_gate_twelve() -> None:
-    assert check_gate_12(_comparison()) == []
+    assert check_gate_12(*_comparison()) == []
 
 
 def test_a_roundtrip_that_moves_the_loudness_fails_gate_twelve() -> None:
-    failures = check_gate_12(_comparison(lufs_after=-17.0))
+    failures = check_gate_12(*_comparison(lufs_after=-17.0))
     assert any("loudness" in failure.check for failure in failures)
 
 
 def test_a_roundtrip_that_clips_fails_gate_twelve() -> None:
-    failures = check_gate_12(_comparison(clipped=12))
+    failures = check_gate_12(*_comparison(clipped=12))
     assert any("clipping" in failure.check for failure in failures)
 
 
 def test_a_roundtrip_that_collapses_fails_gate_twelve() -> None:
-    failures = check_gate_12(_comparison(correlation=0.05))
+    failures = check_gate_12(*_comparison(correlation=0.05))
     assert any("correlation" in failure.check for failure in failures)
 
 
@@ -235,6 +237,7 @@ def _plan(
         channels=2,
         duration_frames=frames,
         duration_range_frames=[frames, frames],
+        form="full",
         tempo_bpm=120,
         frames_per_beat=22050,
         meter_numerator=4,

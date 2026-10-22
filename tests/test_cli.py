@@ -18,6 +18,7 @@ EXPECTED_KEYS: tuple[str, ...] = (
     "sidecar",
     "duration",
     "format",
+    "form",
     "peak",
     "true_peak",
     "loudness",
@@ -43,21 +44,21 @@ def test_version_prints_and_exits_zero(cli_runner: CliRunner) -> None:
     assert re.search(r"\d+\.\d+\.\d+", result.stdout)
 
 
-@pytest.mark.parametrize("command", ["batch", "validate", "catalog", "install"])
+@pytest.mark.parametrize("command", ["playlist", "library", "publish"])
 def test_unregistered_commands_do_not_exist(cli_runner: CliRunner, command: str) -> None:
     result = cli_runner.invoke(app, [command])
     assert result.exit_code != 0
     assert "No such command" in result.output
 
 
-def test_render_prints_exactly_thirteen_lines(cli_runner: CliRunner, tmp_path: Path) -> None:
+def test_render_prints_exactly_fourteen_lines(cli_runner: CliRunner, tmp_path: Path) -> None:
     result = cli_runner.invoke(
         app,
         ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert result.exit_code == 0
     lines = result.stdout.strip().splitlines()
-    assert len(lines) == 13
+    assert len(lines) == 14
     keys = tuple(line.split(": ", 1)[0] for line in lines)
     assert keys == EXPECTED_KEYS
     for line in lines:
@@ -167,13 +168,13 @@ def test_a_gate_failure_exits_two_and_writes_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The gates are enforced: a failure is exit 2, an empty stdout, no file."""
-    import indiegen.cli as cli_module
+    import indiegen.batch as batch_module
     from indiegen.validate import GateFailure, GateResult
 
     def failing(*_args: Any, **_kwargs: Any) -> GateFailure:
         return GateFailure(failures=[GateResult(gate=2, measured=1.0, limit=0.0, check="injected failure")])
 
-    monkeypatch.setattr(cli_module, "run_gates", failing)
+    monkeypatch.setattr(batch_module, "run_gates", failing)
     result = cli_runner.invoke(
         app,
         ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],

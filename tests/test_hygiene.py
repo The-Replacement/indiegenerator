@@ -104,7 +104,7 @@ def test_the_render_path_does_not_import_compose() -> None:
     """cli.py is the orchestrator and legitimately calls compose()."""
     for path, tree in iter_modules():
         relative = relative_to_package(path)
-        if relative.startswith("compose/") or path.name == "cli.py":
+        if relative.startswith("compose/") or path.name in {"cli.py", "batch.py"}:
             continue
         for name in imported_names(tree):
             assert not name.startswith("indiegen.compose")

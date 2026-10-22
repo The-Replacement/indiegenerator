@@ -35,6 +35,20 @@ def _mutate_section_graph(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # Two groups need a gentler touch: a chord's intervals cannot all be moved
 # at once without leaving the scale, and a motif bank is consumed by drawing
 # one cell, so every cell has to move for the draw to change.
+def _mutate_forms(value: Any) -> Any:
+    """The forms, with every range's lower bound moved by one.
+
+    The form's names are literals and the weight is the batch's business:
+    the range is what the plan draws its duration from, and moving its
+    lower bound always moves the draw.
+    """
+    mutated: list[dict[str, Any]] = []
+    for card in value:
+        low, high = card["duration_range_seconds"]
+        mutated.append({**card, "duration_range_seconds": [low + 1, high]})
+    return mutated
+
+
 KEY_MUTATIONS: dict[str, Any] = {
     "chord_intervals": lambda value: [*value[:-1], value[-1] + 1],
     "motif_bank": lambda value: [[*cell[:-1], cell[-1] + 1] for cell in value],
@@ -47,6 +61,7 @@ KEY_MUTATIONS: dict[str, Any] = {
     "mode_pool": lambda value: list(reversed(value)),
     "pulse": lambda value: "seconds" if value == "bars" else "bars",
     "section_graph": _mutate_section_graph,
+    "forms": _mutate_forms,
 }
 
 

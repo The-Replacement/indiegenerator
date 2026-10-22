@@ -56,6 +56,7 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
     migrated["motif"] = {"notes": [{"midi": note, "duration_frames": 1} for note in migrated["motif"]]}
     migrated.pop("master_gain_millibels", None)
     migrated["target_lufs_millibels"] = -16000
+    migrated["form"] = "full"
     migrated["bus_gains"] = []
     for section in migrated["sections"]:
         section.pop("motif", None)

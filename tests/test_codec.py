@@ -57,7 +57,15 @@ def test_our_true_peak_agrees_with_ffmpeg(flac: Path) -> None:
 
 def test_the_mp3_roundtrip_keeps_the_loudness_and_the_shape(flac: Path) -> None:
     comparison = mp3_roundtrip(flac)
-    assert check_gate_12(comparison) == []
+    assert (
+        check_gate_12(
+            comparison.lufs_before,
+            comparison.lufs_after,
+            comparison.clipped,
+            comparison.correlation,
+        )
+        == []
+    )
 
 
 def test_the_roundtrip_reports_what_it_measured(flac: Path) -> None:
