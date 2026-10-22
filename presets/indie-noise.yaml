@@ -21,7 +21,7 @@ pulse: bars
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6. The numbers are the medians of twenty renders
 # of the lane, one per seed.
-timbre: {break: 7345, build: 7343, drift: 7213, intro: 7363, outro: 7364, peak: 7506, plateau: 7817, return: 8165}
+timbre: {break: 7318, build: 7905, drift: 7229, intro: 7378, outro: 7376, peak: 7506, plateau: 7736, return: 7983}
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}
@@ -51,7 +51,9 @@ techniques:
     detune_cents: 0
 
   # T6: the noise wall. It crests in the plateau and cuts to near silence
-  # with the outro: the dynamics are the point of this lane.
+  # with the outro: the dynamics are the point of this lane. The wall
+  # comes in with the build (a density of 55) and not with the dense
+  # sections alone, so a walk that never reaches one still has a wall.
   - kind: hat
     pattern:
       steps_per_bar: 16
@@ -60,7 +62,7 @@ techniques:
       rotation: 0
       condition: always
       condition_period: 1
-      min_density: 70
+      min_density: 55
       ghost_permille: 340
       velocity_millibels: -1200
     cutoff_hz: 5200

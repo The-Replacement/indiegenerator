@@ -85,5 +85,10 @@ reverb:
   damping: {numerator: 2, denominator: 100}
   allpass_delays_frames: [556, 441, 341, 225]
   allpass_feedback: {numerator: 5, denominator: 10}
-  stereo_spread_frames: 23
+  # Eight frames, not twenty-three: the spread is the decorrelation
+  # between the two channels, and at the low end it is what takes the bass
+  # out of the mono fold-down (measured: -1.78 dB at twenty-three frames,
+  # -0.32 dB at eight). Eight frames is a fifth of a millisecond, and the
+  # width comes from the combs, not from it.
+  stereo_spread_frames: 8
   send_millibels: -600
