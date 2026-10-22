@@ -75,6 +75,19 @@ MINIMUM_DIFFERENCES: int = 2
 MODE_SHIFT_MIN_BARS: int = 16
 MODE_SHIFT_MAX_BARS: int = 64
 
+# The density an arrangement has to reach. A track that never gets here has
+# no peak, and the layers that only exist in the dense sections are in
+# none of it.
+DENSE_SECTION_DENSITY: int = 70
+
+# The strategies that take material away, and the instruments they take.
+DROPPING_STRATEGIES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("drop_drums", ("kick", "snare", "hat")),
+    ("drop_kick", ("kick",)),
+    ("drop_bass", ("bass",)),
+    ("solo_texture", ("kick", "snare", "hat", "bass")),
+)
+
 
 def pick_lane(preset: Preset, rng: SplitMix64) -> str:
     """The weighted lane pick. Called from compose, with the compose RNG."""
@@ -103,6 +116,12 @@ def _paths_from(
     The walk never visits a function twice, so an arrangement is a shape and
     not a loop, and the branches are taken in a rotated order, so the draw
     decides which of the legal arrangements this seed gets.
+
+    Every arrangement also reaches a dense section. A walk that never gets
+    there is a track with no peak, and the layers that only exist in the
+    dense sections - the hats, the noise wall - are in none of it: half the
+    dub lane's arrangements had no hats at all, and the lane's recipe says
+    they are a layer. The arc is the shape, not a detail of it.
     """
     by_function = {node.function: node for node in graph}
     if start not in by_function:
@@ -128,7 +147,11 @@ def _paths_from(
             walk(path + [successor], used | {successor.function})
 
     walk([by_function[start]], {start})
-    return results
+    dense = [path for path in results if max(node.density for node in path) >= DENSE_SECTION_DENSITY]
+    # A graph whose paths are too short to reach a dense section keeps its
+    # own paths: the ambient lane's two and three section arrangements are
+    # legal, and they have no dense section to reach.
+    return dense if dense else results
 
 
 def _walk_graph(graph: list[SectionProfile], count: int, rng: SplitMix64) -> list[SectionProfile]:
@@ -474,6 +497,11 @@ def _draw_moves(
         choice: StrategyCard = applicable[rng.below(len(applicable))]
         previous = choice.strategy
         span = choice.span_bars * frames_per_bar if choice.span_bars else choice.crossfade_frames
+        if _would_empty(choice.strategy, sample, span, ranges):
+            # A drop that takes the whole of a layer is not a drop, it is a
+            # hole: the layer plays in one section, the drop covers it, and
+            # the voice is gone for the whole track. The move is not drawn.
+            continue
         moves.append(
             DirectorMove(
                 sample=sample,
@@ -485,6 +513,31 @@ def _draw_moves(
             )
         )
     return moves
+
+
+def _would_empty(
+    strategy: str,
+    sample: int,
+    span: int,
+    ranges: dict[str, list[tuple[int, int]]],
+) -> bool:
+    """Would this drop take the whole of a layer's material?
+
+    A drop that covers every stretch in which a voice plays silences it
+    for the whole track, and a voice that is silent for the whole track is
+    not a drop. The dub lane's hats play in one section; a drop of eight
+    bars in that section took all of them, and the lane had no hats at all.
+    """
+    if strategy not in dict(DROPPING_STRATEGIES):
+        return False
+    end = sample + span
+    for name in dict(DROPPING_STRATEGIES)[strategy]:
+        spans = ranges.get(name)
+        if not spans:
+            continue
+        if all(sample <= low and high <= end for low, high in spans):
+            return True
+    return False
 
 
 def _frippertronics_spec(card: FrippertronicsCard, rng: SplitMix64) -> FrippertronicsSpec:
