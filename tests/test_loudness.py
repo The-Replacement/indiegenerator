@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from indiegen.master.loudness import integrated_lufs, measure, sample_peak_dbfs, true_peak_dbtp
+from indiegen.master.loudness import integrated_lufs, loudness_range, measure, sample_peak_dbfs, true_peak_dbtp
 
 RATE: int = 44100
 
@@ -89,9 +89,22 @@ def test_true_peak_matches_the_analytic_inter_sample_maximum() -> None:
     assert abs(true_peak_dbtp(stereo) - analytic) < 0.1
 
 
-def test_measure_returns_the_three_numbers() -> None:
+def test_measure_returns_the_four_numbers() -> None:
     times = np.arange(RATE) / RATE
     tone = np.sin(2.0 * math.pi * 1000.0 * times) * 0.5
     values = measure(np.stack([tone, tone], axis=1), RATE)
-    assert set(values) == {"integrated_lufs", "sample_peak_dbfs", "true_peak_dbtp"}
+    assert set(values) == {"integrated_lufs", "sample_peak_dbfs", "true_peak_dbtp", "loudness_range_lu"}
     assert values["sample_peak_dbfs"] < 0.0
+
+
+def test_the_loudness_range_of_a_stationary_signal_is_almost_nothing() -> None:
+    generator = np.random.default_rng(11)
+    noise = generator.standard_normal(RATE * 20) * 0.1
+    assert loudness_range(np.stack([noise, noise], axis=1), RATE) < 1.0
+
+
+def test_the_loudness_range_of_a_ramp_is_its_span() -> None:
+    times = np.arange(RATE * 40) / RATE
+    ramp = 0.02 + 0.9 * times / 40.0
+    tone = ramp * np.sin(2.0 * math.pi * 440.0 * times)
+    assert loudness_range(np.stack([tone, tone], axis=1), RATE) > 8.0

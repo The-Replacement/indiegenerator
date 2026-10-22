@@ -21,6 +21,7 @@ EXPECTED_KEYS: tuple[str, ...] = (
     "peak",
     "true_peak",
     "loudness",
+    "loudness_range",
     "sections",
     "techniques",
     "plan_sha256",
@@ -49,14 +50,14 @@ def test_unregistered_commands_do_not_exist(cli_runner: CliRunner, command: str)
     assert "No such command" in result.output
 
 
-def test_render_prints_exactly_twelve_lines(cli_runner: CliRunner, tmp_path: Path) -> None:
+def test_render_prints_exactly_thirteen_lines(cli_runner: CliRunner, tmp_path: Path) -> None:
     result = cli_runner.invoke(
         app,
         ["render", "--preset", "motorik", "--seed", "1042", "--seconds", "60", "--out", str(tmp_path)],
     )
     assert result.exit_code == 0
     lines = result.stdout.strip().splitlines()
-    assert len(lines) == 12
+    assert len(lines) == 13
     keys = tuple(line.split(": ", 1)[0] for line in lines)
     assert keys == EXPECTED_KEYS
     for line in lines:

@@ -14,14 +14,21 @@ from indiegen.validate import (
     GATES_IN_FORCE,
     SILENCE_FLOOR_LSB,
     TRAILING_SILENCE_LIMIT_S,
+    CodecComparison,
     GateFailure,
     GateResult,
+    check_gate_1,
     check_gate_2,
+    check_gate_3,
     check_gate_4,
     check_gate_5,
     check_gate_6,
     check_gate_7,
     check_gate_8,
+    check_gate_9,
+    check_gate_10,
+    check_gate_11,
+    check_gate_12,
     check_gate_13,
     leading_silence_limit,
     minimum_sections,
@@ -36,7 +43,100 @@ def _pcm(samples: np.ndarray) -> np.ndarray:
 
 
 def test_only_the_gates_in_force_are_implemented() -> None:
-    assert GATES_IN_FORCE == (2, 4, 5, 6, 7, 8, 13)
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+
+
+def _tone(seconds: float = 6.0, amplitude: float = 5800.0) -> np.ndarray:
+    """A tone at the target loudness, in the int16 scale."""
+    times = np.arange(int(seconds * RATE)) / RATE
+    wave = amplitude * np.sin(2.0 * np.pi * 220.0 * times)
+    return _pcm(np.stack([wave, wave], axis=1))
+
+
+def test_a_track_at_the_target_loudness_passes_gate_one() -> None:
+    assert check_gate_1(_tone(), RATE) == []
+
+
+def test_a_quiet_track_fails_gate_one() -> None:
+    failures = check_gate_1(_tone(amplitude=1000.0), RATE)
+    assert any("loudness" in failure.check for failure in failures)
+
+
+def test_a_loud_track_fails_gate_one() -> None:
+    failures = check_gate_1(_tone(amplitude=30000.0), RATE)
+    assert any("loudness" in failure.check or "true peak" in failure.check for failure in failures)
+
+
+def test_a_duration_inside_the_declared_range_passes_gate_three() -> None:
+    plan = _plan(sections=2, frames=20 * RATE)
+    assert check_gate_3(plan) == []
+
+
+def test_a_duration_outside_the_declared_range_fails_gate_three() -> None:
+    plan = _plan(sections=2, frames=20 * RATE)
+    plan = plan.model_copy(update={"duration_range_frames": [30 * RATE, 40 * RATE]})
+    failures = check_gate_3(plan)
+    assert any("duration" in failure.check for failure in failures)
+
+
+def test_a_mono_low_band_passes_gate_nine() -> None:
+    assert check_gate_9(_tone(), RATE) == []
+
+
+def test_a_low_band_that_cancels_in_mono_fails_gate_nine() -> None:
+    """A low band that is out of phase between the channels loses its bass."""
+    times = np.arange(int(6.0 * RATE)) / RATE
+    bass = 20000.0 * np.sin(2.0 * np.pi * 60.0 * times)
+    signal = np.stack([bass, -bass], axis=1)
+    failures = check_gate_9(_pcm(signal), RATE)
+    assert any("mono fold-down" in failure.check for failure in failures)
+
+
+def test_the_same_hash_passes_gate_ten_and_a_different_one_does_not() -> None:
+    assert check_gate_10("abc", "abc") == []
+    failures = check_gate_10("abc", "def")
+    assert failures and failures[0].gate == 10
+
+
+def test_our_loudness_against_ffmpeg_passes_gate_eleven() -> None:
+    assert check_gate_11(-16.0, -16.1) == []
+
+
+def test_our_loudness_against_ffmpeg_fails_gate_eleven() -> None:
+    failures = check_gate_11(-16.0, -16.5)
+    assert failures and failures[0].gate == 11
+
+
+def _comparison(**overrides: float) -> CodecComparison:
+    values = {
+        "lufs_before": -16.0,
+        "lufs_after": -16.2,
+        "peak_before": -2.0,
+        "peak_after": -2.2,
+        "correlation": 0.99,
+        "clipped": 0,
+    }
+    values.update(overrides)
+    return CodecComparison(**values)  # type: ignore[arg-type]
+
+
+def test_a_clean_roundtrip_passes_gate_twelve() -> None:
+    assert check_gate_12(_comparison()) == []
+
+
+def test_a_roundtrip_that_moves_the_loudness_fails_gate_twelve() -> None:
+    failures = check_gate_12(_comparison(lufs_after=-17.0))
+    assert any("loudness" in failure.check for failure in failures)
+
+
+def test_a_roundtrip_that_clips_fails_gate_twelve() -> None:
+    failures = check_gate_12(_comparison(clipped=12))
+    assert any("clipping" in failure.check for failure in failures)
+
+
+def test_a_roundtrip_that_collapses_fails_gate_twelve() -> None:
+    failures = check_gate_12(_comparison(correlation=0.05))
+    assert any("correlation" in failure.check for failure in failures)
 
 
 def test_a_clean_signal_passes_gate_two() -> None:
@@ -174,8 +274,9 @@ def _plan(
         lane_weights=[],
         dither_seed=1,
         dither_lsb=1,
-        master_gain_millibels=0,
+        target_lufs_millibels=-16000,
         ceiling_millibels=0,
+        bus_gains=[],
         fade_in_frames=0,
         fade_out_frames=0,
         section_crossfade_frames=0,
@@ -339,10 +440,11 @@ def test_run_gates_returns_none_when_everything_passes() -> None:
     plan = _plan(sections=2, frames=20 * RATE)
     time = np.arange(plan.duration_frames) / RATE
     # A tone whose level ramps across the middle: there is a moment of
-    # novelty in it, and its timbre does not move.
+    # novelty in it, and its timbre does not move. Its level is the target
+    # loudness, so the loudness gate has nothing to say about it.
     ramp = np.clip((time - 9.0) / 2.0, 0.0, 1.0) * 0.8 + 0.2
     tone = ramp * np.sin(2.0 * np.pi * 220.0 * time)
-    pcm = _pcm(np.stack([tone, tone], axis=1) * 8000)
+    pcm = _pcm(np.stack([tone, tone], axis=1) * 5800)
     mix = pcm.astype(np.float64) / 32768.0
     appearances = [
         MotifAppearance(

@@ -129,7 +129,7 @@ def test_the_gate_module_exists_and_the_failure_type_is_not_an_exception() -> No
     from indiegen.validate import GATES_IN_FORCE, GateFailure
 
     assert (PACKAGE / "validate.py").exists()
-    assert GATES_IN_FORCE == (2, 4, 5, 6, 7, 8, 13)
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
     assert not issubclass(GateFailure, BaseException)
 
 

@@ -1,9 +1,13 @@
-"""AC-52, AC-53: the frozen S0 artifact must survive the S1 pipeline.
+"""AC-52, AC-53: the frozen S0 artifact must survive the pipeline.
 
-S0's committed canonical plan bytes are migrated field by field into the S3
-model without changing a single value the renderer reads, and the result must
-render to S0's ``pcm_sha256`` exactly. If the migration changed anything the
-renderer looks at, this test fails.
+S0's committed canonical plan bytes are migrated field by field into the
+current model without changing a single value the renderer reads, and the
+result must render to the recorded ``pcm_sha256`` exactly. If the migration
+changed anything the renderer looks at, this test fails.
+
+The hash moved in S4: the master chain now measures the loudness and
+limits the true peak, so the same plan is delivered at a different level.
+The migration itself still changes no value the renderer reads.
 """
 
 from __future__ import annotations
@@ -18,11 +22,11 @@ from indiegen.render import render_plan
 from indiegen.writer import pcm_sha256
 from tests.conftest import GOLDEN_DIR
 
-S0_PCM_SHA256: str = "892cb06a76244f43c97336295574d24910bc188d318ed29cd9ba696544e5cf78"
+S0_PCM_SHA256: str = "f97584b6cddf83fb3090ae25afe7d00b23b49bf2617860123f65614afc9307a9"
 
 
 def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
-    """Migrate S0's committed plan into the S3 model.
+    """Migrate S0's committed plan into the current model.
 
     The migration adds the event discriminator, drops the field the renderer
     never read, turns the technique cards into names, adds the empty bus
@@ -50,6 +54,9 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
     migrated["motif_appearances"] = []
     migrated["deja_vu_replay_permille"] = []
     migrated["motif"] = {"notes": [{"midi": note, "duration_frames": 1} for note in migrated["motif"]]}
+    migrated.pop("master_gain_millibels", None)
+    migrated["target_lufs_millibels"] = -16000
+    migrated["bus_gains"] = []
     for section in migrated["sections"]:
         section.pop("motif", None)
         section["instrumentation"] = ["pad"]
