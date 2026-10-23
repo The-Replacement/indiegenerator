@@ -17,14 +17,15 @@ from dataclasses import dataclass
 from typing import cast
 
 import numpy as np
-from scipy.signal import lfilter
 
 from indiegen.errors import PlanError
 from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, RhythmEvent, SnareEvent
 from indiegen.synth.env import dc_block
+from indiegen.synth.filter import one_pole_highpass, one_pole_lowpass
 from indiegen.synth.noise import CONTROL_RATE, PinkState, control_slice, pink_state, stream_key, uniform_stream
+from indiegen.synth.osc import midi_to_hz
 
 DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
 
@@ -68,17 +69,11 @@ class DrumState:
 
 
 def _highpass(signal: np.ndarray, cutoff_hz: float, sample_rate: int) -> np.ndarray:
-    """A one-pole high pass: (1 - z^-1) / (1 - r z^-1)."""
-    coefficient = math.exp(-2.0 * math.pi * cutoff_hz / sample_rate)
-    filtered: np.ndarray = lfilter([1.0, -1.0], [1.0, -coefficient], signal)
-    return filtered
+    return one_pole_highpass(signal, cutoff_hz, sample_rate)
 
 
 def _lowpass(signal: np.ndarray, cutoff_hz: float, sample_rate: int) -> np.ndarray:
-    """A one-pole low pass: (1 - r) / (1 - r z^-1)."""
-    coefficient = math.exp(-2.0 * math.pi * cutoff_hz / sample_rate)
-    filtered: np.ndarray = lfilter([1.0 - coefficient], [1.0, -coefficient], signal)
-    return filtered
+    return one_pole_lowpass(signal, cutoff_hz, sample_rate)
 
 
 def _envelope(count: int, decay_frames: int, sample_rate: int) -> np.ndarray:
@@ -138,7 +133,7 @@ def render_bass(event: BassEvent, hit: BassHit, sample_rate: int, velocity: floa
     one the plucked strings get.
     """
     count = event.decay_frames
-    frequency = 440.0 * math.pow(2.0, (hit.midi - 69) / 12.0)
+    frequency = midi_to_hz(hit.midi)
     phase = np.cumsum(np.full(count, frequency, dtype=np.float64)) / np.float64(sample_rate)
     saw = 2.0 * (phase - np.floor(phase)) - 1.0
     shaped = _lowpass(saw, float(event.cutoff_hz), sample_rate)

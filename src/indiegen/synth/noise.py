@@ -121,6 +121,9 @@ def control_slice(
     The stream is continued from where it stands, so the values are the same
     ones the whole stream would have produced.
     """
+    # have is the number of control samples already produced that overlap the
+    # requested window; it is clamped to [0, HISTORY + 1] by the caller's
+    # block size, so the history slice below never underflows.
     have = state.position - low
     if have > HISTORY:
         raise ValueError("the control stream is too far ahead of the block")

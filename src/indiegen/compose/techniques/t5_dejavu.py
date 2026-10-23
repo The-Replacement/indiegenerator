@@ -20,9 +20,6 @@ from indiegen.config import DejaVuCard
 from indiegen.plan import PluckEvent, Rational
 from indiegen.theory.scales import nearest_scale_note
 
-REPLAY_START_PERMILLE: int = 150
-REPLAY_END_PERMILLE: int = 850
-
 
 def replay_permille(card: DejaVuCard, section: int, section_count: int) -> int:
     """The replay probability of a section, from explore to locked.

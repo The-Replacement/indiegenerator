@@ -100,7 +100,7 @@ class SectionProfile(FrozenModel):
     """
 
     function: str
-    next: list[str]
+    next: list[str] = Field(max_length=16)
     density: int = Field(ge=0, le=100)
     level_millibels: int
     bars: int = Field(gt=0)
@@ -154,7 +154,7 @@ class DirectorMove(FrozenModel):
     detail: str
     parameter: int
     crossfade_frames: int = Field(ge=0)
-    applies_to: list[str]
+    applies_to: list[str] = Field(max_length=16)
 
 
 class Partial(FrozenModel):
@@ -210,7 +210,7 @@ class PadEnvelopeSegment(FrozenModel):
     """
 
     delta_frames: int = Field(ge=1)
-    permutation: list[int] = Field(min_length=2)
+    permutation: list[int] = Field(min_length=2, max_length=16)
 
 
 class PadEvent(EventBase):
@@ -220,7 +220,7 @@ class PadEvent(EventBase):
     partials: list[Partial] = Field(min_length=1, max_length=9)
     lfo_rate: Rational
     lfo_depth_cents: int
-    envelope_segments: list[PadEnvelopeSegment] = []
+    envelope_segments: list[PadEnvelopeSegment] = Field(default_factory=list, max_length=16)
 
     @model_validator(mode="after")
     def _permutations_match_partials(self) -> Self:
@@ -248,15 +248,15 @@ class PolyPeriodEvent(EventBase):
     """A poly-period loop: several voices, each on its own distinct period."""
 
     kind: Literal["poly_period"]
-    voices: list[PolyPeriodVoice]
-    partials: list[Partial]
+    voices: list[PolyPeriodVoice] = Field(max_length=16)
+    partials: list[Partial] = Field(max_length=16)
 
 
 class DroneEvent(EventBase):
     """A spectral drone stack: near-unison partials drifting against each other."""
 
     kind: Literal["drone"]
-    partials: list[DriftingPartial]
+    partials: list[DriftingPartial] = Field(max_length=16)
     noise_seed: int
 
 
@@ -306,7 +306,7 @@ class KickEvent(RhythmEvent):
     """A kick drum: a round body with a fast pitch drop and a soft transient."""
 
     kind: Literal["kick"]
-    hits: list[DrumHit]
+    hits: list[DrumHit] = Field(max_length=MAX_HITS)
     body_hz: int
     drop_hz: int
     drop_frames: int
@@ -317,7 +317,7 @@ class SnareEvent(RhythmEvent):
     """A snare drum: a body tone and a noise burst, decaying apart."""
 
     kind: Literal["snare"]
-    hits: list[DrumHit]
+    hits: list[DrumHit] = Field(max_length=MAX_HITS)
     body_hz: int
     body_decay_frames: int
     noise_decay_frames: int
@@ -327,7 +327,7 @@ class HatEvent(RhythmEvent):
     """A closed hat: a short burst of high-passed noise."""
 
     kind: Literal["hat"]
-    hits: list[DrumHit]
+    hits: list[DrumHit] = Field(max_length=MAX_HITS)
     cutoff_hz: int
     decay_frames: int
 
@@ -336,7 +336,7 @@ class BassEvent(RhythmEvent):
     """A bass line: a filtered saw on the lane's root, with octave jumps."""
 
     kind: Literal["bass"]
-    hits: list[BassHit]
+    hits: list[BassHit] = Field(max_length=MAX_HITS)
     cutoff_hz: int
     decay_frames: int
 
@@ -360,10 +360,10 @@ class DelaySend(FrozenModel):
 class ReverbSpec(FrozenModel):
     """A short Schroeder reverb: parallel combs into series allpasses."""
 
-    comb_delays_frames: list[int]
+    comb_delays_frames: list[int] = Field(max_length=16)
     comb_feedback: Rational
     damping: Rational
-    allpass_delays_frames: list[int]
+    allpass_delays_frames: list[int] = Field(max_length=8)
     allpass_feedback: Rational
     stereo_spread_frames: int = Field(ge=0)
     send_millibels: int
@@ -386,8 +386,8 @@ class SectionPlan(FrozenModel):
     bars: int
     density: int
     level_millibels: int
-    techniques: list[str]
-    instrumentation: list[str]
+    techniques: list[str] = Field(max_length=32)
+    instrumentation: list[str] = Field(max_length=16)
     mode: str
     root_midi: int
     texture: str
@@ -405,7 +405,7 @@ class MotifNote(FrozenModel):
 class MotifCell(FrozenModel):
     """The motif: three to seven notes, one cell."""
 
-    notes: list[MotifNote]
+    notes: list[MotifNote] = Field(max_length=16)
 
 
 class MotifAppearance(FrozenModel):
@@ -419,8 +419,8 @@ class MotifAppearance(FrozenModel):
     transform: str
     parameter: int
     start_frame: int = Field(ge=0)
-    notes: list[int]
-    durations: list[int]
+    notes: list[int] = Field(max_length=16)
+    durations: list[int] = Field(max_length=16)
 
 
 class FrippertronicsSpec(FrozenModel):
@@ -476,52 +476,52 @@ class Plan(FrozenModel):
     sample_rate: int
     channels: int
     duration_frames: int
-    duration_range_frames: list[int]
+    duration_range_frames: list[int] = Field(max_length=8)
     form: Literal["full", "longform", "interlude"]
     tempo_bpm: int
     frames_per_beat: int
     meter_numerator: int
     meter_denominator: int
     pulse: Literal["bars", "seconds"]
-    scale_midi: list[int]
-    fx_sends: list[FxSend]
-    techniques: list[str]
-    strategy_deck: list[DirectorMove]
-    section_count_range: list[int]
+    scale_midi: list[int] = Field(max_length=32)
+    fx_sends: list[FxSend] = Field(max_length=8)
+    techniques: list[str] = Field(max_length=32)
+    strategy_deck: list[DirectorMove] = Field(max_length=64)
+    section_count_range: list[int] = Field(max_length=4)
     section_count: int
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
-    chord_tone_intervals: list[int] = []
+    chord_tone_intervals: list[int] = Field(default_factory=list, max_length=5)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)
     double_copies: int = Field(default=0, ge=0, le=2)
     double_offset_frames: int = Field(default=0, ge=0, le=50)
-    arrangement_mutes: list[ArrangementMute] = []
-    sections: list[SectionPlan]
+    arrangement_mutes: list[ArrangementMute] = Field(default_factory=list, max_length=256)
+    sections: list[SectionPlan] = Field(max_length=64)
     motif: MotifCell
-    motif_appearances: list[MotifAppearance]
-    deja_vu_replay_permille: list[int]
-    title_words: list[str]
-    lane_weights: list[LaneWeight]
+    motif_appearances: list[MotifAppearance] = Field(max_length=256)
+    deja_vu_replay_permille: list[int] = Field(max_length=64)
+    title_words: list[str] = Field(max_length=64)
+    lane_weights: list[LaneWeight] = Field(max_length=16)
     dither_seed: int
     dither_lsb: int
     target_lufs_millibels: int
     ceiling_millibels: int
     saturation_drive_millibels: int = Field(default=0, ge=0, le=1800)
     saturation_mix_permille: int = Field(default=0, ge=0, le=1000)
-    bus_gains: list[BusGain]
+    bus_gains: list[BusGain] = Field(max_length=16)
     drum_bus_comp: DrumBusComp | None = None
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int
     track_number: int
-    delay_sends: list[DelaySend]
+    delay_sends: list[DelaySend] = Field(max_length=8)
     reverb: ReverbSpec | None
     frippertronics: FrippertronicsSpec | None
     dub_chain: DubChainSpec | None
-    events: list[Event]
-    director_log: list[DirectorMove]
+    events: list[Event] = Field(max_length=50000)
+    director_log: list[DirectorMove] = Field(max_length=256)
 
     @model_validator(mode="after")
     def _bounded_inputs(self) -> Self:

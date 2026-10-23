@@ -52,8 +52,8 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
 
     # Pre-limiter saturation (L21): tone shaping, not loudness. Sits before
     # the limiter so the ceiling stays the only loudness authority.
-    drive = getattr(plan, "saturation_drive_millibels", 0)
-    mix = getattr(plan, "saturation_mix_permille", 0) / 1000.0
+    drive = plan.saturation_drive_millibels
+    mix = plan.saturation_mix_permille / 1000.0
     processed = stereo
     if mix > 0 and drive > 0:
         gain_drive = millibels_to_gain(drive)

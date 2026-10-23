@@ -24,14 +24,14 @@ from indiegen.catalog import read_sidecar
 from indiegen.errors import PlanError
 from indiegen.master.codec import CodecError, ebur128, mp3_roundtrip
 from indiegen.master.loudness import integrated_lufs
-from indiegen.plan import INT16_MAX, INT16_MIN, Plan
+from indiegen.plan import Plan
 from indiegen.validate import (
-    DC_OFFSET_LIMIT,
     ENERGY_CORRELATION_LIMIT,
     STATIC_CENTROID_LIMIT,
     TIMBRE_CORRELATION_LIMIT,
     GateResult,
     check_gate_1,
+    check_gate_2_pcm,
     check_gate_3,
     check_gate_4,
     check_gate_7,
@@ -41,7 +41,9 @@ from indiegen.validate import (
     check_gate_11,
     check_gate_12,
     check_gate_13,
+    energy_correlation_ok,
     failure,
+    timbre_ok,
 )
 from indiegen.writer import pcm_sha256, read_pcm
 
@@ -131,18 +133,9 @@ def _check_gate_2_file(pcm: np.ndarray) -> list[GateResult]:
     """Gate 2 as a file can answer it: the DC offset and the rails.
 
     The non-finite half of gate 2 is about the mix, and a file of int16
-    cannot hold a NaN.
+    cannot hold a NaN. The PCM half is shared with ``validate.check_gate_2``.
     """
-    results: list[GateResult] = []
-    if pcm.size:
-        delivered = pcm.astype(np.float64) / 32768.0
-        offset = max(abs(float(np.mean(delivered[:, channel]))) for channel in range(delivered.shape[1]))
-        if offset > DC_OFFSET_LIMIT:
-            results.append(failure(gate=2, measured=offset, limit=DC_OFFSET_LIMIT, check="DC offset"))
-    rails = int(np.count_nonzero((pcm == INT16_MAX) | (pcm == INT16_MIN)))
-    if rails:
-        results.append(failure(gate=2, measured=float(rails), limit=0.0, check="samples at digital full scale"))
-    return results
+    return check_gate_2_pcm(pcm)
 
 
 def _recorded(payload: dict[str, Any]) -> dict[str, Any]:
@@ -153,7 +146,7 @@ def _recorded(payload: dict[str, Any]) -> dict[str, Any]:
 def _check_gate_5_recorded(payload: dict[str, Any]) -> list[GateResult]:
     """Gate 5, answered by the number the render recorded."""
     value = _recorded(payload).get("energy_correlation")
-    if value is None or float(value) >= ENERGY_CORRELATION_LIMIT:
+    if value is None or energy_correlation_ok(float(value)):
         return []
     return [
         failure(
@@ -171,24 +164,16 @@ def _check_gate_6_recorded(payload: dict[str, Any]) -> list[GateResult]:
     value = measurements.get("timbre_correlation")
     if value is None:
         return []
-    if measurements.get("timbre_static"):
-        if float(value) <= STATIC_CENTROID_LIMIT:
-            return []
-        return [
-            failure(
-                gate=6,
-                measured=float(value),
-                limit=STATIC_CENTROID_LIMIT,
-                check="timbre variance against a static plan",
-            )
-        ]
-    if float(value) >= TIMBRE_CORRELATION_LIMIT:
+    static = bool(measurements.get("timbre_static"))
+    if timbre_ok(float(value), static):
         return []
+    limit = STATIC_CENTROID_LIMIT if static else TIMBRE_CORRELATION_LIMIT
+    check = "timbre variance against a static plan" if static else "timbre trajectory correlation"
     return [
         failure(
             gate=6,
             measured=float(value),
-            limit=TIMBRE_CORRELATION_LIMIT,
-            check="timbre trajectory correlation",
+            limit=limit,
+            check=check,
         )
     ]

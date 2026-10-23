@@ -68,14 +68,26 @@ def _frames(minutes: float | None, seconds: int | None) -> int | None:
     return None
 
 
+MAX_PLAN_BYTES: int = 10 * 1024 * 1024
+
+
+def _reject_json_constant(value: str) -> Any:
+    raise PlanError(f"invalid JSON constant in plan file: {value}")
+
+
 def _plan_from_file(path: Path) -> Plan:
     """Read a plan from a sidecar, or from a bare plan document."""
     try:
-        raw: Any = json.loads(path.read_text(encoding="utf-8"))
+        if path.stat().st_size > MAX_PLAN_BYTES:
+            raise PlanError(f"plan file too large: {path.stat().st_size} bytes")
+        text = path.read_text(encoding="utf-8")
+        raw: Any = json.loads(text, parse_constant=_reject_json_constant)
     except OSError as exc:
         raise PlanError(f"cannot read plan file: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise PlanError(f"invalid plan file: {exc}") from exc
+    except PlanError:
+        raise
     payload = raw.get("plan", raw) if isinstance(raw, dict) else raw
     try:
         plan = Plan.model_validate(payload)

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from indiegen.gain import millibels_to_gain_array
 from indiegen.plan import DroneEvent
 from indiegen.synth.env import dc_block_state
 from indiegen.synth.noise import (
@@ -103,7 +104,7 @@ def render_drone_block(
             1.0,
         )
         millibels = partial.amplitude_millibels + partial.amplitude_lfo.depth_millibels * amplitude_signal
-        voice += np.sin(2.0 * np.pi * phase / sample_rate) * np.exp(millibels * (math.log(10.0) / 2000.0))
+        voice += np.sin(2.0 * np.pi * phase / sample_rate) * millibels_to_gain_array(millibels)
 
     blocked, dc_carry = dc_block_state(voice, sample_rate, state.dc)
     return blocked, DroneState(

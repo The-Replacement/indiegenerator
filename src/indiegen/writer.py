@@ -64,9 +64,9 @@ def pcm_sha256(samples: np.ndarray) -> str:
 
 def staging_dir(out_dir: Path) -> Path:
     """The directory a file is written to before it is published."""
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
     temp_dir = out_dir / TEMP_DIR_NAME
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
     return temp_dir
 
 
@@ -99,6 +99,7 @@ def write_flac_atomic(
     try:
         sf.write(temp_path, pcm, sample_rate, subtype="PCM_16", format="FLAC")
         apply_tags(temp_path, tags)
+        os.chmod(temp_path, 0o644)
         publish_atomically(temp_path, target)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)
@@ -123,6 +124,7 @@ def write_sidecar_atomic(
         with open(temp_path, "wb") as handle:
             handle.write(data)
             handle.flush()
+        os.chmod(temp_path, 0o644)
         publish_atomically(temp_path, target)
     except OSError as exc:
         temp_path.unlink(missing_ok=True)

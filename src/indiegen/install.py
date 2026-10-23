@@ -39,7 +39,7 @@ def _copy_atomic(source: Path, target_dir: Path) -> Path:
     target = target_dir / source.name
     temp_path = staging_dir(target_dir) / source.name
     try:
-        shutil.copyfile(source, temp_path)
+        shutil.copyfile(source, temp_path, follow_symlinks=False)
         publish_atomically(temp_path, target)
     except OSError:
         temp_path.unlink(missing_ok=True)

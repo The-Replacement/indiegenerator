@@ -104,27 +104,13 @@ def leading_silence_limit(lane: str) -> float:
     return DEFAULT_LEADING_SILENCE_LIMIT_S
 
 
-def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
-    """Gate 2: no non-finite sample, no DC offset, nothing at the rails.
+def check_gate_2_pcm(pcm: np.ndarray) -> list[GateResult]:
+    """The PCM-only half of gate 2: DC offset and rails.
 
-    The DC offset is measured on the delivered PCM, normalised to full
-    scale. The brief's limit is an absolute number, and the pre-master mix
-    has no absolute scale of its own - its level depends on how many voices
-    the track stacks - so measuring there would measure the arrangement
-    rather than the master. A DC offset in a master is what wastes headroom
-    and skews the waveform, and that is what this catches.
+    Shared by ``check_gate_2`` (which adds the non-finite mix check) and
+    ``filecheck._check_gate_2_file``, so the two cannot drift apart.
     """
     results: list[GateResult] = []
-    non_finite = int(np.count_nonzero(~np.isfinite(mix)))
-    if non_finite:
-        results.append(
-            failure(
-                gate=2,
-                measured=float(non_finite),
-                limit=0.0,
-                check="non-finite samples in the mix",
-            )
-        )
     if pcm.size:
         delivered = pcm.astype(np.float64) / 32768.0
         offset = max(abs(float(np.mean(delivered[:, channel]))) for channel in range(delivered.shape[1]))
@@ -147,6 +133,31 @@ def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
                 check="samples at digital full scale",
             )
         )
+    return results
+
+
+def check_gate_2(mix: np.ndarray, pcm: np.ndarray) -> list[GateResult]:
+    """Gate 2: no non-finite sample, no DC offset, nothing at the rails.
+
+    The DC offset is measured on the delivered PCM, normalised to full
+    scale. The brief's limit is an absolute number, and the pre-master mix
+    has no absolute scale of its own - its level depends on how many voices
+    the track stacks - so measuring there would measure the arrangement
+    rather than the master. A DC offset in a master is what wastes headroom
+    and skews the waveform, and that is what this catches.
+    """
+    results: list[GateResult] = []
+    non_finite = int(np.count_nonzero(~np.isfinite(mix)))
+    if non_finite:
+        results.append(
+            failure(
+                gate=2,
+                measured=float(non_finite),
+                limit=0.0,
+                check="non-finite samples in the mix",
+            )
+        )
+    results.extend(check_gate_2_pcm(pcm))
     return results
 
 
@@ -440,6 +451,18 @@ def energy_correlation(plan: Plan, mix: np.ndarray) -> float:
     return pearson(measured, planned)
 
 
+def energy_correlation_ok(correlation: float) -> bool:
+    """The one predicate for gate 5, shared by the live and recorded checks."""
+    return correlation >= ENERGY_CORRELATION_LIMIT
+
+
+def timbre_ok(correlation: float, static: bool) -> bool:
+    """The one predicate for gate 6, shared by the live and recorded checks."""
+    if static:
+        return correlation <= STATIC_CENTROID_LIMIT
+    return correlation >= TIMBRE_CORRELATION_LIMIT
+
+
 def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     """Gate 5: the energy trajectory follows the planned curve.
 
@@ -450,7 +473,7 @@ def check_gate_5(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     """
     results: list[GateResult] = []
     correlation = energy_correlation(plan, mix)
-    if correlation < ENERGY_CORRELATION_LIMIT:
+    if not energy_correlation_ok(correlation):
         results.append(
             failure(
                 gate=5,
@@ -514,18 +537,17 @@ def check_gate_6(plan: Plan, mix: np.ndarray) -> list[GateResult]:
     results: list[GateResult] = []
     correlation, static = timbre_measurement(plan, mix)
     if static:
-        relative = correlation
-        if relative > STATIC_CENTROID_LIMIT:
+        if not timbre_ok(correlation, True):
             results.append(
                 failure(
                     gate=6,
-                    measured=relative,
+                    measured=correlation,
                     limit=STATIC_CENTROID_LIMIT,
                     check="timbre variance against a static plan",
                 )
             )
         return results
-    if correlation < TIMBRE_CORRELATION_LIMIT:
+    if not timbre_ok(correlation, False):
         results.append(
             failure(
                 gate=6,

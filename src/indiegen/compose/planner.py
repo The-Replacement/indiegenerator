@@ -500,36 +500,22 @@ def _planned_centroid(timbre: dict[str, int], function: str) -> int:
     return max(1, sum(timbre.values()) // len(timbre))
 
 
-# Which instrument a card kind puts in the plan. A card that is not an
-# instrument (the pink stream, the Frippertronics send, the dub chain) and a
-# card the plan does not know are both absent from the map.
-INSTRUMENT_BY_KIND: Mapping[str, str] = MappingProxyType(
-    {
-        "pad": "pad",
-        "poly_period": "poly_period",
-        "drone": "drone",
-        "pluck": "ks",
-        "kick": "kick",
-        "snare": "snare",
-        "hat": "hat",
-        "bass": "bass",
-        "deja_vu": "pluck",
-    }
-)
-
-
-def _card_instrument(card: TechniqueCard) -> str | None:
-    """The instrument a card puts in the plan, or None when it is not one."""
-    return INSTRUMENT_BY_KIND.get(card.kind)
+def _pattern_min_density(card: TechniqueCard) -> int:
+    return card.pattern.min_density  # type: ignore[union-attr]
 
 
 def _card_min_density(card: object) -> int:
     """The density at which a card's layer starts to play."""
-    if isinstance(card, (KickCard, SnareCard, HatCard, BassCard)):
-        return card.pattern.min_density
-    if isinstance(card, (PadCard, PolyPeriodCard, DroneCard, PluckCard, DejaVuCard)):
-        return card.min_density
-    return 0
+    spec = CARD_SPECS.get(getattr(card, "kind", ""))
+    if spec is None:
+        return 0
+    return spec.min_density(card)  # type: ignore[arg-type]
+
+
+def _card_instrument(card: TechniqueCard) -> str | None:
+    """The instrument a card puts in the plan, or None when it is not one."""
+    spec = CARD_SPECS.get(card.kind)
+    return spec.instrument if spec is not None else None
 
 
 def _playing_ranges(
@@ -715,6 +701,159 @@ def _form_for(station: StationPreset, duration_frames: int | None) -> Form:
     return station.forms[0].form
 
 
+@dataclass(frozen=True)
+class _PlanInputs:
+    """The values compose() has computed, handed to the assembler."""
+
+    preset_name: str
+    seed: int
+    station: StationPreset
+    lane: LanePreset
+    form: Form
+    frames: int
+    tempo: int
+    frames_per_beat: int
+    title_words: tuple[str, str]
+    dither_seed: int
+    cell: list[tuple[int, int]]
+    appearances: list[MotifAppearance]
+    sections: list[SectionPlan]
+    nodes: list[SectionProfile]
+    delay_send: DelaySend
+    reverb: ReverbSpec | None
+    frippertronics: FrippertronicsSpec | None
+    dub_chain: DubChainSpec | None
+    deck: list[DirectorMove]
+    replay: list[int]
+    events: list[Event]
+
+
+def _assemble_plan(inputs: _PlanInputs) -> Plan:
+    """Build the Plan from already-computed values. No RNG here."""
+    station = inputs.station
+    lane = inputs.lane
+    return Plan(
+        version=3,
+        format_version=station.format_version,
+        preset=inputs.preset_name,
+        seed=inputs.seed,
+        lane=lane.lane,
+        alias=lane.alias,
+        album=lane.album,
+        file_token=lane.file_token,
+        title=f"{inputs.title_words[0]} {inputs.title_words[1]}",
+        sample_rate=SAMPLE_RATE,
+        channels=2,
+        duration_frames=inputs.frames,
+        duration_range_frames=[
+            lane.duration_range_seconds[0] * SAMPLE_RATE,
+            lane.duration_range_seconds[1] * SAMPLE_RATE,
+        ],
+        form=inputs.form,
+        tempo_bpm=inputs.tempo,
+        frames_per_beat=inputs.frames_per_beat,
+        meter_numerator=lane.meter[0],
+        meter_denominator=lane.meter[1],
+        pulse=lane.pulse,
+        scale_midi=list(lane.scale_midi),
+        tuning_system=station.tuning_system,
+        chord_segments_per_section=station.chord_segments_per_section,
+        chromatic_budget_permille=station.chromatic_budget_permille,
+        chord_tone_intervals=list(station.chord_tone_intervals),
+        planar_offset_semitones=station.planar_offset_semitones,
+        ornament_permille=station.ornament_permille,
+        grace_offset_frames=station.grace_offset_frames,
+        double_copies=station.double_copies,
+        double_offset_frames=station.double_offset_frames,
+        fx_sends=list(lane.fx_sends),
+        techniques=[card.kind for card in lane.techniques],
+        strategy_deck=inputs.deck,
+        section_count_range=list(lane.section_count_range),
+        section_count=len(inputs.nodes),
+        sections=inputs.sections,
+        motif=MotifCell(notes=[MotifNote(midi=midi, duration_frames=duration) for midi, duration in inputs.cell]),
+        motif_appearances=inputs.appearances,
+        deja_vu_replay_permille=list(inputs.replay),
+        title_words=list(station.title_words),
+        lane_weights=list(station.lane_weights),
+        dither_seed=inputs.dither_seed,
+        dither_lsb=station.dither_lsb,
+        target_lufs_millibels=station.target_lufs_millibels,
+        ceiling_millibels=station.ceiling_millibels,
+        bus_gains=list(lane.bus_gains),
+        fade_in_frames=station.fade_in_frames,
+        fade_out_frames=station.fade_out_frames,
+        section_crossfade_frames=station.section_crossfade_frames,
+        track_number=station.track_number,
+        delay_sends=[inputs.delay_send],
+        reverb=inputs.reverb,
+        frippertronics=inputs.frippertronics,
+        dub_chain=inputs.dub_chain,
+        events=inputs.events,
+        director_log=[],
+    )
+
+
+def _build_fx_deck_and_replay(
+    station: StationPreset,
+    lane: LanePreset,
+    frames: int,
+    frames_per_beat: int,
+    frames_per_bar: int,
+    pulsed: bool,
+    events: list[Event],
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+    rng: SplitMix64,
+) -> tuple[DelaySend, ReverbSpec | None, FrippertronicsSpec | None, DubChainSpec | None, list[DirectorMove], list[int]]:
+    """Build the delay send, reverb, Frippertronics, dub chain, Director deck and deja-vu replay.
+
+    The RNG draws here (Frippertronics, dub chain, Director) happen in this
+    order, exactly as they did inline, so the draw sequence is unchanged.
+    """
+    delay = station.delay
+    delay_send = DelaySend(
+        name="dotted_eighth",
+        delay_frames=delay.delay_ratio.numerator * frames_per_beat // delay.delay_ratio.denominator,
+        feedback=delay.feedback,
+        damping=delay.damping,
+        send_millibels=delay.send_millibels,
+    )
+    reverb = (
+        ReverbSpec(
+            comb_delays_frames=list(lane.reverb.comb_delays_frames),
+            comb_feedback=lane.reverb.comb_feedback,
+            damping=lane.reverb.damping,
+            allpass_delays_frames=list(lane.reverb.allpass_delays_frames),
+            allpass_feedback=lane.reverb.allpass_feedback,
+            stereo_spread_frames=lane.reverb.stereo_spread_frames,
+            send_millibels=lane.reverb.send_millibels,
+        )
+        if lane.reverb is not None
+        else None
+    )
+    frippertronics = next(
+        (_frippertronics_spec(card, rng) for card in lane.techniques if isinstance(card, FrippertronicsCard)),
+        None,
+    )
+    dub_chain = next(
+        (_dub_chain_spec(card, rng) for card in lane.techniques if isinstance(card, DubChainCard)),
+        None,
+    )
+    deck = _draw_moves(
+        station.director,
+        frames,
+        frames_per_bar,
+        pulsed,
+        {event.instrument for event in events},
+        _playing_ranges(lane, nodes, boundaries),
+        rng,
+    )
+    deja_vu = next((card for card in lane.techniques if isinstance(card, DejaVuCard)), None)
+    replay = [replay_permille(deja_vu, index, len(nodes)) for index in range(len(nodes))] if deja_vu else []
+    return delay_send, reverb, frippertronics, dub_chain, deck, replay
+
+
 def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:
     """Build the frozen Plan from a preset and a seed.
 
@@ -819,107 +958,34 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
 
     _assert_sections_differ(preset, seed, sections, rhythm_variants)
 
-    delay = station.delay
-    delay_send = DelaySend(
-        name="dotted_eighth",
-        delay_frames=delay.delay_ratio.numerator * frames_per_beat // delay.delay_ratio.denominator,
-        feedback=delay.feedback,
-        damping=delay.damping,
-        send_millibels=delay.send_millibels,
+    delay_send, reverb, frippertronics, dub_chain, deck, replay = _build_fx_deck_and_replay(
+        station, lane, frames, frames_per_beat, frames_per_bar, pulsed, events, nodes, boundaries, rng
     )
-    reverb = (
-        ReverbSpec(
-            comb_delays_frames=list(lane.reverb.comb_delays_frames),
-            comb_feedback=lane.reverb.comb_feedback,
-            damping=lane.reverb.damping,
-            allpass_delays_frames=list(lane.reverb.allpass_delays_frames),
-            allpass_feedback=lane.reverb.allpass_feedback,
-            stereo_spread_frames=lane.reverb.stereo_spread_frames,
-            send_millibels=lane.reverb.send_millibels,
-        )
-        if lane.reverb is not None
-        else None
-    )
-    frippertronics = next(
-        (_frippertronics_spec(card, rng) for card in lane.techniques if isinstance(card, FrippertronicsCard)),
-        None,
-    )
-    dub_chain = next(
-        (_dub_chain_spec(card, rng) for card in lane.techniques if isinstance(card, DubChainCard)),
-        None,
-    )
-    deck = _draw_moves(
-        station.director,
-        frames,
-        frames_per_bar,
-        pulsed,
-        {event.instrument for event in events},
-        _playing_ranges(lane, nodes, boundaries),
-        rng,
-    )
-    deja_vu = next((card for card in lane.techniques if isinstance(card, DejaVuCard)), None)
-    replay = [replay_permille(deja_vu, index, len(nodes)) for index in range(len(nodes))] if deja_vu else []
 
-    return Plan(
-        version=3,
-        format_version=station.format_version,
-        preset=preset.name,
+    inputs = _PlanInputs(
+        preset_name=preset.name,
         seed=seed,
-        lane=lane.lane,
-        alias=lane.alias,
-        album=lane.album,
-        file_token=lane.file_token,
-        title=f"{title_words[0]} {title_words[1]}",
-        sample_rate=SAMPLE_RATE,
-        channels=2,
-        duration_frames=frames,
-        duration_range_frames=[
-            lane.duration_range_seconds[0] * SAMPLE_RATE,
-            lane.duration_range_seconds[1] * SAMPLE_RATE,
-        ],
+        station=station,
+        lane=lane,
         form=form,
-        tempo_bpm=tempo,
+        frames=frames,
+        tempo=tempo,
         frames_per_beat=frames_per_beat,
-        meter_numerator=lane.meter[0],
-        meter_denominator=lane.meter[1],
-        pulse=lane.pulse,
-        scale_midi=list(lane.scale_midi),
-        tuning_system=station.tuning_system,
-        chord_segments_per_section=station.chord_segments_per_section,
-        chromatic_budget_permille=station.chromatic_budget_permille,
-        chord_tone_intervals=list(station.chord_tone_intervals),
-        planar_offset_semitones=station.planar_offset_semitones,
-        ornament_permille=station.ornament_permille,
-        grace_offset_frames=station.grace_offset_frames,
-        double_copies=station.double_copies,
-        double_offset_frames=station.double_offset_frames,
-        fx_sends=list(lane.fx_sends),
-        techniques=[card.kind for card in lane.techniques],
-        strategy_deck=deck,
-        section_count_range=list(lane.section_count_range),
-        section_count=len(nodes),
-        sections=sections,
-        motif=MotifCell(notes=[MotifNote(midi=midi, duration_frames=duration) for midi, duration in cell]),
-        motif_appearances=appearances,
-        deja_vu_replay_permille=list(replay),
-        title_words=list(station.title_words),
-        lane_weights=list(station.lane_weights),
+        title_words=title_words,
         dither_seed=dither_seed,
-        dither_lsb=station.dither_lsb,
-        target_lufs_millibels=station.target_lufs_millibels,
-        ceiling_millibels=station.ceiling_millibels,
-        bus_gains=list(lane.bus_gains),
-        fade_in_frames=station.fade_in_frames,
-        fade_out_frames=station.fade_out_frames,
-        section_crossfade_frames=station.section_crossfade_frames,
-        track_number=station.track_number,
-        delay_sends=[delay_send],
+        cell=cell,
+        appearances=appearances,
+        sections=sections,
+        nodes=nodes,
+        delay_send=delay_send,
         reverb=reverb,
         frippertronics=frippertronics,
         dub_chain=dub_chain,
+        deck=deck,
+        replay=replay,
         events=events,
-        director_log=[],
     )
+    return _assemble_plan(inputs)
 
 
 @dataclass(frozen=True)
@@ -935,6 +1001,21 @@ class _LaneFrames:
 
 
 CardEvents = Callable[[TechniqueCard, SplitMix64, TechniqueContext, _LaneFrames], Sequence[Event]]
+
+
+@dataclass(frozen=True)
+class CardSpec:
+    """The single registration of one technique card kind.
+
+    Everything the composer needs to know about a card kind lives here, so
+    adding a technique means adding one entry to ``CARD_SPECS`` and nothing
+    else: no new branch in ``_card_instrument``, no new branch in
+    ``_card_min_density``, no new row in a dispatch table.
+    """
+
+    events: CardEvents
+    instrument: str | None
+    min_density: Callable[[TechniqueCard], int]
 
 
 def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
@@ -1015,20 +1096,24 @@ def _no_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, fram
 # this table is a preset bug the composer reports; a kind that is present but
 # does not play is ``_no_events``, said out loud. The old ``else`` branch sent
 # every unrecognised card to the drone builder.
-_CARD_EVENTS: Mapping[str, CardEvents] = MappingProxyType(
+def _min_density_card(card: TechniqueCard) -> int:
+    return card.min_density  # type: ignore[union-attr]
+
+
+CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
     {
-        "pad": _pad_events,
-        "poly_period": _poly_period_events,
-        "pluck": _pluck_events,
-        "kick": _kick_events,
-        "snare": _snare_events,
-        "hat": _hat_events,
-        "bass": _bass_events,
-        "deja_vu": _deja_vu_events,
-        "drone": _drone_events,
-        "pink": _no_events,
-        "frippertronics": _no_events,
-        "dub_chain": _no_events,
+        "pad": CardSpec(_pad_events, "pad", _min_density_card),
+        "poly_period": CardSpec(_poly_period_events, "poly_period", _min_density_card),
+        "pluck": CardSpec(_pluck_events, "ks", _min_density_card),
+        "kick": CardSpec(_kick_events, "kick", _pattern_min_density),
+        "snare": CardSpec(_snare_events, "snare", _pattern_min_density),
+        "hat": CardSpec(_hat_events, "hat", _pattern_min_density),
+        "bass": CardSpec(_bass_events, "bass", _pattern_min_density),
+        "deja_vu": CardSpec(_deja_vu_events, "pluck", _min_density_card),
+        "drone": CardSpec(_drone_events, "drone", _min_density_card),
+        "pink": CardSpec(_no_events, None, lambda _: 0),
+        "frippertronics": CardSpec(_no_events, None, lambda _: 0),
+        "dub_chain": CardSpec(_no_events, None, lambda _: 0),
     }
 )
 
@@ -1055,10 +1140,10 @@ def _events_for_lane(
     )
     events: list[Event] = []
     for card in lane.techniques:
-        builder = _CARD_EVENTS.get(card.kind)
-        if builder is None:
+        spec = CARD_SPECS.get(card.kind)
+        if spec is None:
             raise PlanError(f"unknown technique card {card.kind!r}", preset=lane.lane, seed=ctx.seed)
-        events.extend(builder(card, rng, ctx, frames))
+        events.extend(spec.events(card, rng, ctx, frames))
     return events
 
 

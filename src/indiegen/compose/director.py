@@ -47,20 +47,6 @@ SOLO_TEXTURE: str = "solo_texture"
 SWAP_DELAY_TO_TRIPLETS: str = "swap_delay_to_triplets"
 REHARMONIZE_RELATIVE: str = "reharmonize_relative"
 
-STRATEGIES: tuple[str, ...] = (
-    TRANSPOSE_UP_FOURTH,
-    TRANSPOSE_MOTIF,
-    INVERT_MOTIF,
-    RETROGRADE_MOTIF,
-    DROP_DRUMS,
-    DROP_KICK,
-    HALF_TIME,
-    DROP_BASS,
-    SOLO_TEXTURE,
-    SWAP_DELAY_TO_TRIPLETS,
-    REHARMONIZE_RELATIVE,
-)
-
 # The instruments the rhythm strategies act on.
 RHYTHM_INSTRUMENTS: tuple[str, ...] = ("kick", "snare", "hat")
 

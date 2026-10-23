@@ -153,7 +153,7 @@ This template is maintained by [The-Replacement](https://github.com/The-Replacem
 - Linting: `ruff check`
 - Type checking: `mypy .`
 - License: Apache-2.0
-- Python: >=3.11
+- Python: >=3.15
 
 ### Entry Points Pattern
 ```python

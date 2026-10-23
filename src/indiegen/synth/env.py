@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import math
-
 import numpy as np
-from scipy.signal import lfilter
 
 from indiegen.gain import millibels_to_gain_array
 from indiegen.plan import EventBase, Plan
+from indiegen.synth.filter import one_pole_highpass, one_pole_highpass_state
 
 DC_BLOCKER_HZ: float = 20.0
 
@@ -25,9 +23,7 @@ def dc_block(signal: np.ndarray, sample_rate: int) -> np.ndarray:
     The transfer function is (1 - z^-1) / (1 - r z^-1): zero at DC, and a
     high pass above the corner.
     """
-    coefficient = math.exp(-2.0 * math.pi * DC_BLOCKER_HZ / sample_rate)
-    blocked: np.ndarray = lfilter([1.0, -1.0], [1.0, -coefficient], signal)
-    return blocked
+    return one_pole_highpass(signal, DC_BLOCKER_HZ, sample_rate)
 
 
 def dc_block_state(
@@ -41,10 +37,7 @@ def dc_block_state(
     behind on every block, and the reverb's comb bank multiplies that
     residual by fifty.
     """
-    coefficient = math.exp(-2.0 * math.pi * DC_BLOCKER_HZ / sample_rate)
-    filtered, carry = lfilter([1.0, -1.0], [1.0, -coefficient], signal, zi=state)
-    result: np.ndarray = filtered
-    return result, carry
+    return one_pole_highpass_state(signal, DC_BLOCKER_HZ, sample_rate, state)
 
 
 def note_envelope_block(event: EventBase, start: int, stop: int) -> np.ndarray:
@@ -59,7 +52,7 @@ def note_envelope_block(event: EventBase, start: int, stop: int) -> np.ndarray:
     count = stop - start
     gain = np.ones(count, dtype=np.float64)
     if event.attack_frames > 0:
-        if getattr(event, "envelope_curve", 0) == 1:
+        if event.envelope_curve == 1:
             ramp = 1.0 - np.exp(-4.0 * np.arange(start, stop, dtype=np.float64) / event.attack_frames)
             gain *= np.minimum(1.0, ramp)
         else:

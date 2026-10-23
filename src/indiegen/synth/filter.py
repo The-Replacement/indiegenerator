@@ -1,11 +1,15 @@
-"""Biquads. The state is a value: coefficients in, audio and new state out."""
+"""Biquads and one-pole filters.
+
+The state is a value: coefficients in, audio and new state out. The one-pole
+helpers live here too, so there is a single implementation of the formula.
+"""
 
 from __future__ import annotations
 
 import math
 
 import numpy as np
-from scipy.signal import sosfilt
+from scipy.signal import lfilter, sosfilt
 
 
 def lowpass_sos(cutoff_hz: int, q_num: int, q_den: int, sample_rate: int) -> np.ndarray:
@@ -48,3 +52,34 @@ def apply_biquad(sos: np.ndarray, block: np.ndarray, state: np.ndarray) -> tuple
     """
     filtered, new_state = sosfilt(sos, block, zi=state, axis=0)
     return np.asarray(filtered, dtype=np.float64), np.asarray(new_state, dtype=np.float64)
+
+
+def _coefficient(cutoff_hz: float, sample_rate: int) -> float:
+    return math.exp(-2.0 * math.pi * cutoff_hz / sample_rate)
+
+
+def one_pole_lowpass(signal: np.ndarray, cutoff_hz: float, sample_rate: int) -> np.ndarray:
+    """A one-pole low pass: (1 - r) / (1 - r z^-1)."""
+    coefficient = _coefficient(cutoff_hz, sample_rate)
+    filtered: np.ndarray = lfilter([1.0 - coefficient], [1.0, -coefficient], signal)
+    return filtered
+
+
+def one_pole_highpass(signal: np.ndarray, cutoff_hz: float, sample_rate: int) -> np.ndarray:
+    """A one-pole high pass: (1 - z^-1) / (1 - r z^-1)."""
+    coefficient = _coefficient(cutoff_hz, sample_rate)
+    filtered: np.ndarray = lfilter([1.0, -1.0], [1.0, -coefficient], signal)
+    return filtered
+
+
+def one_pole_highpass_state(
+    signal: np.ndarray,
+    cutoff_hz: float,
+    sample_rate: int,
+    state: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """The high pass, carrying its filter state across blocks."""
+    coefficient = _coefficient(cutoff_hz, sample_rate)
+    filtered, carry = lfilter([1.0, -1.0], [1.0, -coefficient], signal, zi=state)
+    result: np.ndarray = filtered
+    return result, carry

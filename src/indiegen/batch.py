@@ -37,11 +37,6 @@ from indiegen.validate import (
 )
 from indiegen.writer import pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
 
-# The forms are dealt out of the station's proportions, spread over the
-# seeds: a batch of twenty is twelve full tracks, five longforms and three
-# interludes.
-FORM_STRIDE: int = 7
-
 
 @dataclass(frozen=True)
 class TrackOutcome:

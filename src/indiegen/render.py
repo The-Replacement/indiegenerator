@@ -184,7 +184,22 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
     )
 
 
-def _mix_voices(  # noqa: C901
+def _section_index_of(frame: int, plan: Plan) -> int:
+    """The index of the section containing ``frame``, or -1 when none."""
+    for index, section in enumerate(plan.sections):
+        if section.start_frame <= frame < section.end_frame:
+            return index
+    return -1
+
+
+def _is_muted(event: Event, section_index: int, plan: Plan) -> bool:
+    """Whether ``event`` is silenced in its section by an arrangement mute."""
+    return (event.kind, section_index) in {
+        (mute.kind, mute.section_index) for mute in plan.arrangement_mutes if mute.mute == 1000
+    }
+
+
+def _mix_voices(
     plan: Plan,
     events: list[Event],
     voices: list[VoiceState],
@@ -203,21 +218,9 @@ def _mix_voices(  # noqa: C901
     drum_bus = np.zeros((count, plan.channels), dtype=np.float64)
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
 
-    # Arrangement mutes: set of (kind, section_index) that are silenced.
-    muted: set[tuple[str, int]] = set()
-    for m in plan.arrangement_mutes:
-        if m.mute == 1000:
-            muted.add((m.kind, m.section_index))
-
-    def _section_index_of(frame: int) -> int:
-        for i, sec in enumerate(plan.sections):
-            if sec.start_frame <= frame < sec.end_frame:
-                return i
-        return -1
-
     for index, event in enumerate(events):
-        si = _section_index_of(event.start_frame)
-        if (event.kind, si) in muted:
+        si = _section_index_of(event.start_frame, plan)
+        if _is_muted(event, si, plan):
             # Advance voice state but produce no audio.
             _, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
             continue
@@ -252,20 +255,22 @@ def _mix_voices(  # noqa: C901
     return main, drum_bus, ks_bus
 
 
-def _render_block(  # noqa: C901
+def _apply_effects(
     plan: Plan,
-    events: list[Event],
-    voices: list[VoiceState],
+    main: np.ndarray,
+    ks_bus: np.ndarray,
     bus: BusState,
     start: int,
     stop: int,
+    count: int,
     kick_hits: list[int],
 ) -> tuple[np.ndarray, BusState]:
-    """One block of the bus graph: the voices, then the effect chain."""
-    count = stop - start
-    main, drum_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
-    trims = bus.trims
+    """The effect chain of one block: dub, delay, filter, Frippertronics, reverb, sidechain.
 
+    Returns the updated main bus and the bus state carrying the effect states
+    across the block boundary. The drum-bus compressor and the section/fade
+    gains are applied by the caller.
+    """
     delay = bus.delay
     filter_state = bus.filter
     reverb = bus.reverb
@@ -324,6 +329,33 @@ def _render_block(  # noqa: C901
         )
         main = main * gain[:, np.newaxis]
 
+    return main, BusState(
+        delay=delay,
+        filter=filter_state,
+        reverb=reverb,
+        frippertronics=frippertronics,
+        dub=dub,
+        sidechain=sidechain,
+        trims=bus.trims,
+        drum_comp=bus.drum_comp,
+    )
+
+
+def _render_block(
+    plan: Plan,
+    events: list[Event],
+    voices: list[VoiceState],
+    bus: BusState,
+    start: int,
+    stop: int,
+    kick_hits: list[int],
+) -> tuple[np.ndarray, BusState]:
+    """One block of the bus graph: the voices, then the effect chain."""
+    count = stop - start
+    main, drum_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
+
+    main, bus = _apply_effects(plan, main, ks_bus, bus, start, stop, count, kick_hits)
+
     # Drum-bus compressor: applied to the drum bus before it joins the mix.
     drum_comp = bus.drum_comp
     if drum_comp is not None and plan.drum_bus_comp is not None:
@@ -335,13 +367,13 @@ def _render_block(  # noqa: C901
     main = main * gain[:, np.newaxis]
 
     return main, BusState(
-        delay=delay,
-        filter=filter_state,
-        reverb=reverb,
-        frippertronics=frippertronics,
-        dub=dub,
-        sidechain=sidechain,
-        trims=trims,
+        delay=bus.delay,
+        filter=bus.filter,
+        reverb=bus.reverb,
+        frippertronics=bus.frippertronics,
+        dub=bus.dub,
+        sidechain=bus.sidechain,
+        trims=bus.trims,
         drum_comp=drum_comp,
     )
 

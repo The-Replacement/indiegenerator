@@ -12,6 +12,7 @@ sample peak, the correlation and the number of clipped samples.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -36,7 +37,7 @@ class CodecComparison(BaseModel):
     clipped: int
 
 
-FFMPEG: str = "ffmpeg"
+FFMPEG: str = shutil.which("ffmpeg") or "ffmpeg"
 MP3_BITRATE: str = "128k"
 
 

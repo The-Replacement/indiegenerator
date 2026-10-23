@@ -85,11 +85,21 @@ class Catalog:
         }
 
 
+MAX_SIDECAR_BYTES: int = 50 * 1024 * 1024
+
+
+def _reject_json_constant(value: str) -> Any:
+    """Sidecars are data, not code: NaN/Infinity are not valid measurements."""
+    raise ValueError(f"invalid JSON constant in sidecar: {value}")
+
+
 def read_sidecar(path: Path) -> dict[str, Any] | None:
     """Read one sidecar, or nothing if it is not a sidecar."""
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except OSError, json.JSONDecodeError:
+        if path.stat().st_size > MAX_SIDECAR_BYTES:
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_json_constant)
+    except OSError, json.JSONDecodeError, ValueError:
         return None
     if not isinstance(payload, dict) or payload.get("schema") != "indiegen/sidecar/1":
         return None
@@ -137,7 +147,11 @@ def build_catalog(directory: Path) -> Catalog:
             continue
         flac = sidecar.with_suffix(".flac")
         size = flac.stat().st_size if flac.is_file() else 0
-        entry = entry_from_sidecar(flac, payload, size)
+        try:
+            entry = entry_from_sidecar(flac, payload, size)
+        except TypeError, ValueError, KeyError:
+            # A malformed sidecar must not take down the whole catalog: skip it.
+            continue
         if entry is None:
             continue
         catalog.entries[entry.pcm_sha256] = entry
