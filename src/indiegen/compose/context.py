@@ -6,7 +6,7 @@ may not look at a clock.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TechniqueContext(BaseModel):
@@ -30,6 +30,10 @@ class TechniqueContext(BaseModel):
     section_scales: list[list[int]]
     section_roots: list[int]
     section_functions: list[str]
+    tuning_system: int = Field(default=0, ge=0, le=1)
+    chord_segments_per_section: int = Field(default=1, ge=1, le=8)
+    chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
+    chord_tone_intervals: list[int] = []
 
     def section_at(self, frame: int) -> int:
         """The section a frame falls in, from the boundaries alone."""

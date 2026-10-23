@@ -21,6 +21,7 @@ def plan_drone(
     start_frame: int,
     duration_frames: int,
     root_midi: int,
+    tuning_system: int = 0,
 ) -> DroneEvent:
     """Draw the partials of one drone stack.
 
@@ -29,6 +30,8 @@ def plan_drone(
     """
     count = rng.between(card.partial_count.min, card.partial_count.max)
     ratios = list(card.ratios)
+    if tuning_system == 1:
+        ratios = [r for r in ratios if not (r.numerator == 5 and r.denominator == 4)]
     partials: list[DriftingPartial] = []
     for index in range(count):
         ratio = ratios[index % len(ratios)]

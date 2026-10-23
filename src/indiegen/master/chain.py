@@ -49,18 +49,26 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
         raise RenderError("non-finite sample in the mix", preset=plan.preset, seed=plan.seed, block_index=0)
     target = plan.target_lufs_millibels / 1000.0
     ceiling = millibels_to_gain(plan.ceiling_millibels)
-    peaks = peak_envelope(stereo, block)
 
-    # The first gain is the one that lands the mix on the target, and the
-    # loop corrects it: the limiter removes energy, so the loudness of the
-    # limited signal is not the loudness of the mix.
-    measured = integrated_lufs(stereo, plan.sample_rate)
+    # Pre-limiter saturation (L21): tone shaping, not loudness. Sits before
+    # the limiter so the ceiling stays the only loudness authority.
+    drive = getattr(plan, "saturation_drive_millibels", 0)
+    mix = getattr(plan, "saturation_mix_permille", 0) / 1000.0
+    processed = stereo
+    if mix > 0 and drive > 0:
+        gain_drive = millibels_to_gain(drive)
+        saturated = np.tanh(stereo * gain_drive)
+        processed = (1.0 - mix) * stereo + mix * saturated
+
+    peaks = peak_envelope(processed, block)
+
+    measured = integrated_lufs(processed, plan.sample_rate)
     gain = decibels_to_gain(target - measured) if math.isfinite(measured) else 1.0
-    limited = stereo
+    limited = processed
     best: tuple[float, np.ndarray] | None = None
     previous_error = 0.0
     for _ in range(MAX_ITERATIONS):
-        limited, _, _ = limit(stereo, gain, peaks, ceiling, block)
+        limited, _, _ = limit(processed, gain, peaks, ceiling, block)
         measured = integrated_lufs(limited, plan.sample_rate)
         if best is None or abs(target - measured) < abs(target - best[0]):
             best = (measured, limited)

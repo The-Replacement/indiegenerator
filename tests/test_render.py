@@ -65,10 +65,10 @@ def test_the_pad_declares_three_partials_with_small_detunes(reference_plan: Plan
     pads = [event for event in reference_plan.events if event.kind == "pad"]
     assert pads
     for event in pads:
-        assert event.partials == 3
-        for detune in event.partial_detune_cents:
-            assert isinstance(detune, int)
-            assert -5 <= detune <= 5
+        assert len(event.partials) == 3
+        for partial in event.partials:
+            assert isinstance(partial.detune_cents, int)
+            assert -5 <= partial.detune_cents <= 5
         assert event.lfo_rate.numerator > 0
         assert event.lfo_rate.denominator > 0
         assert isinstance(event.lfo_depth_cents, int)

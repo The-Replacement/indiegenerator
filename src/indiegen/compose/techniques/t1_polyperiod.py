@@ -14,6 +14,7 @@ from indiegen.compose.rng import SplitMix64
 from indiegen.config import PolyPeriodCard
 from indiegen.errors import PlanError
 from indiegen.plan import Partial, PolyPeriodEvent, PolyPeriodVoice
+from indiegen.theory.scales import chord_pool
 
 MINOR_SECOND_SEMITONES: frozenset[int] = frozenset({1, 11})
 DENSITY_MIN: float = 0.5
@@ -51,14 +52,15 @@ def _minor_second_pairs(pitches: list[int]) -> int:
 
 
 def _usable_intervals(card: PolyPeriodCard, ctx: TechniqueContext) -> list[int]:
-    """The chord tones the scale can carry, as the prefix the voices take."""
-    intervals: list[int] = []
-    for interval in card.chord_intervals:
-        if ctx.root_midi + interval in ctx.scale_midi:
-            intervals.append(interval)
-        else:
-            break
-    return intervals or [0]
+    """The chord tones the scale and the chromatic budget admit.
+
+    The station may declare its own chromatic sonority; the card's
+    ``chord_intervals`` are the fallback. At ``chromatic_budget_permille = 0``
+    this is exactly the old filter: the prefix stops at the first tone the
+    scale cannot carry.
+    """
+    declared = ctx.chord_tone_intervals or card.chord_intervals
+    return chord_pool(ctx.scale_midi, ctx.root_midi, declared, ctx.chromatic_budget_permille)
 
 
 def _draw_periods(rng: SplitMix64, card: PolyPeriodCard, count: int, sample_rate: int) -> list[int]:

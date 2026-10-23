@@ -40,6 +40,7 @@ class PadCard(FrozenModel):
     lfo_depth_cents: int
     amplitude_millibels: int
     min_density: int
+    envelope_segments: int = Field(default=0, ge=0, le=4)
 
 
 class PolyPeriodCard(FrozenModel):
@@ -173,7 +174,8 @@ class BassCard(FrozenModel):
     cutoff_hz: int
     decay_frames: int
     octave_jump_permille: int
-    fifth_permille: int
+    fifth_permille: int = Field(ge=0, le=1000)
+    midi_offset_semitones: int = Field(default=-12, ge=-12, le=12)
 
 
 class PinkCard(FrozenModel):
@@ -320,7 +322,6 @@ class StationPreset(FrozenModel):
     kind: Literal["station"]
     lane_weights: list[LaneWeight]
     forms: list[FormCard]
-    palette: list[str]
     motif_bank: list[list[int]]
     motif_rhythm: list[int]
     title_words: list[str]
@@ -331,6 +332,15 @@ class StationPreset(FrozenModel):
     section_crossfade_frames: int
     target_lufs_millibels: int
     ceiling_millibels: int
+    tuning_system: int = Field(default=0, ge=0, le=1)
+    chord_segments_per_section: int = Field(default=1, ge=1, le=8)
+    chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
+    chord_tone_intervals: list[int] = []
+    planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
+    ornament_permille: int = Field(default=0, ge=0, le=200)
+    grace_offset_frames: int = Field(default=0, ge=0, le=500)
+    double_copies: int = Field(default=0, ge=0, le=2)
+    double_offset_frames: int = Field(default=0, ge=0, le=50)
     dither_lsb: int
     track_number: int
     format_version: int

@@ -121,6 +121,31 @@ class BusGain(FrozenModel):
     gain_millibels: int
 
 
+class DrumBusComp(FrozenModel):
+    """A compressor on the drum bus: threshold, ratio, attack, release, makeup, mix."""
+
+    threshold_millibels: int = Field(default=0, ge=-6000, le=0)
+    ratio_permille: int = Field(default=2000, ge=2000, le=10000)
+    attack_frames: int = Field(default=10, ge=10, le=500)
+    release_frames: int = Field(default=1000, ge=1000, le=100000)
+    makeup_millibels: int = Field(default=0, ge=0, le=6000)
+    mix_permille: int = Field(default=0, ge=0, le=1000)
+
+
+class ArrangementMute(FrozenModel):
+    """A per-section per-instrument mute (binary: 0 or 1000)."""
+
+    kind: str
+    section_index: int = Field(ge=0)
+    mute: int = Field(ge=0, le=1000)
+
+    @model_validator(mode="after")
+    def _poles_only(self) -> ArrangementMute:
+        if self.mute not in (0, 1000):
+            raise PlanError(f"arrangement_mutes mute must be 0 or 1000, got {self.mute}")
+        return self
+
+
 class DirectorMove(FrozenModel):
     """A strategy from the deck, and - in the log - a move the Director made."""
 
@@ -172,16 +197,42 @@ class EventBase(FrozenModel):
     amplitude_millibels: int
     attack_frames: int = Field(ge=0)
     release_frames: int = Field(ge=0)
+    envelope_curve: int = Field(default=0, ge=0, le=1)
+
+
+class PadEnvelopeSegment(FrozenModel):
+    """One amplitude-permutation segment of a pad event.
+
+    ``delta_frames`` is the segment's length measured from the previous
+    boundary (the first from the event start); the last segment runs to the
+    event's end. The permutation reassigns the partial weights: partial ``i``
+    sounds with the base weight of partial ``permutation[i]``.
+    """
+
+    delta_frames: int = Field(ge=1)
+    permutation: list[int] = Field(min_length=2)
 
 
 class PadEvent(EventBase):
     """A sustained additive pad. The S0 instrument, unchanged."""
 
     kind: Literal["pad"]
-    partials: int = Field(ge=1)
-    partial_detune_cents: list[int]
+    partials: list[Partial] = Field(min_length=1, max_length=9)
     lfo_rate: Rational
     lfo_depth_cents: int
+    envelope_segments: list[PadEnvelopeSegment] = []
+
+    @model_validator(mode="after")
+    def _permutations_match_partials(self) -> Self:
+        """Each segment's permutation must be a permutation of the partials."""
+        size = len(self.partials)
+        for segment in self.envelope_segments:
+            if sorted(segment.permutation) != list(range(size)):
+                raise PlanError(
+                    f"pad envelope segment permutation {segment.permutation} "
+                    f"is not a permutation of {size} partial indices"
+                )
+        return self
 
 
 class PolyPeriodVoice(FrozenModel):
@@ -341,7 +392,6 @@ class SectionPlan(FrozenModel):
     root_midi: int
     texture: str
     reprise_of: int
-    transform: str
     centroid_hz: int = Field(gt=0)
 
 
@@ -418,6 +468,7 @@ class Plan(FrozenModel):
     preset: str
     seed: int
     lane: str
+    tuning_system: int = Field(default=0, ge=0, le=1)
     alias: str
     album: str
     file_token: str
@@ -433,12 +484,20 @@ class Plan(FrozenModel):
     meter_denominator: int
     pulse: Literal["bars", "seconds"]
     scale_midi: list[int]
-    palette: list[str]
     fx_sends: list[FxSend]
     techniques: list[str]
     strategy_deck: list[DirectorMove]
     section_count_range: list[int]
     section_count: int
+    chord_segments_per_section: int = Field(default=1, ge=1, le=8)
+    chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
+    chord_tone_intervals: list[int] = []
+    planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
+    ornament_permille: int = Field(default=0, ge=0, le=200)
+    grace_offset_frames: int = Field(default=0, ge=0, le=500)
+    double_copies: int = Field(default=0, ge=0, le=2)
+    double_offset_frames: int = Field(default=0, ge=0, le=50)
+    arrangement_mutes: list[ArrangementMute] = []
     sections: list[SectionPlan]
     motif: MotifCell
     motif_appearances: list[MotifAppearance]
@@ -449,7 +508,10 @@ class Plan(FrozenModel):
     dither_lsb: int
     target_lufs_millibels: int
     ceiling_millibels: int
+    saturation_drive_millibels: int = Field(default=0, ge=0, le=1800)
+    saturation_mix_permille: int = Field(default=0, ge=0, le=1000)
     bus_gains: list[BusGain]
+    drum_bus_comp: DrumBusComp | None = None
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int
@@ -477,8 +539,21 @@ class Plan(FrozenModel):
         return self
 
     @model_validator(mode="after")
-    def _enforce_integer_leaves(self) -> Self:
-        reject_non_integer_leaves(self.model_dump(), "plan")
+    def _chord_tone_intervals_shape(self) -> Self:
+        """A declared chromatic sonority: 3–5 tones, each a pitch class 0..11."""
+        tones = self.chord_tone_intervals
+        if tones and not 3 <= len(tones) <= 5:
+            raise PlanError(f"chord_tone_intervals needs 3..5 tones, got {len(tones)}")
+        if any(not 0 <= tone <= 11 for tone in tones):
+            raise PlanError(f"chord_tone_intervals must be pitch classes 0..11, got {tones}")
+        return self
+
+    @model_validator(mode="after")
+    def _double_consistency(self) -> Self:
+        if self.double_copies > 0 and self.double_offset_frames < 1:
+            raise PlanError("double_copies > 0 requires double_offset_frames >= 1")
+        if self.double_copies == 0 and self.double_offset_frames > 0:
+            raise PlanError("double_offset_frames requires double_copies > 0")
         return self
 
 

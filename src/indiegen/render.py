@@ -58,6 +58,7 @@ from indiegen.plan import (
     SnareEvent,
 )
 from indiegen.synth.drone import DroneState, drone_state, render_drone_block
+from indiegen.synth.drumcomp import DrumCompState, drum_comp_state, render_drum_comp_block
 from indiegen.synth.drums import DrumState, drum_state, render_drum_block
 from indiegen.synth.env import fade_gain, note_envelope_block, section_gain
 from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos
@@ -88,6 +89,7 @@ class BusState:
     dub: DubChainState | None
     sidechain: SidechainState | None
     trims: dict[str, float]
+    drum_comp: DrumCompState | None
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -169,6 +171,7 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
     if plan.dub_chain is not None:
         dub = dub_chain_state(plan.dub_chain, plan.sample_rate)
         sidechain = sidechain_state()
+    drum_comp = drum_comp_state() if plan.drum_bus_comp is not None else None
     return BusState(
         delay=delay,
         filter=filter_state,
@@ -177,10 +180,11 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
         dub=dub,
         sidechain=sidechain,
         trims=bus_gains(plan.bus_gains),
+        drum_comp=drum_comp,
     )
 
 
-def _mix_voices(
+def _mix_voices(  # noqa: C901
     plan: Plan,
     events: list[Event],
     voices: list[VoiceState],
@@ -196,21 +200,33 @@ def _mix_voices(
     """
     count = stop - start
     main = np.zeros((count, plan.channels), dtype=np.float64)
-    kick_bus = np.zeros((count, plan.channels), dtype=np.float64)
+    drum_bus = np.zeros((count, plan.channels), dtype=np.float64)
     ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
 
+    # Arrangement mutes: set of (kind, section_index) that are silenced.
+    muted: set[tuple[str, int]] = set()
+    for m in plan.arrangement_mutes:
+        if m.mute == 1000:
+            muted.add((m.kind, m.section_index))
+
+    def _section_index_of(frame: int) -> int:
+        for i, sec in enumerate(plan.sections):
+            if sec.start_frame <= frame < sec.end_frame:
+                return i
+        return -1
+
     for index, event in enumerate(events):
+        si = _section_index_of(event.start_frame)
+        if (event.kind, si) in muted:
+            # Advance voice state but produce no audio.
+            _, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
+            continue
         if isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
             # A drum pattern plays itself: the hits carry their own pan, so
             # the block is already stereo.
             stereo, voices[index] = _voice_block(event, plan.sample_rate, start, stop, voices[index])
             level = trim(trims, event.kind)
-            if isinstance(event, KickEvent):
-                # The kick is kept apart: the sidechain ducks everything
-                # else, and the kick is what ducks it.
-                kick_bus += stereo * level
-            else:
-                main += stereo * level
+            drum_bus += stereo * level
             continue
         event_start = event.start_frame
         event_stop = event_start + event.duration_frames
@@ -233,10 +249,10 @@ def _mix_voices(
             main[offset:end, 0] += voice * left
             main[offset:end, 1] += voice * right
 
-    return main, kick_bus, ks_bus
+    return main, drum_bus, ks_bus
 
 
-def _render_block(
+def _render_block(  # noqa: C901
     plan: Plan,
     events: list[Event],
     voices: list[VoiceState],
@@ -247,7 +263,7 @@ def _render_block(
 ) -> tuple[np.ndarray, BusState]:
     """One block of the bus graph: the voices, then the effect chain."""
     count = stop - start
-    main, kick_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
+    main, drum_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
     trims = bus.trims
 
     delay = bus.delay
@@ -264,25 +280,24 @@ def _render_block(
         ks_bus = ks_bus * level
 
     if delay is not None and plan.delay_sends:
-        # The send's level is the level of the send: the delay is fed at the
-        # declared level and its wet comes back at unity.
-        level = millibels_to_gain(plan.delay_sends[0].send_millibels)
-        wet, delay = render_delay(ks_bus * level, delay, plan.delay_sends[0])
-        main += wet
+        for send in plan.delay_sends:
+            level = millibels_to_gain(send.send_millibels)
+            wet, delay = render_delay(ks_bus * level, delay, send)
+            main += wet
 
     if filter_state is not None and plan.fx_sends:
-        send = plan.fx_sends[0]
-        sos = lowpass_sos(send.cutoff_hz, send.q_num, send.q_den, plan.sample_rate)
-        filtered, filter_state = apply_biquad(sos, main, filter_state)
-        if not bool(np.all(np.isfinite(filtered))):
-            raise RenderError(
-                "non-finite sample after filtering",
-                preset=plan.preset,
-                seed=plan.seed,
-                block_index=start // BLOCK_SIZE,
-            )
-        level = millibels_to_gain(send.send_millibels)
-        main = main + (filtered - main) * level
+        for fx_send in plan.fx_sends:
+            sos = lowpass_sos(fx_send.cutoff_hz, fx_send.q_num, fx_send.q_den, plan.sample_rate)
+            filtered, filter_state = apply_biquad(sos, main, filter_state)
+            if not bool(np.all(np.isfinite(filtered))):
+                raise RenderError(
+                    "non-finite sample after filtering",
+                    preset=plan.preset,
+                    seed=plan.seed,
+                    block_index=start // BLOCK_SIZE,
+                )
+            level = millibels_to_gain(fx_send.send_millibels)
+            main = main + (filtered - main) * level
 
     if frippertronics is not None and plan.frippertronics is not None:
         # T3: the long feedback delay, summed back into the main bus.
@@ -309,10 +324,12 @@ def _render_block(
         )
         main = main * gain[:, np.newaxis]
 
-    # The kick is kept apart so that the sidechain can duck everything else,
-    # and it is summed here: a lane without a dub chain has no sidechain and
-    # still has a kick.
-    main += kick_bus
+    # Drum-bus compressor: applied to the drum bus before it joins the mix.
+    drum_comp = bus.drum_comp
+    if drum_comp is not None and plan.drum_bus_comp is not None:
+        drum_bus, drum_comp = render_drum_comp_block(drum_bus, drum_comp, plan.drum_bus_comp, plan.sample_rate)
+    # The drum bus is summed into the main mix here.
+    main += drum_bus
 
     gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
     main = main * gain[:, np.newaxis]
@@ -325,6 +342,7 @@ def _render_block(
         dub=dub,
         sidechain=sidechain,
         trims=trims,
+        drum_comp=drum_comp,
     )
 
 

@@ -39,6 +39,16 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
     for event in migrated["events"]:
         event.pop("velocity_millibels", None)
         event["kind"] = "pad"
+        # Migrate partials: int + partial_detune_cents -> list[Partial].
+        count = event.pop("partials", 1)
+        detunes = event.pop("partial_detune_cents", [])
+        partials = [{"ratio": {"numerator": 1, "denominator": 1}, "amplitude_millibels": 0, "detune_cents": 0}]
+        for index in range(2, count + 1):
+            detune = detunes[index - 2] if index - 2 < len(detunes) else 0
+            partials.append(
+                {"ratio": {"numerator": index, "denominator": 1}, "amplitude_millibels": 0, "detune_cents": detune}
+            )
+        event["partials"] = partials
         events.append(event)
     migrated["events"] = events
     migrated["techniques"] = [card["name"].split("_")[0] for card in migrated["techniques"]]
@@ -58,6 +68,7 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
     migrated["target_lufs_millibels"] = -16000
     migrated["form"] = "full"
     migrated["bus_gains"] = []
+    migrated.pop("palette", None)
     for section in migrated["sections"]:
         section.pop("motif", None)
         section["instrumentation"] = ["pad"]
@@ -65,7 +76,6 @@ def migrate_s0_plan(payload: dict[str, Any]) -> Plan:
         section["root_midi"] = 38
         section["texture"] = "sparse"
         section["reprise_of"] = -1
-        section["transform"] = "identity"
         section["centroid_hz"] = 700
     migrated["version"] = 3
     return Plan.model_validate(migrated)
@@ -84,7 +94,7 @@ def test_the_migration_changes_no_value_the_renderer_reads() -> None:
     original = payload["events"][0]
     migrated = plan.events[0].model_dump()
     for key, value in original.items():
-        if key in {"velocity_millibels", "kind"}:
+        if key in {"velocity_millibels", "kind", "partials", "partial_detune_cents"}:
             continue
         assert migrated[key] == value, key
 
@@ -99,7 +109,7 @@ def test_the_pad_arithmetic_is_unchanged() -> None:
     """
     source = (Path(__file__).resolve().parents[1] / "src" / "indiegen" / "synth" / "pad.py").read_text(encoding="utf-8")
     assert "cumulative_sum(" in source
-    assert "detunes = [0, *event.partial_detune_cents]" in source
+    assert "for index, partial in enumerate(event.partials):" in source
     assert "np.power(2.0, drift / 1200.0)" in source
 
 

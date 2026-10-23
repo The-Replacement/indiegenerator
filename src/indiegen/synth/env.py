@@ -59,8 +59,12 @@ def note_envelope_block(event: EventBase, start: int, stop: int) -> np.ndarray:
     count = stop - start
     gain = np.ones(count, dtype=np.float64)
     if event.attack_frames > 0:
-        ramp = np.arange(start, stop, dtype=np.float64) / event.attack_frames
-        gain *= np.minimum(1.0, ramp)
+        if getattr(event, "envelope_curve", 0) == 1:
+            ramp = 1.0 - np.exp(-4.0 * np.arange(start, stop, dtype=np.float64) / event.attack_frames)
+            gain *= np.minimum(1.0, ramp)
+        else:
+            ramp = np.arange(start, stop, dtype=np.float64) / event.attack_frames
+            gain *= np.minimum(1.0, ramp)
     if event.release_frames > 0:
         ramp = (
             np.arange(

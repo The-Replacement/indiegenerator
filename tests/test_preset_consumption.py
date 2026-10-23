@@ -60,6 +60,7 @@ KEY_MUTATIONS: dict[str, Any] = {
     # moves the numbers around them instead.
     "mode_pool": lambda value: list(reversed(value)),
     "pulse": lambda value: "seconds" if value == "bars" else "bars",
+    "tuning_system": lambda value: 1 if value == 0 else 0,
     "section_graph": _mutate_section_graph,
     "forms": _mutate_forms,
 }

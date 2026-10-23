@@ -217,11 +217,16 @@ def plan_bass(card: BassCard, rng: SplitMix64, ctx: TechniqueContext, pink: Pink
     """
     hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
     bass: list[BassHit] = []
-    for frame, velocity in hits:
+    for index, (frame, velocity) in enumerate(hits):
         root = ctx.section_roots[ctx.section_at(frame)] if ctx.section_roots else ctx.root_midi
-        midi = root - 12
+        midi = root + card.midi_offset_semitones
         if rng.below(1000) < card.octave_jump_permille:
             midi += 12
+        # Phrase-end fifth: BRIEF 5 recipe. Only on the last hit of a
+        # phrase (section boundary crossing), and only when enabled.
+        is_phrase_end = index == len(hits) - 1 or ctx.section_at(hits[index + 1][0]) != ctx.section_at(frame)
+        if is_phrase_end and card.fifth_permille > 0 and rng.below(1000) < card.fifth_permille:
+            midi += 7
         bass.append(BassHit(frame=frame, velocity_millibels=velocity, midi=midi))
     return BassEvent(
         kind="bass",

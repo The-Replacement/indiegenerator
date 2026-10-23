@@ -69,3 +69,30 @@ def nearest_scale_note(scale: list[int], target: int) -> int:
     if not scale:
         return target
     return min(scale, key=lambda note: (abs(note - target), note))
+
+
+def chord_pool(scale_midi: list[int], root_midi: int, intervals: list[int], budget_permille: int) -> list[int]:
+    """The declared chord tones the scale and the chromatic budget admit.
+
+    A tone in the scale is always admitted. A tone outside the scale is
+    admitted only while the off-scale count stays within the budget: the
+    fraction of chromatic tones in the returned prefix can never exceed
+    ``budget_permille / 1000``. The first tone the budget refuses ends the
+    list, because the voices take a prefix and a silently dropped middle
+    tone would change the chord without being declared.
+
+    At ``budget_permille = 0`` this is exactly the old scale filter: the
+    prefix breaks at the first non-scale tone.
+    """
+    usable: list[int] = []
+    off_scale = 0
+    for interval in intervals:
+        if root_midi + interval in scale_midi:
+            usable.append(interval)
+            continue
+        total = len(usable) + 1
+        if (off_scale + 1) * 1000 > budget_permille * total:
+            break
+        usable.append(interval)
+        off_scale += 1
+    return usable or [0]

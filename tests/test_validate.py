@@ -244,7 +244,6 @@ def _plan(
         meter_denominator=4,
         pulse=pulse,
         scale_midi=[60],
-        palette=[],
         fx_sends=[],
         techniques=[],
         strategy_deck=[],
@@ -265,7 +264,6 @@ def _plan(
                 root_midi=38,
                 texture="open",
                 reprise_of=-1,
-                transform="identity",
                 centroid_hz=section_centroids[index],
             )
             for index in range(sections)

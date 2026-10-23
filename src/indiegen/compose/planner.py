@@ -57,9 +57,12 @@ from indiegen.plan import (
     MotifAppearance,
     MotifCell,
     MotifNote,
+    PadEnvelopeSegment,
     PadEvent,
+    Partial,
     Plan,
     PluckEvent,
+    PolyPeriodEvent,
     Rational,
     ReverbSpec,
     RhythmEvent,
@@ -293,10 +296,122 @@ def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> lis
     return [root for root in scale_midi if all(root + interval in scale_midi for interval in wanted)]
 
 
+def _segment_roots(section_roots: list[int], pool: list[int], segments: int) -> list[list[int]]:
+    """Per-section chord-segment roots. ``segments=1`` degenerates to the section root."""
+    if segments <= 1:
+        return [[root] for root in section_roots]
+    if not pool:
+        return [[root] for root in section_roots]
+    out: list[list[int]] = []
+    for root in section_roots:
+        base = pool.index(root) if root in pool else 0
+        out.append([pool[(base + j) % len(pool)] for j in range(segments)])
+    return out
+
+
+def _planar_offset(events: list[Event], k: int) -> list[Event]:
+    """Planar (parallel) motion: every poly-period chord tone moves by k semitones.
+
+    Scale membership is waived for the offset only: the voices keep their
+    declared intervals and the whole voicing slides in parallel. At ``k = 0``
+    the list is returned untouched, byte for byte.
+    """
+    if k == 0:
+        return events
+    out: list[Event] = []
+    for event in events:
+        if isinstance(event, PolyPeriodEvent):
+            voices = [voice.model_copy(update={"midi": voice.midi + k}) for voice in event.voices]
+            out.append(event.model_copy(update={"voices": voices, "midi": event.midi + k}))
+        else:
+            out.append(event)
+    return out
+
+
+def _ornament_events(events: list[Event], boundaries: list[int], seed: int, permille: int, grace: int) -> list[Event]:
+    """Plan-time grace/anticipation plucks at phrase boundaries (L08).
+
+    Each host pluck that has room gets a short anticipation pluck ``grace``
+    frames before it (clipped to the bar start, never crossing). Emission is
+    a pure function of the plan, so re-composition is byte-stable and
+    reprises stay deterministic. ``permille == 0`` or ``grace == 0`` is a
+    no-op.
+    """
+    if permille <= 0 or grace <= 0:
+        return events
+    out = list(events)
+    plucks = [e for e in events if isinstance(e, PluckEvent)]
+    for host in plucks:
+        section_start = 0
+        for i in range(len(boundaries) - 1):
+            if boundaries[i] <= host.start_frame < boundaries[i + 1]:
+                section_start = boundaries[i]
+                break
+        if host.start_frame - grace < section_start:
+            continue  # no room: grace would cross the bar start
+        import numpy as np
+
+        roll_rng = np.random.default_rng(seed * 1000003 + host.start_frame)
+        if roll_rng.random() * 1000 > permille:
+            continue
+        out.append(
+            PluckEvent(
+                kind="pluck",
+                instrument="ks",
+                start_frame=host.start_frame - grace,
+                duration_frames=grace,
+                midi=host.midi,
+                pan_permille=host.pan_permille,
+                amplitude_millibels=host.amplitude_millibels,
+                attack_frames=0,
+                release_frames=0,
+                feedback=host.feedback,
+                brightness=host.brightness,
+                pluck_position_permille=host.pluck_position_permille,
+                detune_cents=host.detune_cents,
+                excitation_seed=host.excitation_seed + 100000,
+            )
+        )
+    return out
+
+
 def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int, length: int, root: int) -> PadEvent:
     """The sustained pad: the S0 instrument, with the S0 field semantics."""
     count = rng.between(card.partials.min, card.partials.max)
     detunes = [rng.between(card.detune_min_cents, card.detune_max_cents) for _ in range(count - 1)]
+    weighted = card.envelope_segments > 0 and count >= 2
+    partials = [Partial(ratio=Rational(numerator=1, denominator=1), amplitude_millibels=0, detune_cents=0)]
+    for index in range(2, count + 1):
+        detune = detunes[index - 2] if index - 2 < len(detunes) else 0
+        # Weighted pads roll the upper partials off so a permutation of the
+        # weights has something to permute: uniform weights make the
+        # segment switch a no-op by construction.
+        weight = -min(1200, 600 * (index - 1)) if weighted else 0
+        partials.append(
+            Partial(
+                ratio=Rational(numerator=index, denominator=1),
+                amplitude_millibels=weight,
+                detune_cents=detune,
+            )
+        )
+    segments: list[PadEnvelopeSegment] = []
+    if weighted:
+        # Equal segments measured from the previous boundary; each segment
+        # rotates the weight assignment by one partial (the Farben rotation).
+        share = max(1, length // card.envelope_segments)
+        for step in range(card.envelope_segments - 1):
+            segments.append(
+                PadEnvelopeSegment(
+                    delta_frames=share,
+                    permutation=[(index + step + 1) % count for index in range(count)],
+                )
+            )
+        # The first declared segment starts from the event's own weights
+        # (identity is implicit until the first permutation lands).
+        segments = [
+            PadEnvelopeSegment(delta_frames=share, permutation=list(range(count))),
+            *segments,
+        ]
     return PadEvent(
         kind="pad",
         instrument="pad",
@@ -307,10 +422,10 @@ def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int
         amplitude_millibels=card.amplitude_millibels,
         attack_frames=ctx.attack_frames,
         release_frames=ctx.release_frames,
-        partials=count,
-        partial_detune_cents=detunes,
+        partials=partials,
         lfo_rate=card.lfo_rate,
         lfo_depth_cents=card.lfo_depth_cents,
+        envelope_segments=segments,
     )
 
 
@@ -652,6 +767,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     modes = _assign_modes(lane.mode_pool, nodes, lengths, frames_per_bar, root_midi, rng)
     section_roots = [root for _, root in modes]
     section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
+    section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
 
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
     dither_seed = rng.next_u64()
@@ -673,13 +789,17 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         section_scales=section_scales,
         section_roots=section_roots,
         section_functions=[node.function for node in nodes],
+        tuning_system=station.tuning_system,
+        chord_segments_per_section=station.chord_segments_per_section,
+        chromatic_budget_permille=station.chromatic_budget_permille,
+        chord_tone_intervals=list(station.chord_tone_intervals),
     )
 
     # T7 resolves once: the lane's 1/f control signals are declared by the
     # pink card and stamped onto the drum events.
     pink = next((card for card in lane.techniques if isinstance(card, PinkCard)), None)
 
-    events = _events_for_lane(lane, nodes, boundaries, lengths, section_roots, rng, ctx, pink)
+    events = _events_for_lane(lane, nodes, boundaries, lengths, section_roots, section_segment_roots, rng, ctx, pink)
 
     # The motif: the station's signature, played by the Karplus-Strong.
     cell = build_cell(station.motif_bank, station.motif_rhythm, root_midi, frames_per_beat, rng)
@@ -689,6 +809,10 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     if string is not None:
         appearances, motif_events = plan_motif(cell, string, ctx, rng)
         events.extend(motif_events)
+
+    events = _planar_offset(events, station.planar_offset_semitones)
+    events = _ornament_events(events, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
+    events = _double_events(events, station.double_copies, station.double_offset_frames, frames)
 
     sections = _section_plans(nodes, boundaries, lengths, frames_per_bar, modes, section_roots, lane, events)
     rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
@@ -760,7 +884,15 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         meter_denominator=lane.meter[1],
         pulse=lane.pulse,
         scale_midi=list(lane.scale_midi),
-        palette=list(station.palette),
+        tuning_system=station.tuning_system,
+        chord_segments_per_section=station.chord_segments_per_section,
+        chromatic_budget_permille=station.chromatic_budget_permille,
+        chord_tone_intervals=list(station.chord_tone_intervals),
+        planar_offset_semitones=station.planar_offset_semitones,
+        ornament_permille=station.ornament_permille,
+        grace_offset_frames=station.grace_offset_frames,
+        double_copies=station.double_copies,
+        double_offset_frames=station.double_offset_frames,
         fx_sends=list(lane.fx_sends),
         techniques=[card.kind for card in lane.techniques],
         strategy_deck=deck,
@@ -798,6 +930,7 @@ class _LaneFrames:
     boundaries: list[int]
     lengths: list[int]
     section_roots: list[int]
+    section_segment_roots: list[list[int]]
     pink: PinkCard | None
 
 
@@ -805,22 +938,39 @@ CardEvents = Callable[[TechniqueCard, SplitMix64, TechniqueContext, _LaneFrames]
 
 
 def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
-    """One pad per section the card declares itself dense enough for."""
+    """One pad per chord segment the card declares itself dense enough for."""
     pad = cast(PadCard, card)
-    return [
-        _pad_event(pad, rng, ctx, frames.boundaries[index], frames.lengths[index], frames.section_roots[index])
-        for index in range(len(frames.nodes))
-        if frames.nodes[index].density >= pad.min_density
-    ]
+    out: list[Event] = []
+    for index in range(len(frames.nodes)):
+        if frames.nodes[index].density < pad.min_density:
+            continue
+        boundary = frames.boundaries[index]
+        length = frames.lengths[index]
+        seg_roots = frames.section_segment_roots[index]
+        count = len(seg_roots)
+        seg_len = length // count
+        for seg, root in enumerate(seg_roots):
+            start = boundary + seg * seg_len
+            dur = seg_len if seg < count - 1 else (length - seg * seg_len)
+            out.append(_pad_event(pad, rng, ctx, start, dur, root))
+    return out
 
 
 def _drone_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
-    """One drone per section, from the same card."""
+    """One drone per chord segment, from the same card."""
     drone = cast(DroneCard, card)
-    return [
-        plan_drone(drone, rng, ctx, frames.boundaries[index], frames.lengths[index], frames.section_roots[index])
-        for index in range(len(frames.nodes))
-    ]
+    out: list[Event] = []
+    for index in range(len(frames.nodes)):
+        boundary = frames.boundaries[index]
+        length = frames.lengths[index]
+        seg_roots = frames.section_segment_roots[index]
+        count = len(seg_roots)
+        seg_len = length // count
+        for seg, root in enumerate(seg_roots):
+            start = boundary + seg * seg_len
+            dur = seg_len if seg < count - 1 else (length - seg * seg_len)
+            out.append(plan_drone(drone, rng, ctx, start, dur, root, ctx.tuning_system))
+    return out
 
 
 def _poly_period_events(
@@ -889,12 +1039,20 @@ def _events_for_lane(
     boundaries: list[int],
     lengths: list[int],
     section_roots: list[int],
+    section_segment_roots: list[list[int]],
     rng: SplitMix64,
     ctx: TechniqueContext,
     pink: PinkCard | None,
 ) -> list[Event]:
     """Every event the lane's cards declare, in the order the lane declares them."""
-    frames = _LaneFrames(nodes=nodes, boundaries=boundaries, lengths=lengths, section_roots=section_roots, pink=pink)
+    frames = _LaneFrames(
+        nodes=nodes,
+        boundaries=boundaries,
+        lengths=lengths,
+        section_roots=section_roots,
+        section_segment_roots=section_segment_roots,
+        pink=pink,
+    )
     events: list[Event] = []
     for card in lane.techniques:
         builder = _CARD_EVENTS.get(card.kind)
@@ -937,7 +1095,6 @@ def _section_plans(
                 root_midi=section_roots[index],
                 texture=node.texture,
                 reprise_of=reprise,
-                transform=node.transform,
                 centroid_hz=_planned_centroid(lane.timbre, node.function),
             )
         )
@@ -976,3 +1133,32 @@ def _assert_sections_differ(
                 preset=preset.name,
                 seed=seed,
             )
+
+
+def _double_events(events: list[Event], copies: int, offset: int, total_frames: int) -> list[Event]:
+    """Micro-offset doubling (L16): clone each event ``copies`` times shifted by multiples of ``offset``.
+
+    Offsets are plan integers, so the comb-filter null is bit-exact. At
+    ``copies == 0`` the list is returned untouched. Clones that would start
+    past the track end are dropped; drum hits are shifted by the same delta.
+    """
+    if copies <= 0 or offset <= 0:
+        return events
+    out = list(events)
+    for copy_idx in range(1, copies + 1):
+        delta = copy_idx * offset
+        for event in events:
+            new_start = event.start_frame + delta
+            if new_start >= total_frames:
+                continue
+            cloned = event.model_copy(update={"start_frame": new_start})
+            hits = getattr(event, "hits", None)
+            if hits is not None and hits:
+                cloned = cloned.model_copy(
+                    update={"hits": [h.model_copy(update={"frame": h.frame + delta}) for h in hits]}
+                )
+            remaining = total_frames - new_start
+            if cloned.duration_frames > remaining:
+                cloned = cloned.model_copy(update={"duration_frames": remaining})
+            out.append(cloned)
+    return out
