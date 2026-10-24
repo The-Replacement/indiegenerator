@@ -38,6 +38,13 @@ MAD_TO_SIGMA: float = 1.4826
 # Gate 5: the delivered energy trajectory has to follow the planned one.
 ENERGY_CORRELATION_LIMIT: float = 0.5
 
+# A plan whose section levels span less than this is a static plan: the
+# curve cannot be heard as a shape, and the per-second RMS of a sparse
+# section swings by more than this for reasons that are not the
+# arrangement. BRIEF 11: a section the plan marked static must not be
+# failed for being static.
+STATIC_LEVEL_SPREAD_MILLIBELS: int = 300
+
 # Gate 6: the delivered timbre trajectory has to follow the planned one.
 TIMBRE_CORRELATION_LIMIT: float = 0.4
 
@@ -439,12 +446,21 @@ def energy_correlation(plan: Plan, mix: np.ndarray) -> float:
     """The correlation of the delivered energy with the planned curve.
 
     A plan that planned a flat curve has no correlation to give: the
-    measurement is one, and the gate does not fail a flat plan.
+    measurement is one, and the gate does not fail a flat plan. The guard
+    is the *spread* of the planned levels and not their exact equality:
+    a curve that moves by 0.2 dB over sixteen minutes is a static plan
+    heard as static, and the delivered per-second RMS of a sparse section
+    swings by more than that for reasons that say nothing about the
+    arrangement (BRIEF 11: "a section the plan marked static must not be
+    failed for being static"). This is the gate-5 twin of gate 6's
+    ``STATIC_CENTROID_TOLERANCE``.
     """
     measured = per_second_rms(mix, plan.sample_rate, plan.fade_in_frames)
     if measured.size < 2:
         return 1.0
     levels = [section.level_millibels for section in plan.sections]
+    if levels and max(levels) - min(levels) <= STATIC_LEVEL_SPREAD_MILLIBELS:
+        return 1.0
     planned = _planned_per_second(plan, measured.size, levels, _first_second(plan))
     if float(np.std(planned)) <= 0.0:
         return 1.0

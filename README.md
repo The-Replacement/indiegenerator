@@ -174,7 +174,8 @@ a track through the fast gates only.
 - **Gate 5** — the energy trajectory follows the planned one: the Pearson
   correlation between the delivered per-second RMS and the plan's section
   level curve has to be at least 0.5. The plan is the reference, and a plan
-  that planned a flat curve is not failed for being flat.
+  whose whole level curve spans less than 0.3 dB is a static plan and is not
+  failed for being static (the two-section ambient is the case in point).
 - **Gate 6** — the timbre trajectory follows the planned one: the delivered
   spectral centroid, measured per section, has to correlate with the plan's
   predicted centroids at 0.4 or better. A plan that declared a static timbre
