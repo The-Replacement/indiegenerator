@@ -71,6 +71,25 @@ def _condition_holds(
     return True
 
 
+def _audible(ctx: TechniqueContext, frame: int, card: PatternCard) -> bool:
+    """Whether the voice's layer has reached the section this FRAME is in.
+
+    The gate belongs to the frame and not to the bar. A bar that straddles
+    a section boundary used to carry the density of the section it started
+    in into the section it ended in, so the sparse sections received the
+    dense ones' material: at forty-five and ninety seconds dub-electronic's
+    quietest section took nine and seven hat, snare and bass hits the
+    arrangement had not reached, its energy arc inverted, and gate 5 failed;
+    indie-noise took four hat hits into its outro, smearing the boundary
+    until gate 7 counted one novelty peak too few.
+    """
+    densities = ctx.section_densities
+    if not densities:
+        return True
+    section = ctx.section_at(frame)
+    return densities[min(section, len(densities) - 1)] >= card.min_density
+
+
 def _hit_frames(
     card: PatternCard,
     rng: SplitMix64,
@@ -109,7 +128,7 @@ def _hit_frames(
             if not active:
                 if card.ghost_permille and rng.below(1000) < card.ghost_permille:
                     frame = bar_start + step * step_frames
-                    if section_start <= frame < section_end:
+                    if section_start <= frame < section_end and _audible(ctx, frame, card):
                         hits.append((frame, card.velocity_millibels - 1200))
                 continue
             if not _condition_holds(
@@ -124,7 +143,7 @@ def _hit_frames(
                 continue
             occurrence += 1
             frame = bar_start + step * step_frames
-            if section_start <= frame < section_end:
+            if section_start <= frame < section_end and _audible(ctx, frame, card):
                 hits.append((frame, card.velocity_millibels))
     return hits
 
