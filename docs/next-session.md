@@ -189,11 +189,27 @@ them does: liquidsoap keeps deleted tracks in its in-memory playlist, so
 `docker compose restart liquidsoap` in ~/Work/radio is required. That was
 done once, at the operator's request.
 
-scripts/smoke.sh reports 28/29: the failure is "la redirección arrastra el
-token", a Caddy 302 assertion (grep -iE '^location: /$'). It is NOT c31's -
-Caddy has restarts=0 and was up throughout - and it sits in the same area as
-the radio repo's most recent commits (fix(webcam): token-in-URL fallback,
-fix(web): fetchSetup credentials). Worth a look on the radio side, not here.
+scripts/smoke.sh reports 29/29. It reported 28/29 while c31 was landing, and
+the one failure was "la redirección arrastra el token", a Caddy 302
+assertion. It was not c31's and not this repo's: the cause was the webcam
+token-in-URL fallback in the RADIO repo (de02e9a), which made the canje
+redirect keep ?t= in the URL, so `grep -iE '^location: /$'` could never
+match. It was fixed there at 40c7c31, by asserting the frontend URL instead.
+
+Two things that fix changed, both worth knowing:
+- The assertion now ENFORCES the token-in-URL redirect, so reverting it to
+  Location: / will FAIL the smoke suite. The trade is encoded as a test.
+- The boundary that still holds is the one that matters: "el token NO llega a
+  Icecast" passes and the no-credential paths 404, so the token never reaches
+  the stream. The accepted exposure is the browser URL only (history,
+  Referer, CDN logs).
+
+Method note, because it is the kind of reasoning that survives into other
+diagnoses: while this was open, "Caddy has restarts=0 and was up throughout"
+was offered as evidence that the failure predated the session. It is not. It
+proves the PROCESS was not restarted, not that its BEHAVIOUR did not change -
+a config edit or a deploy changes behaviour without touching the process. The
+causal evidence was pinning the change to a specific commit.
 
 =====================================================================
 METHOD THAT HAS WORKED HERE
