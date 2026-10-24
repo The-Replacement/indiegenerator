@@ -48,10 +48,13 @@ could not find them again.
 - Swing is on/off per beat; no per-subdivision swing (16th swing) yet.
 - Jitter is compose-side and therefore shifts `MotifAppearance.start_frame`.
   Any future pass that rewrites plucks must do the same.
-- Pre-master energy trajectory gates (5/6) were not measured across a seed
-  sweep with swing on; the 60 s motorik and 90 s ambient renders pass, and
-  the 8-minute lane table was re-measured. A seed sweep is the honest next
-  step.
+- Gate 5/6 seed sweep done (5 lanes x seeds {1042,2000,4002}, on vs zeroed,
+  240 s): c26 is gate-safe, on/off deltas <= 0.035 and mostly < 0.01. The
+  sweep surfaced a **pre-existing** failure unrelated to c26: ambient seed
+  2000 fails gate 5 (0.395 at 240 s, 0.478 at 480 s, limit 0.5), on and off
+  alike, and the CLI exits 2 and writes nothing. Its own change
+  (`c27-ambient-energy-trajectory`) should fix the arranger or the lane's
+  level curve, not the gate. See topic `c26-gate-sweep` in memory.
 - The opening/body and closing/body tests in `test_artifact.py` used a
   window **peak**, which a single transient decides: 40 frames of motorik
   jitter could move a peak out of the body window and flip the assertion
