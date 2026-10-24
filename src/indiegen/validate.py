@@ -119,8 +119,16 @@ def check_gate_2_pcm(pcm: np.ndarray) -> list[GateResult]:
     """
     results: list[GateResult] = []
     if pcm.size:
-        delivered = pcm.astype(np.float64) / 32768.0
-        offset = max(abs(float(np.mean(delivered[:, channel]))) for channel in range(delivered.shape[1]))
+        frames = int(pcm.shape[0])
+        channels = int(pcm.shape[1])
+        totals = np.zeros(channels, dtype=np.int64)
+        rails = 0
+        for start in range(0, frames, MEASURE_BLOCK):
+            stop = min(frames, start + MEASURE_BLOCK)
+            chunk = pcm[start:stop]
+            totals += chunk.astype(np.int64).sum(axis=0)
+            rails += int(np.count_nonzero((chunk == INT16_MAX) | (chunk == INT16_MIN)))
+        offset = max(abs(float(totals[channel])) / (32768.0 * frames) for channel in range(channels))
         if offset > DC_OFFSET_LIMIT:
             results.append(
                 failure(
@@ -130,7 +138,8 @@ def check_gate_2_pcm(pcm: np.ndarray) -> list[GateResult]:
                     check="DC offset",
                 )
             )
-    rails = int(np.count_nonzero((pcm == INT16_MAX) | (pcm == INT16_MIN)))
+    else:
+        rails = 0
     if rails:
         results.append(
             failure(
@@ -173,14 +182,23 @@ def check_gate_8(pcm: np.ndarray, lane: str, sample_rate: int) -> list[GateResul
     results: list[GateResult] = []
     if pcm.size == 0:
         return results
-    peak = np.max(np.abs(pcm.astype(np.int32)), axis=1)
-    silent = peak <= SILENCE_FLOOR_LSB
-    if bool(np.all(silent)):
-        leading = int(pcm.shape[0])
-        trailing = int(pcm.shape[0])
-    else:
-        leading = int(np.argmax(~silent))
-        trailing = int(np.argmax(~silent[::-1]))
+    frames = int(pcm.shape[0])
+    leading = frames
+    for start in range(0, frames, MEASURE_BLOCK):
+        stop = min(frames, start + MEASURE_BLOCK)
+        peak = np.max(np.abs(pcm[start:stop].astype(np.int32)), axis=1)
+        active = np.nonzero(peak > SILENCE_FLOOR_LSB)[0]
+        if active.size:
+            leading = start + int(active[0])
+            break
+    trailing = frames
+    for end in range(frames, 0, -MEASURE_BLOCK):
+        start = max(0, end - MEASURE_BLOCK)
+        peak = np.max(np.abs(pcm[start:end].astype(np.int32)), axis=1)
+        active = np.nonzero(peak > SILENCE_FLOOR_LSB)[0]
+        if active.size:
+            trailing = frames - 1 - (start + int(active[-1]))
+            break
     limit = leading_silence_limit(lane)
     if leading / sample_rate > limit:
         results.append(
@@ -283,16 +301,14 @@ def spectral_flux(pcm: np.ndarray, sample_rate: int) -> np.ndarray:
     says it is, and the count is the same either way.
     """
     frame = int(NOVELTY_FRAME_SECONDS * sample_rate)
-    signal = pcm.astype(np.float64) / 32768.0
-    mono = np.mean(signal, axis=1)
-    count = mono.size // frame
+    count = int(pcm.shape[0]) // frame
     if count < 2:
         return np.zeros(0, dtype=np.float64)
     window = np.hanning(frame)
     flux = np.zeros(count - 1, dtype=np.float64)
     previous: np.ndarray | None = None
     for index in range(count):
-        chunk = mono[index * frame : (index + 1) * frame] * window
+        chunk = to_float(pcm[index * frame : (index + 1) * frame]).mean(axis=1) * window
         magnitude = 20.0 * np.log10(np.maximum(np.abs(np.fft.rfft(chunk)), 1e-6))
         if previous is not None:
             difference = magnitude - previous

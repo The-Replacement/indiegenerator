@@ -36,6 +36,7 @@ reverb, the gains - carries its state from one block to the next.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import cast
 
 import numpy as np
@@ -380,14 +381,36 @@ def _render_block(
 
 def render_plan(plan: Plan) -> np.ndarray:
     """Render the plan into a stereo float64 buffer."""
+    mix = np.zeros((plan.duration_frames, plan.channels), dtype=np.float64)
+    _render_into(plan, mix)
+    return mix
+
+
+def _render_into(plan: Plan, target: np.ndarray) -> None:
+    """Render the plan's blocks into ``target``, one render block at a time."""
     frames = plan.duration_frames
     events = schedule(plan)
     voices = [_voice_state(event, plan.sample_rate) for event in events]
     bus = _bus_state(plan, events)
     kick_hits = [hit.frame for event in events if isinstance(event, KickEvent) for hit in event.hits]
-    mix = np.zeros((frames, plan.channels), dtype=np.float64)
     for start in range(0, frames, RENDER_BLOCK):
         stop = min(frames, start + RENDER_BLOCK)
         block, bus = _render_block(plan, events, voices, bus, start, stop, kick_hits)
-        mix[start:stop] = block
-    return mix
+        target[start:stop] = block
+
+
+def write_mix_stem(plan: Plan, path: Path) -> tuple[int, int]:
+    """Render the plan to a float64 memmap stem and return its shape.
+
+    The stem is the mix on disk: the master reads it twice and the gates
+    read it through the memmap, so the whole-track array never has to be on
+    the heap. The float64 bits are the bytes the in-memory render would have
+    held, so the master is bit-identical over the stem.
+    """
+    frames = plan.duration_frames
+    shape = (frames, plan.channels)
+    stem = np.memmap(path, dtype=np.float64, mode="w+", shape=shape)
+    _render_into(plan, stem)
+    stem.flush()
+    del stem
+    return shape

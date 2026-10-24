@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
+import numpy as np
+
 from indiegen.catalog import Catalog, build_catalog, write_catalog
 from indiegen.compose import compose, director
 from indiegen.compose.planner import Form
@@ -27,7 +29,7 @@ from indiegen.master.chain import master
 from indiegen.master.loudness import measure
 from indiegen.metadata import build_tags, filename_for
 from indiegen.plan import Plan, plan_sha256
-from indiegen.render import BLOCK_SIZE, render_plan
+from indiegen.render import BLOCK_SIZE, write_mix_stem
 from indiegen.validate import (
     GateFailure,
     energy_correlation,
@@ -35,7 +37,7 @@ from indiegen.validate import (
     stereo_correlation,
     timbre_measurement,
 )
-from indiegen.writer import pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
+from indiegen.writer import TEMP_DIR_NAME, pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
 
 
 @dataclass(frozen=True)
@@ -103,15 +105,27 @@ def render_track(plan: Plan, out_dir: Path) -> RenderResult:
     A track that failed a gate is not written: the radio is watching the
     output directory and a file that failed the gates must not exist. The
     failure is data, and the caller decides what to do with it.
+
+    The mix is rendered to a float64 stem and read back through a memmap,
+    so the whole-track array is on disk and not on the heap. The stem is
+    removed whatever happens after it.
     """
-    mix = render_plan(plan)
-    pcm = master(plan, mix, BLOCK_SIZE)
-    failure = run_gates(plan, mix, pcm)
-    if failure is not None:
-        return RenderResult(failure=failure)
-    energy = energy_correlation(plan, mix)
-    timbre, static = timbre_measurement(plan, mix)
-    del mix
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir = out_dir / TEMP_DIR_NAME
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    stem = tmp_dir / f"{plan.file_token}_s{plan.seed}.mix"
+    try:
+        shape = write_mix_stem(plan, stem)
+        mix = np.memmap(stem, dtype=np.float64, mode="r", shape=shape)
+        pcm = master(plan, mix, BLOCK_SIZE)
+        failure = run_gates(plan, mix, pcm)
+        if failure is not None:
+            return RenderResult(failure=failure)
+        energy = energy_correlation(plan, mix)
+        timbre, static = timbre_measurement(plan, mix)
+        del mix
+    finally:
+        stem.unlink(missing_ok=True)
 
     filename = filename_for(plan)
     tags = build_tags(plan)

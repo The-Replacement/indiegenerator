@@ -105,6 +105,36 @@ def peak_envelope(mix: np.ndarray, block: int) -> np.ndarray:
     return peaks
 
 
+def peak_envelope_block(mix: np.ndarray, start: int, stop: int) -> np.ndarray:
+    """The inter-sample peak of base samples ``[start, stop)``.
+
+    This is the body of :func:`peak_envelope` for one block, and it is
+    exposed because the streaming master needs the envelope of the block it
+    is limiting and nothing else. The value of a base sample depends only
+    on the ``MARGIN_FRAMES`` of context on either side of it, so this
+    reproduces the whole-track call's value exactly, block partition or no.
+    """
+    frames = mix.shape[0]
+    context_start = max(0, start - MARGIN_FRAMES)
+    context_stop = min(frames, stop + MARGIN_FRAMES)
+    front = start - context_start
+    back = (stop + MARGIN_FRAMES) - context_stop
+    context = np.array(mix[context_start:context_stop], dtype=np.float64)
+    if front or back:
+        padding = np.zeros((front + back, mix.shape[1]), dtype=np.float64)
+        context = np.concatenate([padding[:front], context, padding[front:]])
+    upsampled = resample_poly(context, OVERSAMPLE, 1, axis=0)
+    lead = start + front - context_start
+    offset = OVERSAMPLE * lead + FILTER_DELAY
+    count = stop - start
+    peaks = np.zeros(count, dtype=np.float64)
+    for channel in range(mix.shape[1]):
+        column = upsampled[:, channel]
+        window = np.abs(column[offset : offset + count * OVERSAMPLE])
+        peaks = np.maximum(peaks, window.reshape(count, OVERSAMPLE).max(axis=1))
+    return peaks
+
+
 def lookahead_min(values: np.ndarray, chunk: int, count: int) -> np.ndarray:
     """The smallest of the next ``chunk`` values, for every value.
 
@@ -134,6 +164,36 @@ def decayed_max(values: np.ndarray, decay: float, carry: float) -> tuple[np.ndar
     return out, float(out[-1])
 
 
+def limit_block(
+    mix: np.ndarray,
+    start: int,
+    stop: int,
+    gain: float,
+    peaks: np.ndarray,
+    ceiling: float,
+    state: LimiterState | None,
+) -> tuple[np.ndarray, LimiterState, float]:
+    """Limit base samples ``[start, stop)`` given their peak envelope.
+
+    ``peaks`` holds the envelope of ``[start, min(frames, stop +
+    LOOKAHEAD_FRAMES))``, so the lookahead is in hand and the state carries
+    the deficit. The whole-track :func:`limit` is this function in a loop,
+    and the streaming master is this function over a memmap.
+    """
+    count = stop - start
+    decay = math.exp(-1.0 / RELEASE_FRAMES)
+    limit_ceiling = ceiling * decibels_to_gain(-MODEL_MARGIN_DB)
+    required = np.minimum(1.0, (limit_ceiling / np.maximum(peaks, TINY)) / gain)
+    if required.size < count + LOOKAHEAD_FRAMES:
+        required = np.concatenate([required, np.full(count + LOOKAHEAD_FRAMES - required.size, 1.0)])
+    look = lookahead_min(required, LOOKAHEAD_FRAMES, count)
+    carry = state.deficit if state is not None else 0.0
+    deficit, carry = decayed_max(1.0 - look, decay, carry)
+    curve = 1.0 - deficit
+    out = mix[start:stop] * (gain * curve)[:, np.newaxis]
+    return out, LimiterState(deficit=carry), float(curve.min())
+
+
 def limit(
     mix: np.ndarray,
     gain: float,
@@ -151,20 +211,12 @@ def limit(
     """
     frames = mix.shape[0]
     out = np.empty_like(mix)
-    decay = math.exp(-1.0 / RELEASE_FRAMES)
-    limit_ceiling = ceiling * decibels_to_gain(-MODEL_MARGIN_DB)
-    carry = state.deficit if state is not None else 0.0
+    carry: LimiterState | None = state
     deepest = 1.0
     for start in range(0, frames, block):
         stop = min(frames, start + block)
-        count = stop - start
         window = peaks[start : min(frames, stop + LOOKAHEAD_FRAMES)]
-        required = np.minimum(1.0, (limit_ceiling / np.maximum(window, TINY)) / gain)
-        if required.size < count + LOOKAHEAD_FRAMES:
-            required = np.concatenate([required, np.full(count + LOOKAHEAD_FRAMES - required.size, 1.0)])
-        look = lookahead_min(required, LOOKAHEAD_FRAMES, count)
-        deficit, carry = decayed_max(1.0 - look, decay, carry)
-        curve = 1.0 - deficit
-        out[start:stop] = mix[start:stop] * (gain * curve)[:, np.newaxis]
-        deepest = min(deepest, float(curve.min()))
-    return out, deepest, LimiterState(deficit=carry)
+        limited, carry, curve_min = limit_block(mix, start, stop, gain, window, ceiling, carry)
+        out[start:stop] = limited
+        deepest = min(deepest, curve_min)
+    return out, deepest, (carry if carry is not None else LimiterState())
