@@ -76,4 +76,5 @@ disallow_untyped_calls = false
 testpaths = ["tests"]
 markers = [
   "slow: long-running lane renders checked against committed golden hashes",
+  "sweep: the bounded seed sweep over the trajectory gates; its own CI job, not the default run",
 ]
