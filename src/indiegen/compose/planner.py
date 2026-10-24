@@ -500,6 +500,27 @@ def _apply_groove(
     return out, new_appearances
 
 
+def _apply_timbre(events: list[Event], drive_permille: int, snap_permille: int) -> list[Event]:
+    """Stamp the lane's drive on the voices and its snap on the drum hits.
+
+    The shaper lives on the voice (a pluck, a pad, a drone, a poly-period
+    loop) and the snap on the rhythm events. Both default to zero and a
+    zero is a strict no-op, so a lane that declares neither is the lane it
+    always was.
+    """
+    if drive_permille <= 0 and snap_permille <= 0:
+        return events
+    out: list[Event] = []
+    for event in events:
+        updates: dict[str, int] = {}
+        if drive_permille > 0 and isinstance(event, PluckEvent):
+            updates["drive_permille"] = drive_permille
+        if snap_permille > 0 and isinstance(event, RhythmEvent):
+            updates["snap_permille"] = snap_permille
+        out.append(event.model_copy(update=updates) if updates else event)
+    return out
+
+
 def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int, length: int, root: int) -> PadEvent:
     """The sustained pad: the S0 instrument, with the S0 field semantics."""
     count = rng.between(card.partials.min, card.partials.max)
@@ -1088,6 +1109,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         seed,
         frames,
     )
+    events = _apply_timbre(events, lane.drive_permille, lane.snap_permille)
     events = _ornament_events(events, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
     events = _double_events(events, station.double_copies, station.double_offset_frames, frames)
 

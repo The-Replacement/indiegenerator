@@ -198,6 +198,7 @@ class EventBase(FrozenModel):
     attack_frames: int = Field(ge=0)
     release_frames: int = Field(ge=0)
     envelope_curve: int = Field(default=0, ge=0, le=1)
+    drive_permille: int = Field(default=0, ge=0, le=1000)
 
 
 class PadEnvelopeSegment(FrozenModel):
@@ -300,6 +301,7 @@ class RhythmEvent(EventBase):
     velocity_depth_millibels: int
     micro_timing_frames: int
     pan_drift_permille: int
+    snap_permille: int = Field(default=0, ge=0, le=1000)
 
 
 class KickEvent(RhythmEvent):

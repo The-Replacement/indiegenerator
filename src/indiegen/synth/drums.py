@@ -84,6 +84,30 @@ def _envelope(count: int, decay_frames: int, sample_rate: int) -> np.ndarray:
     return np.asarray(decay * attack, dtype=np.float64)
 
 
+SNAP_DECAY_FRAMES: int = 176
+"""The snap's decay: four milliseconds at forty-four-one hundred hertz."""
+
+SNAP_LEVEL: float = 0.5
+"""How loud the snap is at snap_permille 1000, relative to the voice."""
+
+
+def _snap(event: RhythmEvent, hit: DrumHit | BassHit, count: int, sample_rate: int) -> np.ndarray | float:
+    """A short noise transient on the hit's attack, scaled by ``snap_permille``.
+
+    The snap is the part of a hit that lives above the body: the beater, the
+    stick, the string meeting the drum head. It is a four millisecond noise
+    burst and it is exactly zero at ``snap_permille == 0``, so the default
+    hit is the hit it always was.
+    """
+    if event.snap_permille <= 0:
+        return 0.0
+    click = uniform_stream(event.noise_seed, hit.frame, CLICK_STREAM, count)
+    times = np.arange(count, dtype=np.float64) / np.float64(sample_rate)
+    decay = np.exp(-times * np.float64(sample_rate) / float(SNAP_DECAY_FRAMES))
+    level = SNAP_LEVEL * (event.snap_permille / 1000.0)
+    return np.asarray(click * decay * level, dtype=np.float64)
+
+
 def render_kick(event: KickEvent, hit: DrumHit, sample_rate: int, velocity: float) -> np.ndarray:
     """One kick: a round body with a fast pitch drop and a soft transient."""
     count = event.decay_frames
@@ -95,7 +119,7 @@ def render_kick(event: KickEvent, hit: DrumHit, sample_rate: int, velocity: floa
     envelope = _envelope(count, event.decay_frames, sample_rate)
     click = uniform_stream(event.noise_seed, hit.frame, CLICK_STREAM, count)
     click = click * np.exp(-times * np.float64(sample_rate) / 88.0)
-    voice = body * envelope + click * 0.2
+    voice = body * envelope + click * 0.2 + _snap(event, hit, count, sample_rate)
     # The click is a burst of noise and carries an offset with it; the
     # blocker takes the offset and leaves the click.
     voice = dc_block(voice, sample_rate)
@@ -111,7 +135,7 @@ def render_snare(event: SnareEvent, hit: DrumHit, sample_rate: int, velocity: fl
     noise = uniform_stream(event.noise_seed, hit.frame, SNARE_STREAM, count)
     noise = _highpass(noise, 220.0, sample_rate)
     noise = noise * _envelope(count, event.noise_decay_frames, sample_rate)
-    voice = body + noise * 0.8
+    voice = body + noise * 0.8 + _snap(event, hit, count, sample_rate)
     return np.asarray(voice * velocity, dtype=np.float64)
 
 
@@ -120,7 +144,7 @@ def render_hat(event: HatEvent, hit: DrumHit, sample_rate: int, velocity: float)
     count = event.decay_frames
     noise = uniform_stream(event.noise_seed, hit.frame, HAT_STREAM, count)
     shaped = _highpass(noise, float(event.cutoff_hz), sample_rate)
-    voice = shaped * _envelope(count, event.decay_frames, sample_rate)
+    voice = shaped * _envelope(count, event.decay_frames, sample_rate) + _snap(event, hit, count, sample_rate)
     return np.asarray(voice * velocity, dtype=np.float64)
 
 

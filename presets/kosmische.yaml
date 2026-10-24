@@ -21,6 +21,9 @@ pulse: bars
 swing_permille: 250
 melodic_jitter_frames: 30
 
+# c30: the drone stack and the arps carry a little harmonic content.
+drive_permille: 200
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.

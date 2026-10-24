@@ -293,6 +293,8 @@ class LanePreset(FrozenModel):
     release_frames: int | None = None
     swing_permille: int = Field(default=0, ge=0, le=1000)
     melodic_jitter_frames: int = Field(default=0, ge=0, le=200)
+    drive_permille: int = Field(default=0, ge=0, le=1000)
+    snap_permille: int = Field(default=0, ge=0, le=1000)
     reverb: ReverbCard | None = None
 
 

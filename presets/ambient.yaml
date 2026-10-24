@@ -20,6 +20,9 @@ pulse: seconds
 swing_permille: 0
 melodic_jitter_frames: 30
 
+# c30: a whisper of harmonics on the drone and the plucks.
+drive_permille: 150
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.

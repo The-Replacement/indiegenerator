@@ -20,6 +20,7 @@ from scipy.signal import lfilter
 
 from indiegen.plan import PluckEvent
 from indiegen.synth.env import dc_block_state
+from indiegen.synth.grit import waveshape
 from indiegen.synth.noise import uniform_stream
 from indiegen.synth.osc import midi_to_hz
 
@@ -116,7 +117,8 @@ def render_pluck_block(
     if end > begin:
         block[: end - begin] = excitation[begin:end]
     filtered, carry = lfilter(state.numerators, state.coefficients, block, zi=state.filter_state)
-    blocked, dc_carry = dc_block_state(filtered, sample_rate, state.dc)
+    shaped = waveshape(filtered, event.drive_permille)
+    blocked, dc_carry = dc_block_state(shaped, sample_rate, state.dc)
     return blocked, PluckState(
         coefficients=state.coefficients,
         numerators=state.numerators,

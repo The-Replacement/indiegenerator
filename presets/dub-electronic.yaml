@@ -21,6 +21,10 @@ pulse: bars
 swing_permille: 500
 melodic_jitter_frames: 25
 
+# c30: the stabs drive hard and the kit snaps.
+drive_permille: 350
+snap_permille: 350
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
