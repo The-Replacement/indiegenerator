@@ -17,6 +17,10 @@ mode_pool: [dorian, phrygian]
 # The lane has a pulse, so the sections are measured in bars.
 pulse: bars
 
+# c26: the noise is freer, the onsets drift furthest.
+swing_permille: 300
+melodic_jitter_frames: 45
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6. The numbers are the medians of twenty renders

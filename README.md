@@ -6,11 +6,12 @@ A seed goes in; a finished, tagged track comes out. Every run of the same
 `(preset, seed)` produces the same plan, and on the same machine the same
 audio, byte for byte.
 
-> **Status: slice S5 (`s5-batch-station`).** The batch, the catalog, the file
-> check, the install, and the station's three forms. The mix bus, the
-> limiter, the loudness normalisation, the true peak, the codec round trip,
-> and every gate of BRIEF §11 in force. Eight minutes of music per lane,
-> delivered at −16 LUFS and at most −1.5 dBTP. See
+> **Status: slice S5 (`s5-batch-station`) + c26 (`c26-microtiming-groove`).**
+> The batch, the catalog, the file check, the install, and the station's
+> three forms, now with swing and 1/f onset jitter on the melodic material.
+> The mix bus, the limiter, the loudness normalisation, the true peak, the
+> codec round trip, and every gate of BRIEF §11 in force. Eight minutes of
+> music per lane, delivered at −16 LUFS and at most −1.5 dBTP. See
 > [What is not built yet](#what-is-not-built-yet).
 
 ---
@@ -37,13 +38,13 @@ format: FLAC 44100Hz PCM_16 2ch
 form: interlude
 peak: -4.305 dBFS
 true_peak: -4.300 dBTP
-loudness: -16.136 LUFS
-loudness_range: 12.565 LU
+loudness: -16.051 LUFS
+loudness_range: 12.648 LU
 sections: 3
 techniques: poly_period,drone,pluck
-plan_sha256: 74fa252cc6de3300933a3344eb4b9588d5943e1044d880f0897b14e503f5f532
-pcm_sha256: 9b12b71ac91d500650cc764556b99c489db482fa9e7526fb1b115ac7496f369c
-render_seconds: 26.202
+plan_sha256: 069b0e97e81dc1c75c66e7ab05b52c5e33fe97d780cf19e7308c62e93d9f9729
+pcm_sha256: 6cf8f6b69f648bc5dfcf3d829cc82dad5c32188ccf0ca2b1059369383acc68d1
+render_seconds: 27.252
 ```
 
 Other commands:
@@ -83,7 +84,7 @@ the numbers are what the machine does, not a benchmark. The host is shared and
 repeat runs of the same command have differed by up to 30%, so read the times
 as an order of magnitude and the hashes as the fact.
 
-Eight-minute pieces, measured on 2026-10-22 with exactly this command, one
+Eight-minute pieces, measured on 2026-10-23 with exactly this command, one
 process each:
 
 ```bash
@@ -92,21 +93,23 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 84.4 s | 116.8 s | 107.4 s | 84.5 s | 155.7 s |
-| Faster than realtime | 5.7× | 4.1× | 4.5× | 5.7× | 3.1× |
+| Render time (whole command) | 77.4 s | 99.8 s | 92.9 s | 79.4 s | 125.1 s |
+| Faster than realtime | 6.2× | 4.8× | 5.2× | 6.0× | 3.8× |
 | Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
-| Integrated loudness | −16.145 LUFS | −16.091 LUFS | −16.116 LUFS | −16.129 LUFS | −16.120 LUFS |
-| True peak (4× oversampled) | −4.298 dBTP | −4.219 dBTP | −4.299 dBTP | −4.265 dBTP | −4.300 dBTP |
-| Loudness range | 10.69 LU | 9.13 LU | 12.23 LU | 9.70 LU | 11.18 LU |
+| Integrated loudness | −16.147 LUFS | −16.073 LUFS | −16.101 LUFS | −16.116 LUFS | −16.098 LUFS |
+| True peak (4× oversampled) | −4.298 dBTP | −4.296 dBTP | −4.297 dBTP | −4.264 dBTP | −4.299 dBTP |
+| Loudness range | 10.76 LU | 10.14 LU | 12.19 LU | 9.98 LU | 11.43 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `plan_sha256` | `6efe546b…` | `de033c86…` | `1b538fa0…` | `819504c0…` | `ca3541a5…` |
-| `pcm_sha256` | `e23a49af…` | `9cdbd015…` | `3b7050c5…` | `96dcca86…` | `5ae5e2d3…` |
+| `plan_sha256` | `87fcceb6…` | `bccd638d…` | `9734b069…` | `9338d997…` | `a80a40fe…` |
+| `pcm_sha256` | `590dffe4…` | `f0705d39…` | `15970506…` | `0c8d1687…` | `5d5946c3…` |
 
 The hashes are the sidecar's, so the audio column is reproducible on any
-machine that runs the command above; the other columns are this one.
+machine that runs the command above; the other columns are this one. Peak
+RSS is from the 2026-10-22 run: c26 shifts onset frames and allocates
+nothing new, so the allocation profile is unchanged.
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the slowest lane is the ambient at 155.7 s even on a run
+both hold with room: the slowest lane is the ambient at 125.1 s even on a run
 this loaded, and the master chain's peak memory (the peak envelope plus the
 limited mix) is 850 MB at eight minutes, below the render's own 1182 MB.
 

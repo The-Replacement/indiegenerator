@@ -21,7 +21,7 @@ from typing import Literal, cast
 
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
-from indiegen.compose.rng import SplitMix64, seed_from_bytes
+from indiegen.compose.rng import SplitMix64, groove_offsets, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
 from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
@@ -54,6 +54,7 @@ from indiegen.plan import (
     DubChainSpec,
     Event,
     FrippertronicsSpec,
+    HitBase,
     MotifAppearance,
     MotifCell,
     MotifNote,
@@ -373,6 +374,130 @@ def _ornament_events(events: list[Event], boundaries: list[int], seed: int, perm
             )
         )
     return out
+
+
+def _on_odd_beat(frame: int, frames_per_beat: int) -> bool:
+    """Whether ``frame`` lands on an odd beat of the bar."""
+    return frames_per_beat > 0 and (frame // frames_per_beat) % 2 == 1
+
+
+def _groove_section_start(boundaries: list[int], frame: int) -> int:
+    """The start of the section ``frame`` falls in, or 0."""
+    floor = 0
+    for boundary in boundaries:
+        if boundary <= frame:
+            floor = boundary
+        else:
+            break
+    return floor
+
+
+def _shift_hits(hits: Sequence[HitBase], swing: int, frames_per_beat: int, duration_frames: int) -> list[HitBase]:
+    """Swing the hits on odd beats, keeping the list non-decreasing.
+
+    ``render_drum_block`` walks the hits with a cursor and stops at the
+    first hit past the block, so the list has to stay sorted: a swung hit
+    is clamped to its predecessor plus one.
+    """
+    shifted: list[HitBase] = []
+    previous = -1
+    for hit in hits:
+        frame = hit.frame
+        if _on_odd_beat(frame, frames_per_beat):
+            frame += swing
+        frame = min(frame, duration_frames - 1)
+        if frame <= previous:
+            frame = previous + 1
+        previous = frame
+        shifted.append(hit.model_copy(update={"frame": frame}) if frame != hit.frame else hit)
+    return shifted
+
+
+def _groove_event(
+    event: Event,
+    swing: int,
+    frames_per_beat: int,
+    jitter_delta: int,
+    boundaries: list[int],
+    duration_frames: int,
+) -> Event:
+    """One event after the swing and the jitter, clamped to its section."""
+    new_event: Event = event
+    if swing and isinstance(event, (PluckEvent, RhythmEvent)) and _on_odd_beat(event.start_frame, frames_per_beat):
+        start = event.start_frame + swing
+        if start + event.duration_frames > duration_frames:
+            start = duration_frames - event.duration_frames
+        if start >= 0:
+            new_event = new_event.model_copy(update={"start_frame": start})
+    if jitter_delta and isinstance(new_event, PluckEvent):
+        floor = _groove_section_start(boundaries, new_event.start_frame)
+        start = max(floor, new_event.start_frame + jitter_delta, 0)
+        if start + new_event.duration_frames > duration_frames:
+            start = duration_frames - new_event.duration_frames
+        if start >= 0:
+            new_event = new_event.model_copy(update={"start_frame": start})
+    if swing and isinstance(new_event, RhythmEvent) and new_event.hits:
+        new_event = new_event.model_copy(
+            update={"hits": _shift_hits(new_event.hits, swing, frames_per_beat, duration_frames)}
+        )
+    return new_event
+
+
+def _apply_groove(
+    events: list[Event],
+    appearances: list[MotifAppearance],
+    boundaries: list[int],
+    frames_per_beat: int,
+    pulse: str,
+    swing_permille: int,
+    jitter_frames: int,
+    seed: int,
+    duration_frames: int,
+) -> tuple[list[Event], list[MotifAppearance]]:
+    """Swing the offbeats and drift the plucks. Pure and deterministic.
+
+    Swing moves an onset that falls on an odd beat later by
+    ``frames_per_beat * swing_permille // 6000`` frames: at 1000 that is a
+    sixth of a beat, the triplet feel, and it is a no-op in a lane with no
+    pulse. The plucks then drift on a compose-side low-frequency stream in
+    ``[-jitter_frames, +jitter_frames]``. The motif's recorded appearances
+    move with their plucks, or the Director could not find them again.
+    """
+    if swing_permille <= 0 and jitter_frames <= 0:
+        return events, appearances
+    swing = frames_per_beat * swing_permille // 6000 if (pulse == "bars" and frames_per_beat > 0) else 0
+    # One jitter offset per (instrument, start, midi) group: the station's
+    # detuned chorus pair is one gesture, so both voices drift together.
+    groups: dict[tuple[str, int, int], int] = {}
+    for event in events:
+        if isinstance(event, PluckEvent):
+            key = (event.instrument, event.start_frame, event.midi)
+            if key not in groups:
+                groups[key] = len(groups)
+    offsets = groove_offsets(seed, len(groups), jitter_frames)
+    out: list[Event] = []
+    moved: dict[int, int] = {}
+    for event in events:
+        delta = (
+            offsets[groups[(event.instrument, event.start_frame, event.midi)]] if isinstance(event, PluckEvent) else 0
+        )
+        new_event = _groove_event(event, swing, frames_per_beat, delta, boundaries, duration_frames)
+        if (
+            isinstance(new_event, PluckEvent)
+            and new_event.instrument == "motif"
+            and new_event.start_frame != event.start_frame
+        ):
+            moved[event.start_frame] = new_event.start_frame
+        out.append(new_event)
+    if not moved:
+        return out, appearances
+    new_appearances = [
+        appearance.model_copy(update={"start_frame": moved[appearance.start_frame]})
+        if appearance.start_frame in moved
+        else appearance
+        for appearance in appearances
+    ]
+    return out, new_appearances
 
 
 def _pad_event(card: PadCard, rng: SplitMix64, ctx: TechniqueContext, start: int, length: int, root: int) -> PadEvent:
@@ -765,6 +890,8 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         grace_offset_frames=station.grace_offset_frames,
         double_copies=station.double_copies,
         double_offset_frames=station.double_offset_frames,
+        swing_permille=lane.swing_permille,
+        melodic_jitter_frames=lane.melodic_jitter_frames,
         fx_sends=list(lane.fx_sends),
         techniques=[card.kind for card in lane.techniques],
         strategy_deck=inputs.deck,
@@ -950,6 +1077,17 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         events.extend(motif_events)
 
     events = _planar_offset(events, station.planar_offset_semitones)
+    events, appearances = _apply_groove(
+        events,
+        appearances,
+        boundaries,
+        frames_per_beat,
+        lane.pulse,
+        lane.swing_permille,
+        lane.melodic_jitter_frames,
+        seed,
+        frames,
+    )
     events = _ornament_events(events, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
     events = _double_events(events, station.double_copies, station.double_offset_frames, frames)
 

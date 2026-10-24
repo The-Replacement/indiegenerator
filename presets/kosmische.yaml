@@ -17,6 +17,10 @@ mode_pool: [aeolian, dorian]
 # The lane has a pulse, so the sections are measured in bars.
 pulse: bars
 
+# c26: a gentle swing, a soft drift.
+swing_permille: 250
+melodic_jitter_frames: 30
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.

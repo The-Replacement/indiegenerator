@@ -65,3 +65,26 @@ class SplitMix64:
 def seed_from_bytes(payload: bytes) -> int:
     """Derive a 64-bit seed from bytes, so the seed material is never guessed."""
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big")
+
+
+def groove_offsets(seed: int, count: int, depth: int) -> list[int]:
+    """A deterministic, low-frequency offset sequence in ``[-depth, depth]``.
+
+    The values come from a dedicated SplitMix64 stream - never the compose
+    RNG, whose draw order the rest of the plan depends on - and are run
+    through an integer one-pole so consecutive onsets drift instead of
+    jittering like white noise. A hand pushes and pulls; white noise
+    twitches. ``depth <= 0`` or ``count <= 0`` returns zeros, so the groove
+    pass is a strict no-op and the default render cannot move because of
+    this helper.
+    """
+    if depth <= 0 or count <= 0:
+        return [0] * max(0, count)
+    rng = SplitMix64(seed_from_bytes(f"groove:{seed}".encode("ascii")))
+    out: list[int] = []
+    value = 0
+    for _ in range(count):
+        target = rng.between(-1000, 1000)
+        value = (3 * value + target) // 4
+        out.append(max(-depth, min(depth, (value * depth) // 1000)))
+    return out

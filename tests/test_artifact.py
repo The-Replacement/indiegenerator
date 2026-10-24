@@ -44,18 +44,30 @@ def _mono(decoded: np.ndarray) -> np.ndarray:
     return decoded.astype(np.float64).mean(axis=1)
 
 
+def _rms(signal: np.ndarray) -> float:
+    """The energy of a window.
+
+    The design claim is about the energy trajectory, not about a single
+    sample: a peak test is decided by whichever transient happens to land
+    in the window, so micro-timing can move a peak in or out and flip the
+    result without the music changing. BRIEF 6's tension curve and gate
+    5's per-second RMS are energy measures; this is the same yardstick.
+    """
+    return float(np.sqrt(np.mean(np.square(signal))))
+
+
 def test_the_opening_is_quieter_than_the_body(decoded: np.ndarray) -> None:
     mono = _mono(decoded)
-    opening = float(np.max(np.abs(mono[: 300 * RATE // 1000])))
-    body = float(np.max(np.abs(mono[RATE : 3 * RATE])))
-    assert opening < body
+    opening = _rms(mono[: 300 * RATE // 1000])
+    body = _rms(mono[RATE : 3 * RATE])
+    assert opening < 0.8 * body
 
 
 def test_the_closing_is_quieter_than_the_body(decoded: np.ndarray) -> None:
     mono = _mono(decoded)
-    closing = float(np.max(np.abs(mono[-500 * RATE // 1000 :])))
-    body = float(np.max(np.abs(mono[RATE : 3 * RATE])))
-    assert closing < body
+    closing = _rms(mono[-500 * RATE // 1000 :])
+    body = _rms(mono[RATE : 3 * RATE])
+    assert closing < 0.8 * body
 
 
 def test_no_internal_dropout(decoded: np.ndarray) -> None:

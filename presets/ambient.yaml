@@ -16,6 +16,10 @@ scale_midi: [38, 40, 41, 43, 45, 47, 48, 50, 52, 53, 55, 57, 59, 60, 62, 64]
 mode_pool: [dorian, aeolian]
 pulse: seconds
 
+# c26: the ambient has no pulse, so swing is a no-op; the plucks still drift.
+swing_permille: 0
+melodic_jitter_frames: 30
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.

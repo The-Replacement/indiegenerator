@@ -497,6 +497,8 @@ class Plan(FrozenModel):
     grace_offset_frames: int = Field(default=0, ge=0, le=500)
     double_copies: int = Field(default=0, ge=0, le=2)
     double_offset_frames: int = Field(default=0, ge=0, le=50)
+    swing_permille: int = Field(default=0, ge=0, le=1000)
+    melodic_jitter_frames: int = Field(default=0, ge=0, le=200)
     arrangement_mutes: list[ArrangementMute] = Field(default_factory=list, max_length=256)
     sections: list[SectionPlan] = Field(max_length=64)
     motif: MotifCell

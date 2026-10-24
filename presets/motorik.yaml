@@ -18,6 +18,10 @@ mode_pool: [dorian, mixolydian, aeolian]
 # Director fires every 8 to 32 of them.
 pulse: bars
 
+# c26: the motorik swings and the stabs breathe.
+swing_permille: 600
+melodic_jitter_frames: 40
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
