@@ -18,27 +18,21 @@ contract (especially 6, 8, 11, 15, 16 and 18). Do not modify it.
 THE STATE
 =====================================================================
 
-master is at fe97aa2 (feat(c31): an upper corner on the hat and a bass-keyed
-masking duck). Clean tree. ruff check, ruff format --check and mypy src are
-clean. pytest -q -m "not sweep": 543 passed, 15 deselected. pytest -q -m
-sweep: 15 passed. pytest -m slow: 4 passed.
+master is at d199dcb (docs(c32): re-derive the indie-noise row of the
+measured table). Clean tree. ruff check ., ruff format --check . and mypy
+src are clean. pytest -q -m "not sweep": 581 passed, 15 deselected.
+pytest -q -m sweep: 15 passed. pytest -m slow: 4 passed.
 
-Slices S0-S5 and changes c21-c31 are done and archived in memory under the
+Slices S0-S5 and changes c21-c32 are done and archived in memory under the
 topic keys sdd-<change_id>-{context,proposal,spec,design,tasks,impl,verify,
 done}. The recent ones, most useful first:
-  sdd-c31-masking-codec-*      (the hat's upper corner and the masking duck)
-  sdd-c30-timbral-grit-*       (the drive and the snap)
-  sdd-c29-longform-memory-*    (the streamed render and master)
-  sdd-c28-seed-sweep-gate-coverage-*  (the sweep and its CI job)
-  sdd-c27-ambient-energy-trajectory-* (gate 5 and the static plan)
-Handoff documents are in docs/handoff/, one per change. Read
-docs/handoff/c31-masking-codec.md first: it carries the measured numbers, the
-shelf that was built and cut, and the two pre-existing defects.
-
-Read the memory topic c31-preexisting-drum-tail-block and
-c31-measurements-and-gate7-regression before touching the render block or a
-gate: they are the latent defects found while landing c31 and the method that
-found them.
+  sdd-c32-short-form-trajectory-done   (the interlude band, three commits)
+  c3336862  the density gate that leaked across section boundaries
+  c32-density-scale-mechanism          (PatternCard.density_scale_permille)
+  sdd-c31-masking-codec-*              (the hat's upper corner and the duck)
+  sdd-c30-timbral-grit-*               (the drive and the snap)
+  sdd-c29-longform-memory-*            (the streamed render and master)
+Handoff documents are in docs/handoff/, one per change.
 
 What exists: five lanes (motorik, kosmische, ambient, dub-electronic,
 indie-noise); the arranger (section graph, tension curve, motif and
@@ -50,19 +44,25 @@ the CLI (render, batch, catalog, validate, install, explain); the catalog and
 the atomic writer. The render streams: the mix is a float64 memmap stem and
 the master holds only the int16 output (c29).
 
-Measured on this machine, eight-minute pieces, seed 1042, after c31:
+Measured on this machine, eight-minute pieces, seed 1042, after c32:
 
 | lane | wall | loudness | true peak | LRA | pcm_sha256 |
 |---|---|---|---|---|---|
 | motorik | 89.3 s | -16.083 LUFS | -4.298 dBTP | 10.37 LU | 3a902b7a... |
 | kosmische | 121.1 s | -16.051 LUFS | -4.299 dBTP | 10.06 LU | 2423db5b... |
 | dub-electronic | 119.4 s | -16.099 LUFS | -4.297 dBTP | 11.75 LU | b5b63e10... |
-| indie-noise | 109.4 s | -16.116 LUFS | -4.292 dBTP | 10.11 LU | e1f6b6b0... |
+| indie-noise | 129.9 s | -16.106 LUFS | -4.293 dBTP | 10.16 LU | 00b1513b... |
 | ambient | 127.3 s | -16.095 LUFS | -4.299 dBTP | 11.44 LU | 4a586f55... |
 
 Every lane passes every gate at eight minutes; the 240 s seed sweep passes
 gates 4/5/6/7/13 at five lanes x three seeds. Every LRA is inside BRIEF 6's
 4-12.
+
+NEW IN c32: THE WHOLE INTERLUDE BAND IS GREEN. Every lane passes every gate
+at 45, 60, 90 AND 120 seconds, which was not true before. That band is the
+station's interlude form (45-120 s, station.yaml:19) and it used to refuse
+kosmische at 45 s and 60 s, motorik at 45 s, indie-noise at 45 s and
+dub-electronic at 45 s and 90 s.
 
 =====================================================================
 THE RULES THAT ARE NOT NEGOTIABLE
@@ -74,10 +74,9 @@ THE RULES THAT ARE NOT NEGOTIABLE
 - The renderer never rolls dice and never imports compose/. The master is
   the one stage that looks at its own output; do not add a second.
 - A field that is declared and never read is a bug. Presets are swept by
-  tests/test_preset_consumption.py: every declared key must move the plan,
-  so a knob only a lane with the matching event can consume is declared
-  only on that lane (see c30: snap on lanes with drums; c31: the duck on the
-  two lanes with a bass).
+  tests/test_preset_consumption.py: every declared key must move the plan.
+  One key is deliberately exempt and says so in the source
+  (density_scale_permille - see below).
 - A default of 0 must be a strict no-op: the frozen S0 render
   (tests/test_migration.py) must stay bit-identical.
 - No new third-party dependency. Exact pins; the pin list is the lockfile.
@@ -87,16 +86,17 @@ THE RULES THAT ARE NOT NEGOTIABLE
   proposal,spec,design,tasks,impl,verify,done} via the n3rv-memory MCP.
 - The project board does not track this project. Skip board updates.
 - Never write into ~/Work/radio except through install, and only when
-  asked. Do not start or restart the radio. (Both were overridden once, at
-  the operator's explicit request, when c31 shipped: see the radio note
-  below. The defaults stand.)
+  asked. Do not start or restart the radio. (Overridden once, at the
+  operator's explicit request, when c31 shipped: see the radio note below.
+  The defaults stand.)
 
 Commands: .venv/bin/pytest, .venv/bin/ruff check ., .venv/bin/ruff format
 --check ., .venv/bin/mypy src, and
 .venv/bin/python -m indiegen.cli render --preset motorik --seed 1042 --out out/
 The seed sweep is its own CI job and a local .venv/bin/pytest -q -m sweep.
 Gate 12 (the codec) and gate 11 need ffmpeg and run only in `validate` and
-`install`, never in the render path.
+`install`, never in the render path. Note: there is no pytest-timeout
+plugin, so --timeout is rejected.
 
 =====================================================================
 DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
@@ -111,20 +111,39 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
   compose time, from a dedicated sub-RNG (c26).
 - Grit: a per-lane drive, tanh(x*gain)/gain, identity at 0, applied in
   synth/ks.py ONLY (the plucked/string voices). The additive pad, drone and
-  poly-period are deliberately clean: drive on the sustained bed lifted
-  motorik's LRA to 16.49 LU (c30). A level-neutral shaper for the sustained
-  bed is still deferred.
+  poly-period are deliberately clean (c30).
 - The render streams over a float64 memmap stem; the master computes the
   peak envelope per block.
-- c31: a hat's cutoff_hz is its LOWER corner (a closed hat is noise ABOVE
-  it), and lowpass_hz is the optional upper one. All three hat lanes declare
-  14000. This is BRIEF 6's codec rule, applied at the source.
-- c31: the duck is keyed on bass HIT FRAMES (the sidechain rule), runs
-  BEFORE the drum bus is summed in, and is declared on motorik and
-  dub-electronic only.
+- c31: a hat's cutoff_hz is its LOWER corner, and lowpass_hz the optional
+  upper one. All three hat lanes declare 14000. This is BRIEF 6's codec rule.
+- c31: the duck is keyed on bass HIT FRAMES, runs BEFORE the drum bus is
+  summed in, and is declared on motorik and dub-electronic only.
 - c31: a station-wide >12 kHz shelf was built and CUT, because across three
-  seeds, the 45 s interlude and the 900 s longform it changed no verdict. Do
-  not rebuild it without new evidence.
+  seeds, the 45 s interlude and the 900 s longform it changed no verdict.
+  Do not rebuild it without new evidence.
+- c32: A PULSED SECTION IS NEVER SHORTER THAN FOUR BARS (MINIMUM_SECTION_BARS,
+  planner.py). _section_lengths asked for four-bar multiples and used to give
+  the snapping up when the drawn section count did not fit - and the count is
+  drawn independently of the duration, so a 45 s track got the same six
+  sections as a 480 s one at two bars each. The count gives way now, not the
+  floor: compose() caps the draw at what four bars per section allows, and
+  _section_lengths falls back to a floor-pinned proportional split
+  (_floored_shares) when the snap does not fit. The cap is floored at the
+  lane's own section_count_range[0] - a five-second test render must keep the
+  count it declared, or _walk_graph has no arrangement to build.
+- c32: A DRUM VOICE'S DENSITY GATE BELONGS TO THE HIT'S FRAME, NOT TO ITS BAR
+  (t6_drums.py, _audible). It used to be tested once per bar against the
+  section the bar started in, so a bar straddling a section boundary carried
+  the dense section's material into the sparse one. That ONE bug was both of
+  the "remaining defects": dub-electronic took nine and seven stray hits into
+  its quietest section at 45 s and 90 s and its energy arc inverted (gate 5),
+  and indie-noise took four into its outro (gate 7).
+- c32: PatternCard.density_scale_permille lets a pattern's pulse count follow
+  the section's density. 0 is a strict no-op. It exists because indie-noise's
+  wall is euclid(16, 16) - already maximum - so build (density 55) and
+  plateau (80) were identical and the lane's documented "it crests in the
+  plateau" was never implemented. At 1000 the wall plays 9 of 16 pulses at
+  density 55 and 13 at 80. Measured: 4.73 -> 5.81 hits/s.
 - A unit trap worth remembering: a millibel in this project is 1/100 dB
   (gain.py: 10 ** (millibels / 2000)). -6000 is -60 dB, not -6 dB.
 - Declared deviations, in the s4-mix-master-spec record: gate 10 is "the
@@ -136,17 +155,7 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
 WHAT IS LEFT - IN THIS ORDER
 =====================================================================
 
---- 1. c32: THE SHORT-FORM TRAJECTORY ---------------------------------
-
-kosmische fails gate 6 at 60 s: the pre-c31 code at the c30 commit measures
--0.214971 against the 0.4 limit for the shipped preset. The c30 handoff
-recorded -0.10 cold / -0.013 warm and those figures DO NOT REPRODUCE - work
-from -0.214971. It passes at 240 s. The station's interlude form is
-45-120 s, so a legal short kosmische track is refused. Find the structural
-cause (the timbre curve at short durations) and fix it, not the gate.
-Reproduce: render --preset kosmische --seed 1042 --seconds 60.
-
---- 2. THE RENDER_BLOCK DRUM-TAIL DEFECT ------------------------------
+--- 1. THE RENDER_BLOCK DRUM-TAIL DEFECT (carried from c31) --------------
 
 A drum voice longer than RENDER_BLOCK loses its tail past the second block:
 render_drum_block carries an overrunning hit as one PendingHit and
@@ -156,17 +165,20 @@ Only kick, snare and bass are affected (the kick's decay_frames is 13000);
 hat, pad and pluck are fine. Reproduces at RENDER_BLOCK 4099 and 8191, clean
 at 16384. Latent in production (RENDER_BLOCK is 131072) and the existing
 test uses 65536, so the suite gives false confidence. It matters because
-RENDER_BLOCK is the obvious next memory dial after c29. Full detail:
-memory topic c31-preexisting-drum-tail-block.
+RENDER_BLOCK is the obvious next memory dial after c29. Full detail: memory
+topic c31-preexisting-drum-tail-block.
 
---- 3. c27-C: THE SHORT AMBIENT'S ARC (deferred from c27) --------------
+--- 2. c27-C: THE SHORT AMBIENT'S ARC (deferred from c27) ----------------
 
 The ambient can draw a two-section intro(-1200) -> outro(-1400) plan, a
 sixteen-minute piece with 0.2 dB of shape; it passes gate 5 only because of
 c27's static-plan tolerance. Give it a real arc, without leaning on the
-exemption.
+exemption. Note that ambient's timbre table is 800 Hz for EVERY function, so
+gate 6 takes its static-variance branch there and never correlates a curve -
+anything that gives the ambient a shape has to decide what that means for
+the declaration.
 
---- 4. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) --------
+--- 3. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 
 No voice-leading engine exists; harmony is modal stasis. This is the biggest
 identity change and the biggest blast radius. Spike it first (a /tmp harness
@@ -174,65 +186,97 @@ with a pre-declared falsifier and a measured A/B) before it touches the
 planner.
 
 =====================================================================
-THE RADIO (state as of c31)
+A KNOWN CAVEAT ABOUT GATE 7 IN ONE LANE
+=====================================================================
+
+indie-noise passes gate 7 at every duration now, but at 45 s it passes
+because the sparser build SPLIT the intro/build flux cluster, not because
+the plateau boundary produces a peak: the flux there is 72300 against a
+threshold of 100353. At 90 s the peaks do track the section boundaries. So
+a green gate 7 in this lane is still not proof that every section change is
+audible. Do not read it as one, and do not tune this lane against gate 7
+without measuring the flux at the boundaries first - the dense wall gives
+the flux a permanently high baseline (median ~68000) and only a large
+spectral change clears the threshold.
+
+Five candidate fixes for this lane were built and measured before the
+mechanism that worked was found (a second wall, a kick, a snare, a pad, a
+poly-period); four of them turned no failing case into a passing one and
+were cut, with their numbers recorded. The kick was also rejected because
+tests/test_bus.py asserts that indie-noise has no kick. That assertion is a
+contract: the lane is defined as a lane without one.
+
+=====================================================================
+THE RADIO (state as of c31, unchanged by c32)
 =====================================================================
 
 ~/Work/radio/music holds 20 tracks, all generated by c31 (seeds 4000-4019,
 installed 2026-10-24; `install` validates every file with the codec gate and
 copies atomically). The nine pre-c30 tracks that used to be in rotation were
-MOVED OUT, not deleted, to /tmp/opencode/radio-old/ - they are also
-byte-identical to the copies in out_batch/, so they are recoverable two
-ways. `rm` is blocked by the sandbox's permission policy; `mv` is not.
+MOVED OUT, not deleted, to /tmp/opencode/radio-old/.
 
 Adding files to music/ needs no restart (reload_mode = "watch"). REMOVING
 them does: liquidsoap keeps deleted tracks in its in-memory playlist, so
 `docker compose restart liquidsoap` in ~/Work/radio is required. That was
 done once, at the operator's request.
 
-scripts/smoke.sh reports 29/29. It reported 28/29 while c31 was landing, and
-the one failure was "la redirección arrastra el token", a Caddy 302
-assertion. It was not c31's and not this repo's: the cause was the webcam
-token-in-URL fallback in the RADIO repo (de02e9a), which made the canje
-redirect keep ?t= in the URL, so `grep -iE '^location: /$'` could never
-match. It was fixed there at 40c7c31, by asserting the frontend URL instead.
+NOTE: c32 changed indie-noise's audio, so the 20 tracks on the radio are
+pre-c32. Re-installing is a decision for the operator, not a step of this
+change.
 
-Two things that fix changed, both worth knowing:
-- The assertion now ENFORCES the token-in-URL redirect, so reverting it to
-  Location: / will FAIL the smoke suite. The trade is encoded as a test.
-- The boundary that still holds is the one that matters: "el token NO llega a
-  Icecast" passes and the no-credential paths 404, so the token never reaches
-  the stream. The accepted exposure is the browser URL only (history,
-  Referer, CDN logs).
-
-Method note, because it is the kind of reasoning that survives into other
-diagnoses: while this was open, "Caddy has restarts=0 and was up throughout"
-was offered as evidence that the failure predated the session. It is not. It
-proves the PROCESS was not restarted, not that its BEHAVIOUR did not change -
-a config edit or a deploy changes behaviour without touching the process. The
-causal evidence was pinning the change to a specific commit.
+scripts/smoke.sh reports 29/29. The one historical failure was a Caddy 302
+assertion caused by the RADIO repo's webcam token-in-URL fallback (de02e9a),
+fixed there at 40c7c31. That fix now ENFORCES the token-in-URL redirect, so
+reverting it to Location: / will FAIL the smoke suite; the accepted exposure
+is the browser URL only, not the stream.
 
 =====================================================================
-METHOD THAT HAS WORKED HERE
+METHOD THAT HAS WORKED HERE - AND THE WAYS IT WENT WRONG IN c32
 =====================================================================
 
-Three of the last six changes (c27, c30, c31) each turned up a defect the
-suite did not see, and c28 was the change that made that class visible. c31
-found its cause by measuring BEFORE writing code: two /tmp spikes attributed
-the gate-12 failure to the hat (90% of the >14 kHz energy) rather than to a
-missing shelf, and a third spike retired the duck's LRA risk. Every spike
-had a pre-declared falsifier.
+c32 turned up three defects the suite did not see, and the method that found
+them is the one to keep: measure before writing code, give every spike a
+pre-declared falsifier, and when a claim breaks, root-cause it or record the
+deviation out loud.
 
-Keep the discipline: run the sweep, measure before and after, and when a
-claim breaks, root-cause it and fix the cause, or record the deviation out
-loud. Several decisions in c31 were made by measurement refusing them (the
-shelf, the timbre re-declaration) and those refusals are recorded with
-numbers. Never loosen a gate to make a number pass.
+Four things went wrong in c32. They are worth more than the fixes:
 
-Two habits worth keeping, both learned the hard way in c31:
+1. FIFTEEN HARNESS RUNS MEASURED THE WRONG PLAN. The CLI builds its plan as
+   director(compose(...)) (cli.py:116). The harnesses called compose() alone,
+   so every plan they measured had no Director - no strategy-deck moves and
+   no _reshape_motif. It surfaced only because a plan-level gate (13,
+   "director fires") reported zero on a plan the CLI accepts, which is
+   impossible. THE CHEAPEST CHECK IS THE HASH: compare the harness's
+   plan_sha256 with the CLI's for the same preset/seed/seconds before
+   trusting a sweep. That hash was in hand from the first run.
+
+2. A CAP ON A DRAWN COUNT MUST BE FLOORED AT THE DECLARED MINIMUM. The first
+   version of c32's section-count cap used max(1, ...); at a test's five
+   seconds that is one section, _walk_graph has no arrangement of one, and
+   35 tests died with PlanError. The draw's range is what the rest of the
+   pipeline assumes.
+
+3. TWO HYPOTHESES WERE MEASURED DEAD. The motif's count-based placement was
+   c32's root cause for a while, and a change to it DID make the gate pass -
+   by altering the bright-onset rate, which is exactly BRIEF 11's "do not add
+   a filter sweep to satisfy this gate" failure mode. It was reverted. The
+   dub chain's sidechain was the second suspect and was also innocent. The
+   real cause was one line of bar-versus-frame gating in a different file.
+
+4. c31's STANDARD, APPLIED TO ITS SUCCESSORS. Five crest candidates were
+   built and measured for indie-noise; the four that turned no failing case
+   into a passing one were CUT rather than shipped, with their numbers
+   recorded. That is the shelf precedent doing its job.
+
+Habits worth keeping, all learned the hard way:
 - When you add a stage to the render, prove bit-identity against a pre-change
-  `git worktree` (PYTHONPATH override the venv's editable install). That is
-  how c31 showed kosmische and ambient were untouched.
-- Do not trust a measured number's label. The c31 work found a mislabelled
-  unit (-6000 millibels described as -6 dB), a stale c30 figure, and two
-  README claims that contradicted the README's own tables.
+  `git worktree` (PYTHONPATH override the venv's editable install).
+- Do not trust a measured number's label. c31 found a mislabelled unit, a
+  stale figure and two README claims that contradicted the README's tables.
+  c32 found that the measured table's indie-noise row was stale the moment
+  the wall changed - re-derive a table row when the thing it measures moves,
+  and remember the goldens do not cover every lane (they cover motorik's plan
+  and ambient's PCM).
+- Never loosen a gate to make a number pass. Four c32 candidates died on
+  that rule and the fifth earned its place.
 ```
