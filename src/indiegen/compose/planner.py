@@ -83,6 +83,21 @@ MINIMUM_DIFFERENCES: int = 2
 MODE_SHIFT_MIN_BARS: int = 16
 MODE_SHIFT_MAX_BARS: int = 64
 
+# The shortest a section may be in a lane with a pulse, in bars. BRIEF 6
+# asks for section lengths in 4-bar multiples, and _section_lengths snaps
+# them to that - but it GIVES UP the snapping when the sections do not fit,
+# which is the wrong thing to give up: a section shorter than this cannot
+# carry the material its function declares. A motif that recurs once a
+# phrase, or a timbre that has to establish itself, needs the room, and
+# what has to give instead is the COUNT of sections.
+#
+# Measured (c32): at six sections a 4-bar floor needs 66.2 s at
+# kosmische's tempo, so a 45 s or a 60 s draw produced two- and three-bar
+# sections - and kosmische failed gate 6 at 60 s and gate 7 at 45 s, with
+# motorik and indie-noise failing gate 7 at 45 s alongside it. Every
+# duration whose smallest section was four bars or more passed.
+MINIMUM_SECTION_BARS: int = 4
+
 # The density an arrangement has to reach. A track that never gets here has
 # no peak, and the layers that only exist in the dense sections are in
 # none of it.
@@ -177,6 +192,53 @@ def _walk_graph(graph: list[SectionProfile], count: int, rng: SplitMix64) -> lis
     return paths[rng.below(len(paths))]
 
 
+def _snapped_shares(shares: list[int], frames_per_bar: int) -> list[int]:
+    """The shares snapped to four-bar multiples, with the floor applied."""
+    floor = MINIMUM_SECTION_BARS * frames_per_bar
+    block = 4 * frames_per_bar
+    return [max(floor, round(share / frames_per_bar / 4) * block) for share in shares]
+
+
+def _floored_shares(weights: list[int], total_frames: int, frames_per_bar: int) -> list[int]:
+    """Split the frames by weight, pinning every section at the floor.
+
+    The alternative when the four-bar snap does not fit. Sections that the
+    proportional split would put below MINIMUM_SECTION_BARS are pinned
+    there and the frames that are left are split by weight among the rest;
+    the split is proportional rather than snapped, because snapping needs
+    more room than a short piece has and the FLOOR is what the material
+    actually needs - a section below it cannot carry the motif's recurrence
+    or establish the timbre its function declares.
+
+    Returns the plain proportional split only when even the floor does not
+    fit, which the caller has already ruled out by drawing a section count
+    whose floor fits.
+    """
+    floor = MINIMUM_SECTION_BARS * frames_per_bar
+    count = len(weights)
+    total_weight = sum(weights) or 1
+    if count * floor > total_frames:
+        return [max(1, total_frames * weight // total_weight) for weight in weights]
+    shares = [0] * count
+    pinned = [False] * count
+    remaining = total_frames
+    while True:
+        free = [index for index in range(count) if not pinned[index]]
+        if not free:
+            break
+        free_weight = sum(weights[index] for index in free) or 1
+        for index in free:
+            shares[index] = remaining * weights[index] // free_weight
+        short = [index for index in free if shares[index] < floor]
+        if not short:
+            break
+        for index in short:
+            shares[index] = floor
+            pinned[index] = True
+            remaining -= floor
+    return shares
+
+
 def _section_lengths(
     nodes: list[SectionProfile],
     total_frames: int,
@@ -188,16 +250,21 @@ def _section_lengths(
     The nodes carry their lengths in bars, and the bars are weights: they
     are scaled to fill the track exactly. In a pulsed lane the lengths are
     snapped to multiples of four bars, because BRIEF 6 asks for lengths in
-    4-bar multiples when a pulse exists. The snapping is given up when it
-    does not fit: a section that has no frames is not a section.
+    4-bar multiples when a pulse exists.
+
+    The floor, MINIMUM_SECTION_BARS, is the one thing the snapping may not
+    give up. The snap needs room - a section with twice the weight rounds
+    up twice as far - and when it does not fit the floor is kept by an
+    unsnapped proportional split instead (``_floored_shares``). Only when
+    even the floor does not fit is it abandoned, which the caller has
+    already made impossible by drawing a section count whose floor fits.
     """
     weights = [node.bars for node in nodes]
     total_weight = sum(weights) or 1
     shares = [max(1, total_frames * weight // total_weight) for weight in weights]
     if pulsed and frames_per_bar:
-        snapped = [max(4, round(share / frames_per_bar / 4) * 4) * frames_per_bar for share in shares]
-        if sum(snapped) <= total_frames:
-            shares = snapped
+        snapped = _snapped_shares(shares, frames_per_bar)
+        shares = snapped if sum(snapped) <= total_frames else _floored_shares(weights, total_frames, frames_per_bar)
         # No section may be longer than the harmonic center can be held:
         # BRIEF T16 moves the center every 16 to 64 bars, and a section
         # longer than that would hold one mode for longer than the brief
@@ -1038,6 +1105,21 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     frames_per_bar = frames_per_beat * beats_per_bar
     section_count = rng.between(lane.section_count_range[0], lane.section_count_range[1])
     pulsed = lane.pulse == "bars"
+    if pulsed and frames_per_bar:
+        # Honour MINIMUM_SECTION_BARS by drawing FEWER sections, not by
+        # shortening them. _section_lengths otherwise gives up its own
+        # 4-bar floor when the draw does not fit, and a section below that
+        # floor cannot carry the material its function declares.
+        #
+        # Never below the lane's own minimum: a track too short for even
+        # that many 4-bar sections (a test's five seconds) keeps the count
+        # it declared, and _section_lengths falls back to the unsnapped
+        # proportional split for it.
+        room = max(
+            lane.section_count_range[0],
+            frames // (MINIMUM_SECTION_BARS * frames_per_bar),
+        )
+        section_count = min(section_count, room)
 
     # The arrangement: a walk over the station's section graph.
     nodes = _walk_graph(station.section_graph, section_count, rng)
