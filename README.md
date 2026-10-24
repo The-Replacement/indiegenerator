@@ -98,15 +98,15 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 89.3 s | 121.1 s | 119.4 s | 109.4 s | 127.3 s |
-| Faster than realtime | 5.4× | 4.0× | 4.0× | 4.4× | 3.8× |
+| Render time (whole command) | 89.3 s | 121.1 s | 119.4 s | 129.9 s | 127.3 s |
+| Faster than realtime | 5.4× | 4.0× | 4.0× | 3.7× | 3.8× |
 | Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
-| Integrated loudness | −16.083 LUFS | −16.051 LUFS | −16.099 LUFS | −16.116 LUFS | −16.095 LUFS |
-| True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.297 dBTP | −4.292 dBTP | −4.299 dBTP |
-| Loudness range | 10.37 LU | 10.06 LU | 11.75 LU | 10.11 LU | 11.44 LU |
+| Integrated loudness | −16.083 LUFS | −16.051 LUFS | −16.099 LUFS | −16.106 LUFS | −16.095 LUFS |
+| True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.297 dBTP | −4.293 dBTP | −4.299 dBTP |
+| Loudness range | 10.37 LU | 10.06 LU | 11.75 LU | 10.16 LU | 11.44 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `plan_sha256` | `b39afded…` | `49f62699…` | `edbfee38…` | `9f7cc56c…` | `28c299f7…` |
-| `pcm_sha256` | `3a902b7a…` | `2423db5b…` | `b5b63e10…` | `e1f6b6b0…` | `4a586f55…` |
+| `plan_sha256` | `b39afded…` | `49f62699…` | `edbfee38…` | `4111ac0f…` | `28c299f7…` |
+| `pcm_sha256` | `3a902b7a…` | `2423db5b…` | `b5b63e10…` | `00b1513b…` | `4a586f55…` |
 
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
