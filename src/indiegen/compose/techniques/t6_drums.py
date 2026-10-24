@@ -205,6 +205,7 @@ def plan_hat(card: HatCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCa
         pan_drift_permille=_pink(pink).pan_drift_permille,
         cutoff_hz=card.cutoff_hz,
         decay_frames=card.decay_frames,
+        lowpass_hz=card.lowpass_hz,
     )
 
 

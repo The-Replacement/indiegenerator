@@ -6,15 +6,17 @@ A seed goes in; a finished, tagged track comes out. Every run of the same
 `(preset, seed)` produces the same plan, and on the same machine the same
 audio, byte for byte.
 
-> **Status: slice S5 (`s5-batch-station`) + c26 – c30.** The batch, the
+> **Status: slice S5 (`s5-batch-station`) + c26 – c31.** The batch, the
 > catalog, the file check, the install, and the station's three forms; swing
 > and 1/f onset jitter on the melodic material (c26); a gate that does not
 > fail a static plan (c27); a bounded seed sweep in its own CI job (c28); a
 > streamed render and master that hold the longform memory budget (c29);
-> and a per-voice drive on the string plus a snapped kit (c30). The mix bus,
-> the limiter, the loudness normalisation, the true peak, the codec round
-> trip, and every gate of BRIEF §11 in force. Eight minutes of music per
-> lane, delivered at −16 LUFS and at most −1.5 dBTP. See
+> a per-voice drive on the string plus a snapped kit (c30); and an upper
+> corner on the hat that keeps the noise wall out of the radio's codec
+> region, plus a bass-keyed duck on the band the bass and the pad share
+> (c31). The mix bus, the limiter, the loudness normalisation, the true peak,
+> the codec round trip, and every gate of BRIEF §11 in force. Eight minutes
+> of music per lane, delivered at −16 LUFS and at most −1.5 dBTP. See
 > [What is not built yet](#what-is-not-built-yet).
 
 ---
@@ -45,9 +47,9 @@ loudness: -16.054 LUFS
 loudness_range: 12.646 LU
 sections: 3
 techniques: poly_period,drone,pluck
-plan_sha256: 12a3f1fbcf2870f9dac744b687f2bab103a941025fcf643593059aa9a38ed946
+plan_sha256: b55edf8edee3c026b8562f66f177884b9d7de4ad981ba5e454af5402c86712fb
 pcm_sha256: 77510545114637df31a8220743ced598629e6fa4fca17e5c56566853f0a2563b
-render_seconds: 29.862
+render_seconds: 29.313
 ```
 
 Other commands:
@@ -87,7 +89,7 @@ the numbers are what the machine does, not a benchmark. The host is shared and
 repeat runs of the same command have differed by up to 30%, so read the times
 as an order of magnitude and the hashes as the fact.
 
-Eight-minute pieces, measured on 2026-10-23 with exactly this command, one
+Eight-minute pieces, measured on 2026-10-24 with exactly this command, one
 process each:
 
 ```bash
@@ -96,26 +98,30 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 88.7 s | 112.6 s | 119.5 s | 94.2 s | 134.9 s |
-| Faster than realtime | 5.4× | 4.3× | 4.0× | 5.1× | 3.6× |
+| Render time (whole command) | 89.3 s | 121.1 s | 119.4 s | 109.4 s | 127.3 s |
+| Faster than realtime | 5.4× | 4.0× | 4.0× | 4.4× | 3.8× |
 | Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
-| Integrated loudness | −16.084 LUFS | −16.051 LUFS | −16.104 LUFS | −16.095 LUFS | −16.095 LUFS |
-| True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.297 dBTP | −4.293 dBTP | −4.299 dBTP |
-| Loudness range | 10.78 LU | 10.06 LU | 11.71 LU | 10.79 LU | 11.44 LU |
+| Integrated loudness | −16.083 LUFS | −16.051 LUFS | −16.099 LUFS | −16.116 LUFS | −16.095 LUFS |
+| True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.297 dBTP | −4.292 dBTP | −4.299 dBTP |
+| Loudness range | 10.37 LU | 10.06 LU | 11.75 LU | 10.11 LU | 11.44 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `plan_sha256` | `899bb792…` | `e6b4f52f…` | `1d9f6d08…` | `6bbb1d60…` | `dc02de9e…` |
-| `pcm_sha256` | `f1c8de79…` | `2423db5b…` | `63016d07…` | `aecfa8e9…` | `4a586f55…` |
+| `plan_sha256` | `b39afded…` | `49f62699…` | `edbfee38…` | `9f7cc56c…` | `28c299f7…` |
+| `pcm_sha256` | `3a902b7a…` | `2423db5b…` | `b5b63e10…` | `e1f6b6b0…` | `4a586f55…` |
 
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
-RSS is from the 2026-10-22 run: c26, c29 and c30 change allocation and
-arithmetic but not the master's whole-track peak envelope, which c29
-removed, so the eight-minute profile is unchanged.
+RSS is from the 2026-10-22 run and was measured with a different tool: a
+`getrusage(RUSAGE_CHILDREN)` cross-check on this run read 620-757 MB for the
+same commands, so the two are not comparable and the older, higher column is
+left standing. What c31 needs from it is only that c31 changes no allocation,
+and that holds: the pre-c31 code reads 720 MB on the ambient eight-minute
+command and c31 reads 746 MB, inside the run-to-run spread this file warns
+about below.
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the slowest lane is the ambient at 134.9 s even on a run
-this loaded, and the master chain's peak memory (the peak envelope plus the
-limited mix) is 850 MB at eight minutes, below the render's own 1182 MB.
+both hold with room: the slowest lane is the ambient at 127.3 s, and the
+master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
+at eight minutes, below the render's own peak.
 
 The budget does not scale with the track, so the lanes do not either. The same
 ambient lane at fifteen minutes, seed 1042, is 268.9 s (3.3× realtime) and
@@ -293,7 +299,13 @@ MAIN BUS ──▶ bus lowpass ──▶ [Frippertronics send] ──▶ wet ─
                 │                                     │    │
                 │     ┌───────────────────────────────┘    │
                 ▼     ▼                                    │
+   [masking duck: the 200-500 Hz band, keyed on the bass]    │
+                │      ◀── bass hit frames                  │
+                ▼                                           │
         [sidechain: ducked by the kick] ◀── kick bus        │
+                │                                           │
+                ▼                                           ▼
+   + drum bus (kick, snare, hat, bass)                      │
                 │                                           │
                 ▼                                           ▼
         section_gain × fade_gain ──▶ master() ──▶ int16 ◀──┘
@@ -311,6 +323,24 @@ reverb's send millibels scale what goes into the effect, so a send declared
 at −6 dB is a send at −6 dB and not at unity. The kick is kept apart so the
 sidechain can duck everything else, and it is summed in every lane — a lane
 without a dub chain has no sidechain and still has a kick.
+
+Two stages are aimed at the mix rather than at the instruments. The **masking
+duck** (c31) takes the 200–500 Hz band down under the bass envelope, keyed on
+the bass *hit frames*, so the pad moves out of the bass's way without a
+per-sample follower. It runs *before* the drum bus is summed in, because the
+bass lives in that bus and a duck applied after the sum would attenuate the
+bass with its own envelope.
+
+The drum bus is summed in *after* the lane's `fx_sends` low pass, so the
+drums do not pass through it. That is why the **hat carries its own upper
+corner** (c31) instead: a closed hat is high-passed noise
+(`synth/drums.py`), so a dense hat wall is bright by construction, and the
+indie-noise wall alone was 90% of that lane's energy above 14 kHz — enough to
+fail the codec gate outright. Every hat lane declares a `lowpass_hz` now; the
+corner is per lane because it is a tone control, and it is the lane's own
+business. c31 also built a station-wide >12 kHz shelf for the same rule and
+**cut it**, because measurement showed it changed no verdict on any lane, any
+seed or any duration; see the handoff for the numbers.
 
 ### The two promises, stated honestly
 
@@ -387,22 +417,27 @@ This slice is the arranger, not the last one. Everything below is
 - **The install is a copy, not a service.** It validates, copies atomically
   and stops. It never starts or restarts the radio, and it only runs when
   it is asked to.
-- **The mix bus has no compressor and no EQ.** The bus carries the
-  per-instrument trims and the send levels; a bus compressor was left out on
-  purpose, because the brief's delivers line does not ask for one and a fast
-  bus compressor would flatten the tension curve that gate 5 measures. The
-  limiter is the peak control.
+- **The mix bus is trims, sends, one low pass and one carve.** The bus carries
+  the per-instrument trims, the send levels, the lane's `fx_sends` low pass,
+  and — since c31 — the 200–500 Hz masking duck, which is dynamics aimed at a
+  single band rather than a bus compressor. The drum bus has an opt-in
+  compressor (`plan.drum_bus_comp`, off by default). A full-band bus
+  compressor was otherwise left out on purpose, because the brief's delivers
+  line does not ask for one and a fast bus compressor would flatten the
+  tension curve that gate 5 measures. The limiter is the peak control.
 - **The lanes are 6–8 minutes, not the 6–15 the ambient recipe asks for.**
-  The render does not stop a fifteen-minute piece: the ambient lane renders
-  seed 1042 in 254 s. Memory does. Measured at fifteen minutes: **2177 MB
-  peak RSS** against the 1.5 GB budget, because every array that spans the
-  track scales with it — the mix (one stereo float64 array, 605 MB), the
-  peak envelope, the limited mix, the 4× oversampled peak. The budget is an
-  eight-minute budget.
-- **The loudness range is out of the brief's 4–12 LU on the dub lane**
-  (12.2 LU measured). The range is a range with a documented exception, not
-  a gate; the brief's own text says "ambient lower, documented", and the
-  dub's lane is the one with the widest dynamics.
+  Memory used to be the reason rather than the render: measured at fifteen
+  minutes it was **2177 MB peak RSS** against the 1.5 GB budget, because every
+  array that spans the track scaled with it — the mix (one stereo float64
+  array, 605 MB), the peak envelope, the limited mix, the 4× oversampled peak.
+  c29 streamed the render and the master, and the same fifteen-minute piece is
+  now **1263 MB** in 268.9 s, inside the budget.
+- **The loudness range has a documented exception on the dub lane.** The range
+  is a range with an exception, not a gate; the brief's own text says "ambient
+  lower, documented", and the dub lane is the one with the widest dynamics.
+  As shipped it measures 11.75 LU at eight minutes, inside the brief's 4–12;
+  the exception is what the widest-dynamics lane is allowed, not a reading
+  taken today.
 - **Nobody has listened to it.** The gates measure the shape of the
   arrangement, not whether it is any good. That is S6's job, and it needs
   human ears.

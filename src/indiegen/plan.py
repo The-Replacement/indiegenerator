@@ -132,6 +132,21 @@ class DrumBusComp(FrozenModel):
     mix_permille: int = Field(default=0, ge=0, le=1000)
 
 
+class DuckSpec(FrozenModel):
+    """c31: the masking duck - the 200-500 Hz band, ducked by the bass.
+
+    BRIEF 6's mix charge: the pad and the bass share a band, and the bass
+    should win it while it is playing. The envelope is keyed on the bass HIT
+    FRAMES, not on the bass audio, so it is identical block-wise and
+    whole-track (the sidechain rule) and costs one exponential per second.
+
+    ``None`` on the Plan means the lane does not duck at all.
+    """
+
+    depth_millibels: int = Field(ge=-12000, le=0)
+    release_frames: int = Field(gt=0)
+
+
 class ArrangementMute(FrozenModel):
     """A per-section per-instrument mute (binary: 0 or 1000)."""
 
@@ -326,12 +341,17 @@ class SnareEvent(RhythmEvent):
 
 
 class HatEvent(RhythmEvent):
-    """A closed hat: a short burst of high-passed noise."""
+    """A closed hat: a short burst of band-passed noise.
+
+    ``cutoff_hz`` is the LOWER corner - a closed hat is noise above it.
+    ``lowpass_hz`` is the optional upper corner, and 0 means there is none.
+    """
 
     kind: Literal["hat"]
     hits: list[DrumHit] = Field(max_length=MAX_HITS)
     cutoff_hz: int
     decay_frames: int
+    lowpass_hz: int = Field(default=0, ge=0, le=24000)
 
 
 class BassEvent(RhythmEvent):
@@ -516,6 +536,7 @@ class Plan(FrozenModel):
     saturation_mix_permille: int = Field(default=0, ge=0, le=1000)
     bus_gains: list[BusGain] = Field(max_length=16)
     drum_bus_comp: DrumBusComp | None = None
+    duck: DuckSpec | None = None
     fade_in_frames: int
     fade_out_frames: int
     section_crossfade_frames: int

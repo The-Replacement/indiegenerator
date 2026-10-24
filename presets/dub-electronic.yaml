@@ -25,6 +25,10 @@ melodic_jitter_frames: 25
 drive_permille: 350
 snap_permille: 350
 
+# c31: the masking duck - see motorik.yaml. This lane already has the kick
+# sidechain; the duck carves the band the bass itself occupies.
+duck: {depth_millibels: -600, release_frames: 8820}
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
@@ -84,6 +88,8 @@ techniques:
       velocity_millibels: -700
     cutoff_hz: 8200
     decay_frames: 2200
+    # c31: BRIEF 6's codec rule - keep the essential content below 14 kHz.
+    lowpass_hz: 14000
   # The minor-9 stabs through the chain. The deja-vu sequencer picks the
   # notes, so the stabs emerge instead of repeating.
   - kind: deja_vu

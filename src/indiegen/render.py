@@ -35,7 +35,7 @@ reverb, the gains - carries its state from one block to the next.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
@@ -48,6 +48,7 @@ from indiegen.fx.frippertronics import FrippertronicsState, frippertronics_state
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
 from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import bus_gains, pan_gains, trim
+from indiegen.mix.masking import DUCK_HIGH_HZ, DUCK_LOW_HZ, apply_duck, duck_band, duck_envelope
 from indiegen.mix.sidechain import SidechainState, render_sidechain, sidechain_state
 from indiegen.plan import (
     BassEvent,
@@ -62,7 +63,7 @@ from indiegen.synth.drone import DroneState, drone_state, render_drone_block
 from indiegen.synth.drumcomp import DrumCompState, drum_comp_state, render_drum_comp_block
 from indiegen.synth.drums import DrumState, drum_state, render_drum_block
 from indiegen.synth.env import fade_gain, note_envelope_block, section_gain
-from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos
+from indiegen.synth.filter import apply_biquad, bandpass_sos, initial_state, lowpass_sos
 from indiegen.synth.ks import PluckState, pluck_state, render_pluck_block
 from indiegen.synth.pad import PadState, pad_state, render_pad_block
 from indiegen.synth.poly_period import PolyPeriodState, poly_period_state, render_poly_period_block
@@ -91,6 +92,7 @@ class BusState:
     sidechain: SidechainState | None
     trims: dict[str, float]
     drum_comp: DrumCompState | None
+    duck: np.ndarray | None = None
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -173,6 +175,12 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
         dub = dub_chain_state(plan.dub_chain, plan.sample_rate)
         sidechain = sidechain_state()
     drum_comp = drum_comp_state() if plan.drum_bus_comp is not None else None
+    # c31: the mask stage's filter state. The duck's band split restarts from
+    # silence if it cannot carry a history, and a step every block is audible,
+    # so a lane that declares a duck gets its state here.
+    duck: np.ndarray | None = None
+    if plan.duck is not None:
+        duck = initial_state(bandpass_sos(DUCK_LOW_HZ, DUCK_HIGH_HZ, plan.sample_rate), plan.channels)
     return BusState(
         delay=delay,
         filter=filter_state,
@@ -182,6 +190,7 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
         sidechain=sidechain,
         trims=bus_gains(plan.bus_gains),
         drum_comp=drum_comp,
+        duck=duck,
     )
 
 
@@ -330,16 +339,40 @@ def _apply_effects(
         )
         main = main * gain[:, np.newaxis]
 
-    return main, BusState(
+    return main, replace(
+        bus,
         delay=delay,
         filter=filter_state,
         reverb=reverb,
         frippertronics=frippertronics,
         dub=dub,
         sidechain=sidechain,
-        trims=bus.trims,
-        drum_comp=bus.drum_comp,
     )
+
+
+def _duck_stage(
+    plan: Plan,
+    main: np.ndarray,
+    bus: BusState,
+    start: int,
+    count: int,
+    bass_hits: list[int],
+) -> tuple[np.ndarray, BusState]:
+    """c31: the bass-keyed 200-500 Hz duck, on the main bus.
+
+    This runs BEFORE the drum bus is summed in, and that placement is the
+    point: the bass lives in the drum bus, so a duck applied after the sum
+    would attenuate the bass with its own envelope.
+
+    The band carries its filter state across blocks; the envelope carries
+    nothing, because every value of it is a function of the absolute frame
+    index and the hit list.
+    """
+    if plan.duck is None or bus.duck is None:
+        return main, bus
+    band, duck = duck_band(main, bus.duck, plan.sample_rate)
+    gain = duck_envelope(start, count, bass_hits, plan.duck)
+    return apply_duck(main, gain, band, plan.duck), replace(bus, duck=duck)
 
 
 def _render_block(
@@ -350,12 +383,17 @@ def _render_block(
     start: int,
     stop: int,
     kick_hits: list[int],
+    bass_hits: list[int],
 ) -> tuple[np.ndarray, BusState]:
     """One block of the bus graph: the voices, then the effect chain."""
     count = stop - start
     main, drum_bus, ks_bus = _mix_voices(plan, events, voices, bus.trims, start, stop)
 
     main, bus = _apply_effects(plan, main, ks_bus, bus, start, stop, count, kick_hits)
+
+    # c31: the masking duck carves the bass's band out of the main bus. It has
+    # to run before the drum bus joins, or the bass would duck itself.
+    main, bus = _duck_stage(plan, main, bus, start, count, bass_hits)
 
     # Drum-bus compressor: applied to the drum bus before it joins the mix.
     drum_comp = bus.drum_comp
@@ -367,16 +405,7 @@ def _render_block(
     gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
     main = main * gain[:, np.newaxis]
 
-    return main, BusState(
-        delay=bus.delay,
-        filter=bus.filter,
-        reverb=bus.reverb,
-        frippertronics=bus.frippertronics,
-        dub=bus.dub,
-        sidechain=bus.sidechain,
-        trims=bus.trims,
-        drum_comp=drum_comp,
-    )
+    return main, replace(bus, drum_comp=drum_comp)
 
 
 def render_plan(plan: Plan) -> np.ndarray:
@@ -393,9 +422,10 @@ def _render_into(plan: Plan, target: np.ndarray) -> None:
     voices = [_voice_state(event, plan.sample_rate) for event in events]
     bus = _bus_state(plan, events)
     kick_hits = [hit.frame for event in events if isinstance(event, KickEvent) for hit in event.hits]
+    bass_hits = sorted(hit.frame for event in events if isinstance(event, BassEvent) for hit in event.hits)
     for start in range(0, frames, RENDER_BLOCK):
         stop = min(frames, start + RENDER_BLOCK)
-        block, bus = _render_block(plan, events, voices, bus, start, stop, kick_hits)
+        block, bus = _render_block(plan, events, voices, bus, start, stop, kick_hits, bass_hits)
         target[start:stop] = block
 
 

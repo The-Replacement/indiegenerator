@@ -23,7 +23,7 @@ from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, RhythmEvent, SnareEvent
 from indiegen.synth.env import dc_block
-from indiegen.synth.filter import one_pole_highpass, one_pole_lowpass
+from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos, one_pole_highpass, one_pole_lowpass
 from indiegen.synth.noise import CONTROL_RATE, PinkState, control_slice, pink_state, stream_key, uniform_stream
 from indiegen.synth.osc import midi_to_hz
 
@@ -139,12 +139,35 @@ def render_snare(event: SnareEvent, hit: DrumHit, sample_rate: int, velocity: fl
     return np.asarray(voice * velocity, dtype=np.float64)
 
 
+def _band_limit(voice: np.ndarray, lowpass_hz: int, sample_rate: int) -> np.ndarray:
+    """The hat's upper corner, applied to the assembled voice.
+
+    The snap is added before this and is bounded with the body: it is a four
+    millisecond broadband burst, and leaving it unshaped would put back the
+    high-frequency energy this corner exists to remove (c31 measured the
+    unshaped hat wall at 90 % of the mix's energy above 14 kHz).
+
+    At ``lowpass_hz <= 0`` the voice is returned unchanged, so a lane that
+    declares no corner renders exactly the voice c30 shipped.
+    """
+    if lowpass_hz <= 0:
+        return voice
+    sos = lowpass_sos(lowpass_hz, 1, 1, sample_rate)
+    filtered, _ = apply_biquad(sos, voice, initial_state(sos, 1))
+    return filtered
+
+
 def render_hat(event: HatEvent, hit: DrumHit, sample_rate: int, velocity: float) -> np.ndarray:
-    """One closed hat: a short burst of high-passed noise."""
+    """One closed hat: a short burst of band-passed noise.
+
+    ``cutoff_hz`` is the lower corner, because a closed hat is noise above it;
+    this is a band pass, not a low pass.
+    """
     count = event.decay_frames
     noise = uniform_stream(event.noise_seed, hit.frame, HAT_STREAM, count)
     shaped = _highpass(noise, float(event.cutoff_hz), sample_rate)
     voice = shaped * _envelope(count, event.decay_frames, sample_rate) + _snap(event, hit, count, sample_rate)
+    voice = _band_limit(voice, event.lowpass_hz, sample_rate)
     return np.asarray(voice * velocity, dtype=np.float64)
 
 

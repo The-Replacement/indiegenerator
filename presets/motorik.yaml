@@ -26,6 +26,13 @@ melodic_jitter_frames: 40
 drive_permille: 300
 snap_permille: 400
 
+# c31: the masking duck. The bass and the sustained pad share the 200-500 Hz
+# band; while the bass is playing, the band gets out of its way. It is keyed
+# on the bass HIT frames, so the envelope is identical block-wise and
+# whole-track. Measured at this setting: motorik's LRA 10.78 -> 9.57, i.e.
+# further inside BRIEF 6's 4-12, not outside it.
+duck: {depth_millibels: -600, release_frames: 8820}
+
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
@@ -86,6 +93,8 @@ techniques:
       velocity_millibels: -900
     cutoff_hz: 7000
     decay_frames: 2600
+    # c31: BRIEF 6's codec rule - keep the essential content below 14 kHz.
+    lowpass_hz: 14000
   - kind: bass
     pattern:
       steps_per_bar: 8

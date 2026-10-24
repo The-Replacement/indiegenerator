@@ -15,7 +15,15 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError
 
 from indiegen.errors import PlanError
-from indiegen.plan import BusGain, FrozenModel, FxSend, LaneWeight, Rational, SectionProfile
+from indiegen.plan import (
+    BusGain,
+    DuckSpec,
+    FrozenModel,
+    FxSend,
+    LaneWeight,
+    Rational,
+    SectionProfile,
+)
 
 LANE_NAMES: tuple[str, ...] = ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise")
 
@@ -158,12 +166,18 @@ class SnareCard(FrozenModel):
 
 
 class HatCard(FrozenModel):
-    """T6: the closed hat."""
+    """T6: the closed hat.
+
+    ``cutoff_hz`` is the lower corner (a closed hat is noise above it) and
+    ``lowpass_hz`` is the optional upper corner that keeps a dense hat wall
+    out of BRIEF 6's >14 kHz codec region. 0 means no upper corner.
+    """
 
     kind: Literal["hat"]
     pattern: PatternCard
     cutoff_hz: int
     decay_frames: int
+    lowpass_hz: int = Field(default=0, ge=0, le=24000)
 
 
 class BassCard(FrozenModel):
@@ -295,6 +309,7 @@ class LanePreset(FrozenModel):
     melodic_jitter_frames: int = Field(default=0, ge=0, le=200)
     drive_permille: int = Field(default=0, ge=0, le=1000)
     snap_permille: int = Field(default=0, ge=0, le=1000)
+    duck: DuckSpec | None = None
     reverb: ReverbCard | None = None
 
 

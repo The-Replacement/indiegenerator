@@ -929,6 +929,7 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         target_lufs_millibels=station.target_lufs_millibels,
         ceiling_millibels=station.ceiling_millibels,
         bus_gains=list(lane.bus_gains),
+        duck=lane.duck,
         fade_in_frames=station.fade_in_frames,
         fade_out_frames=station.fade_out_frames,
         section_crossfade_frames=station.section_crossfade_frames,

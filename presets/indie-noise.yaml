@@ -75,6 +75,12 @@ techniques:
       velocity_millibels: -1200
     cutoff_hz: 5200
     decay_frames: 3400
+    # c31: the noise wall is the lane's identity, and it is dense (a hit on
+    # every 16th). Band-limits the hat's top so the wall stops owning the
+    # mix's >14 kHz content - BRIEF 6's codec rule. Measured: the wall was
+    # 90 % of the >14 kHz energy and gate 12 (the MP3 128 roundtrip) failed
+    # at 0.925 LU against a 0.5 limit without this corner.
+    lowpass_hz: 14000
 
 section_count_range: [4, 6]
 # The durations this lane may be rendered at: the full tracks, the
