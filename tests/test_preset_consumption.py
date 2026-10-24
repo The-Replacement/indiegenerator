@@ -18,7 +18,12 @@ from indiegen.config import load_preset
 from indiegen.errors import PlanError
 from indiegen.plan import canonical_json
 
-SKIPPED_KEYS: frozenset[str] = frozenset({"kind", "lane", "strategy"})
+# density_scale_permille is skipped here and covered by tests/test_c32.py
+# instead. It moves a euclid pulse count, and with euclid_k as small as 16 a
+# one-permille step almost never crosses a whole pulse, so this sweep's +1
+# mutation would report a consumed key as ignored. The dedicated test asserts
+# the pulse count and the crest it produces.
+SKIPPED_KEYS: frozenset[str] = frozenset({"kind", "lane", "strategy", "density_scale_permille"})
 
 
 def _mutate_section_graph(value: list[dict[str, Any]]) -> list[dict[str, Any]]:

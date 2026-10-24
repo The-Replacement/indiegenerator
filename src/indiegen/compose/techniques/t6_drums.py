@@ -71,6 +71,24 @@ def _condition_holds(
     return True
 
 
+def _pulses(card: PatternCard, density: int) -> int:
+    """The pulse count for a section of this density.
+
+    ``density_scale_permille`` is how much of the fall from a density of
+    100 the pulse count follows, so 0 keeps the pattern identical in every
+    section - which is what every voice but the indie-noise wall wants -
+    and 1000 makes the count proportional to the density.
+
+    The wall is where this matters: euclid(16, 16) is already a hit on
+    every step in the dense sections, so the only direction its density
+    can move is DOWN, and the sparser sections are where it must. That is
+    what makes a crest audible as a change of shape rather than of level.
+    """
+    clamped = max(0, min(100, density))
+    fall = (card.euclid_k * (100 - clamped) * card.density_scale_permille) // 100_000
+    return max(1, card.euclid_k - fall)
+
+
 def _audible(ctx: TechniqueContext, frame: int, card: PatternCard) -> bool:
     """Whether the voice's layer has reached the section this FRAME is in.
 
@@ -116,8 +134,10 @@ def _hit_frames(
         pattern = patterns.get(section)
         if pattern is None:
             # The pattern turns by a step per section, so two sections
-            # that share a density still do not share a rhythm.
-            pattern = rotate(euclid(card.euclid_k, card.euclid_n), card.rotation + section)
+            # that share a density still do not share a rhythm, and the
+            # pulse count follows the density when the card asks for it.
+            density = densities[min(section, len(densities) - 1)] if densities else 100
+            pattern = rotate(euclid(_pulses(card, density), card.euclid_n), card.rotation + section)
             patterns[section] = pattern
         boundaries = ctx.section_boundaries
         section_first_bar = boundaries[min(section, len(boundaries) - 1)] // frames_per_bar if frames_per_bar else 0

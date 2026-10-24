@@ -142,6 +142,13 @@ class PatternCard(FrozenModel):
     min_density: int
     ghost_permille: int
     velocity_millibels: int
+    # How far the pulse count follows the section's density, in permille of
+    # the fall from a density of 100. 0 is a strict no-op: the pattern is
+    # the same in every section, which is what every voice but the
+    # indie-noise wall wants. At 1000 a voice plays euclid_k pulses in the
+    # densest section and proportionally fewer in the sparser ones, so its
+    # density is a property of the section and not only a threshold.
+    density_scale_permille: int = Field(default=0, ge=0, le=1000)
 
 
 class KickCard(FrozenModel):

@@ -73,6 +73,14 @@ techniques:
       min_density: 55
       ghost_permille: 340
       velocity_millibels: -1200
+      # c32: the wall's density follows the section's, so it crests in the
+      # plateau instead of being identical in the build and the plateau.
+      # euclid(16, 16) is already a hit on every step, so the crest can
+      # only come from the sparser sections being sparser: at a density of
+      # 55 the wall plays 9 of 16 pulses, at 80 it plays 13, at 100 it
+      # plays all 16. This lane's comment always claimed the crest; until
+      # this key existed the pattern could not express one.
+      density_scale_permille: 1000
     cutoff_hz: 5200
     decay_frames: 3400
     # c31: the noise wall is the lane's identity, and it is dense (a hit on
