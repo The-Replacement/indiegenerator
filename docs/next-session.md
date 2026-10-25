@@ -18,51 +18,57 @@ contract (especially 6, 8, 11, 15, 16 and 18). Do not modify it.
 THE STATE
 =====================================================================
 
-master is at d199dcb (docs(c32): re-derive the indie-noise row of the
-measured table). Clean tree. ruff check ., ruff format --check . and mypy
-src are clean. pytest -q -m "not sweep": 581 passed, 15 deselected.
-pytest -q -m sweep: 15 passed. pytest -m slow: 4 passed.
+master is at the c33 commit (fix(c33): freeze the drum's micro-timing in the
+Plan). Clean tree. ruff check ., ruff format --check . and mypy src are
+clean (60 files). pytest -q -m "not sweep and not slow": 650 passed, 20
+deselected. pytest -q -m sweep: 15 passed. pytest -m slow: 5 passed.
 
-Slices S0-S5 and changes c21-c32 are done and archived in memory under the
-topic keys sdd-<change_id>-{context,proposal,spec,design,tasks,impl,verify,
-done}. The recent ones, most useful first:
-  sdd-c32-short-form-trajectory-done   (the interlude band, three commits)
-  c3336862  the density gate that leaked across section boundaries
-  c32-density-scale-mechanism          (PatternCard.density_scale_permille)
-  sdd-c31-masking-codec-*              (the hat's upper corner and the duck)
-  sdd-c30-timbral-grit-*               (the drive and the snap)
-  sdd-c29-longform-memory-*            (the streamed render and master)
-Handoff documents are in docs/handoff/, one per change.
+Slices S0-S5 and changes c21-c33 are done. SDD records are in memory under
+sdd-<change_id>-{context,explore,proposal,spec,design,tasks,impl,verify,done}.
+The recent ones, most useful first:
+  sdd-c33-{explore,proposal,spec,design,tasks,impl,verify}  the drum drift
+  c27c-ambient-timbre-declaration     (the ambient's flat timbre)
+  c27c-ambient-45s-regression         (the silent poly-period voice)
+  sdd-c32-short-form-trajectory-done  (the interlude band)
+  c32-density-scale-mechanism         (PatternCard.density_scale_permille)
+  c31-masking-codec-*                 (the hat's upper corner and the duck)
+Handoff documents are in docs/handoff/, one per change. c33's is
+docs/handoff/c33-drum-drift-in-the-plan.md.
 
 What exists: five lanes (motorik, kosmische, ambient, dub-electronic,
 indie-noise); the arranger (section graph, tension curve, motif and
 transforms, the Director, the modal shifts, the Frippertronics, the dub
-chain); the mix bus (trims, sends, one low pass, and since c31 a bass-keyed
-200-500 Hz duck); the master chain (measured loudness onto -16 LUFS, a
-true-peak limiter, LRA, seeded TPDF dither); every gate of BRIEF 11 in force;
-the CLI (render, batch, catalog, validate, install, explain); the catalog and
-the atomic writer. The render streams: the mix is a float64 memmap stem and
-the master holds only the int16 output (c29).
+chain, a conservative voice-leading pass); the mix bus (trims, sends, one low
+pass, the bass-keyed 200-500 Hz duck); the master chain (measured loudness
+onto -16 LUFS, a true-peak limiter, LRA, seeded TPDF dither); every gate of
+BRIEF 11 in force; the CLI (render, batch, catalog, validate, install,
+explain); the catalog and the atomic writer. The render streams: the mix is a
+float64 memmap stem and the master holds only the int16 output (c29).
 
-Measured on this machine, eight-minute pieces, seed 1042, after c32:
+Measured on this machine, eight-minute pieces, seed 1042, after c33. The
+previous table was stale (4ed10b5 moved the harmony; 3a902b7a was the old
+motorik row):
 
 | lane | wall | loudness | true peak | LRA | pcm_sha256 |
 |---|---|---|---|---|---|
-| motorik | 89.3 s | -16.083 LUFS | -4.298 dBTP | 10.37 LU | 3a902b7a... |
-| kosmische | 121.1 s | -16.051 LUFS | -4.299 dBTP | 10.06 LU | 2423db5b... |
-| dub-electronic | 119.4 s | -16.099 LUFS | -4.297 dBTP | 11.75 LU | b5b63e10... |
-| indie-noise | 129.9 s | -16.106 LUFS | -4.293 dBTP | 10.16 LU | 00b1513b... |
-| ambient | 127.3 s | -16.095 LUFS | -4.299 dBTP | 11.44 LU | 4a586f55... |
+| motorik | 118.8 s | -16.071 LUFS | -4.299 dBTP | 9.221 LU | 7a5b7afb... |
+| kosmische | 148.9 s | -16.058 LUFS | -4.298 dBTP | 10.553 LU | 499c6efb... |
+| dub-electronic | 149.2 s | -16.059 LUFS | -4.298 dBTP | 12.297 LU | 445142e2... |
+| indie-noise | 159.4 s | -16.092 LUFS | -4.279 dBTP | 9.436 LU | d7c75aa8... |
+| ambient | 167.7 s | -16.008 LUFS | -4.300 dBTP | 11.282 LU | 1ca0885d... |
 
-Every lane passes every gate at eight minutes; the 240 s seed sweep passes
-gates 4/5/6/7/13 at five lanes x three seeds. Every LRA is inside BRIEF 6's
-4-12.
+dub-electronic's 12.297 LU is above BRIEF 6's 12 and is the documented dub
+exception in the S4 declaration. Every other lane is inside 4-12.
 
-NEW IN c32: THE WHOLE INTERLUDE BAND IS GREEN. Every lane passes every gate
-at 45, 60, 90 AND 120 seconds, which was not true before. That band is the
-station's interlude form (45-120 s, station.yaml:19) and it used to refuse
-kosmische at 45 s and 60 s, motorik at 45 s, indie-noise at 45 s and
-dub-electronic at 45 s and 90 s.
+The interlude band (45-120 s) is green for all five lanes, and has been
+since c32. That band is the station's interlude form (45-120 s,
+station.yaml:19).
+
+NEW IN c33: THE RENDER IS BLOCK-INVARIANT, FOR REAL. A drum hit's played
+frame is data in the Plan (HitBase.frame), and HitBase.drift_frames recovers
+the grid frame the arrangement wrote. The renderer no longer adds an offset
+of its own. Measured: 0 of 200 consecutive RENDER_BLOCK sizes (4000..4199)
+change a sample; before c33, 10 of them lost a whole drum hit.
 
 =====================================================================
 THE RULES THAT ARE NOT NEGOTIABLE
@@ -73,10 +79,19 @@ THE RULES THAT ARE NOT NEGOTIABLE
   pure function of the Plan. Randomness ends when the Plan is frozen.
 - The renderer never rolls dice and never imports compose/. The master is
   the one stage that looks at its own output; do not add a second.
+- compose/ may not import synth/, mix/, master/ or fx/ - tests/test_hygiene.py
+  enforces it. That is why the 1/f control stream lives in indiegen/control.py
+  and not under synth/.
+- The drift is the performance; every decision asks the grid. A hit has two
+  frames: frame (where it plays) and grid_frame() (where it was scheduled).
+  The voice's noise, the bus keyframes (the duck, the kick sidechain), the
+  Director's move windows, and the density gates all read grid_frame().
+  Reading frame where grid_frame() is meant changes the arrangement, and it
+  did: 759 kicks became 761 at 480 s.
 - A field that is declared and never read is a bug. Presets are swept by
   tests/test_preset_consumption.py: every declared key must move the plan.
   One key is deliberately exempt and says so in the source
-  (density_scale_permille - see below).
+  (density_scale_permille).
 - A default of 0 must be a strict no-op: the frozen S0 render
   (tests/test_migration.py) must stay bit-identical.
 - No new third-party dependency. Exact pins; the pin list is the lockfile.
@@ -86,9 +101,7 @@ THE RULES THAT ARE NOT NEGOTIABLE
   proposal,spec,design,tasks,impl,verify,done} via the n3rv-memory MCP.
 - The project board does not track this project. Skip board updates.
 - Never write into ~/Work/radio except through install, and only when
-  asked. Do not start or restart the radio. (Overridden once, at the
-  operator's explicit request, when c31 shipped: see the radio note below.
-  The defaults stand.)
+  asked. Do not start or restart the radio.
 
 Commands: .venv/bin/pytest, .venv/bin/ruff check ., .venv/bin/ruff format
 --check ., .venv/bin/mypy src, and
@@ -111,15 +124,14 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
   function - so gate 6 measures its variance, not a curve. Its delivered
   centroid moves with the track's DURATION, not with the section's function:
   a table fitted at 90 s correlates -0.37 / -0.28 / +0.35 at 45 s. Do not
-  "fix" the table without a mechanism that makes the centroid duration-aware.
-- c27-C fallout, fixed: a poly-period phase is drawn INSIDE THE TRACK. It
-  used to be drawn inside the period, so a 58 s period on a 45 s track could
-  start at 50.95 s, never sound, and refuse the plan (density 0.471 < 0.5):
-  _fit_density scales windows, not start phases. Renders at or above the
-  card's longest period (90 s) are bit-identical; only shorter tracks move.
-  tests/test_presets.py composes every lane at its declared minimum.
+  "fix" the table without a mechanism that makes the centroid
+  duration-aware. Declared value 560 Hz (measured median, range 412-861).
+- c27-C fallout, fixed: a poly-period phase is drawn INSIDE THE TRACK
+  (t1_polyperiod.py). Renders at or above the card's longest period (90 s)
+  are bit-identical; only shorter tracks moved.
 - Micro-timing: swing on odd beats and 1/f onset jitter on plucks, at
-  compose time, from a dedicated sub-RNG (c26).
+  compose time (c26). The drum's micro-timing is compose-time too, since
+  c33 - see above.
 - Grit: a per-lane drive, tanh(x*gain)/gain, identity at 0, applied in
   synth/ks.py ONLY (the plucked/string voices). The additive pad, drone and
   poly-period are deliberately clean (c30).
@@ -128,38 +140,27 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
 - c31: a hat's cutoff_hz is its LOWER corner, and lowpass_hz the optional
   upper one. All three hat lanes declare 14000. This is BRIEF 6's codec rule.
 - c31: the duck is keyed on bass HIT FRAMES, runs BEFORE the drum bus is
-  summed in, and is declared on motorik and dub-electronic only.
+  summed in, and is declared on motorik and dub-electronic only. Its key is
+  the GRID frame, deliberately: re-keying it on the played frame is audible
+  (9.4e-2 in the 200-500 Hz band on motorik) and needs its own change.
 - c31: a station-wide >12 kHz shelf was built and CUT, because across three
   seeds, the 45 s interlude and the 900 s longform it changed no verdict.
-  Do not rebuild it without new evidence.
-- c32: A PULSED SECTION IS NEVER SHORTER THAN FOUR BARS (MINIMUM_SECTION_BARS,
-  planner.py). _section_lengths asked for four-bar multiples and used to give
-  the snapping up when the drawn section count did not fit - and the count is
-  drawn independently of the duration, so a 45 s track got the same six
-  sections as a 480 s one at two bars each. The count gives way now, not the
-  floor: compose() caps the draw at what four bars per section allows, and
-  _section_lengths falls back to a floor-pinned proportional split
-  (_floored_shares) when the snap does not fit. The cap is floored at the
-  lane's own section_count_range[0] - a five-second test render must keep the
-  count it declared, or _walk_graph has no arrangement to build.
-- c32: A DRUM VOICE'S DENSITY GATE BELONGS TO THE HIT'S FRAME, NOT TO ITS BAR
-  (t6_drums.py, _audible). It used to be tested once per bar against the
-  section the bar started in, so a bar straddling a section boundary carried
-  the dense section's material into the sparse one. That ONE bug was both of
-  the "remaining defects": dub-electronic took nine and seven stray hits into
-  its quietest section at 45 s and 90 s and its energy arc inverted (gate 5),
-  and indie-noise took four into its outro (gate 7).
+- c32: A PULSED SECTION IS NEVER SHORTER THAN FOUR BARS
+  (MINIMUM_SECTION_BARS, planner.py). The count gives way, not the floor.
+- c32: A DRUM VOICE'S DENSITY GATE BELONGS TO THE HIT'S FRAME, NOT TO ITS
+  BAR (t6_drums.py, _audible).
 - c32: PatternCard.density_scale_permille lets a pattern's pulse count follow
-  the section's density. 0 is a strict no-op. It exists because indie-noise's
-  wall is euclid(16, 16) - already maximum - so build (density 55) and
-  plateau (80) were identical and the lane's documented "it crests in the
-  plateau" was never implemented. At 1000 the wall plays 9 of 16 pulses at
-  density 55 and 13 at 80. Measured: 4.73 -> 5.81 hits/s.
+  the section's density. 0 is a strict no-op.
+- c33: A DRUM HIT'S PLAYED FRAME IS IN THE PLAN. The drift is read at compose
+  time from the same 1/f timing stream the renderer used to read, so the
+  change moved no audio at any duration: the pre-master mix at 131072 is
+  bit-identical to 5af67f3 at 20, 90 and 480 s on motorik, dub-electronic and
+  indie-noise (motorik 7001c989, dub b7a520f3, indie-noise c3ad866d at 480 s).
+  The plan golden moved (afab3b54) because hit frames and drift_frames are
+  plan bytes.
 - The millibel is the SI millibel: 1/1000 dB, so gain.py is
-  `10 ** (millibels / 20000)` and `-6000` is -6 dB. The unit was 1/100 dB
-  until 2026-10-25 and every stored level was re-expressed x10 when it
-  changed; the audio is bit-identical (the frozen S0 hash and the ambient
-  PCM hash both still match), only the numbers got a digit.
+  `10 ** (millibels / 20000)` and `-6000` is -6 dB. Every stored level was
+  re-expressed x10 when it changed; the audio is bit-identical.
 - Declared deviations, in the s4-mix-master-spec record: gate 10 is "the
   same seed must NOT give a different hash"; the limiter is not safety-only
   on indie-noise; the LRA range has the documented dub exception; the Python
@@ -169,95 +170,54 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
 WHAT IS LEFT - IN THIS ORDER
 =====================================================================
 
---- 1. THE RENDER_BLOCK DRUM-TAIL DEFECT (carried from c31) --------------
+--- 1. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 
-A drum voice longer than RENDER_BLOCK loses its tail past the second block:
-render_drum_block carries an overrunning hit as one PendingHit and
-_mix_pending mixes it into the next block, but the tails are never
-RE-carried, because `carried` is rebuilt from the current block's own hits.
-Only kick, snare and bass are affected (the kick's decay_frames is 13000);
-hat, pad and pluck are fine. Reproduces at RENDER_BLOCK 4099 and 8191, clean
-at 16384. Latent in production (RENDER_BLOCK is 131072) and the existing
-test uses 65536, so the suite gives false confidence. It matters because
-RENDER_BLOCK is the obvious next memory dial after c29. Full detail: memory
-topic c31-preexisting-drum-tail-block.
+Harmony is modal stasis. There IS a conservative voice-leading pass
+(planner._apply_voice_leading: it smooths large leaps while staying in
+scale, for plucks and bass, and moves the recorded motif appearances with
+them) - an earlier handover claimed no engine existed, which was wrong. What
+does not exist is harmonic PROGRESSION: the mode changes between sections and
+the melody is transposed to follow, but there is no voice leading across a
+chord change, and no modal mixture.
 
---- 2. c27-C: THE AMBIENT'S TIMBRE IS A DECLARATION (DECIDED) -----------
+This is the biggest identity change and the biggest blast radius. Spike it
+first: a /tmp harness with a pre-declared falsifier and a measured A/B, and
+check plan_sha256 against the CLI for the same preset/seed/seconds before
+trusting any sweep (c32's fifteen harness runs all measured a plan with no
+Director in it).
 
-The ambient used to draw a two-section intro -> outro plan, a sixteen-minute
-piece with 0.2 dB of shape, and it passed gate 5 only because of c27's
-static-plan tolerance. **Done for gate 5:** the lane's section_count_range is
-now [3, 4], so it builds 3-4 sections with 8-9 dB of arc and gate 5 correlates
-it like any other lane. test_c27.py pins the measured counts and spreads and
-tests the exemption on plans built for it (at the threshold, one millibel
-under, one millibel over).
+--- 2. RENDER_BLOCK, NOW THAT IT IS SAFE TO LOWER -----------------------
 
-**Gate 6 is decided, not open: the ambient DECLARES A FLAT TIMBRE**, so the
-gate measures the lane's variance (relative sigma <= 0.25) and never
-correlates a curve. The decision is measured, not aesthetic. On the raw mix
-the gates see, four seeds, 45-900 s (harness:
-/tmp/opencode/c27c/measure_ambient_timbre.py):
+The drum-tail defect c31 recorded is fixed (4ed10b5) and the drift defect
+c33 found is fixed, so the block size no longer changes the audio. 0 of 200
+consecutive sizes is bit-identical on motorik, and the two regression tests
+pin 4060. c29's workstream was memory; this is the next dial. Measure the
+memory ceiling and the wall time at 32k and 16k on the 900 s longform before
+choosing, and keep an eye on the per-block cost the master pays.
 
-| cell                  | intro | build | plateau | outro | gate-6 variance |
-|-----------------------|-------|-------|---------|-------|-----------------|
-| 1042 @ 90 s           | 714   | 661   | 542     | 727   | 0.130           |
-| 1042 @ 240 s          | 599   | 532   | 534     | 561   | 0.049           |
-| 1042 @ 480 s          | 552   | 501   | 515     | 578   | 0.054           |
-| 2000 @ 90 s           | 716   | 482   | -       | 599   | 0.171           |
-| 3005 @ 45 s           | 694   | 784   | 650     | 474   | 0.201           |
-| 4002 @ 45 s           | 773   | 729   | 733     | 578   | 0.133           |
-| 1042 @ 900 s          | 518   | 565   | 588     | 567   | 0.046           |
+--- 3. AN ELEVEN-SECOND GAP IN THE HANDOVER THAT IS NOW CLOSED ----------
 
-The same function does not hold its centroid across durations: seed 1042's
-intro reads 714 Hz at 90 s, 599 at 240 s and 552 at 480 s, and its plateau is
-the dimmest section at 90 s but the brightest at 900 s. No function owns the
-brightest centroid either: the outro is brightest in 8 of the 15 cells, the
-intro in 5, the plateau and the build in one each, and at 45 s the outro is
-the DARKEST in two of three seeds. A per-function table fitted at 90 s
-correlates -0.37 / -0.28 / +0.35 at 45 s, i.e. it does not survive the lane's
-own duration range. That is the same duration-dependent declaration c32
-documented for kosmische: a function-keyed centroid is a function of section
-LENGTH, and no single constant is right at both ends. So the flat table is
-the declaration.
-
-The declared value moved 800 -> 560 Hz: 560 is the measured median of the
-delivered per-section centroid over those 15 cells (range 412-861), and it
-is the scale of the variance check, not a claim about any section. A flat
-table at the old 800 made the check 43% more lenient than the lane's real
-centroid. test_c27.py now pins both halves: the table is one value for every
-function (fast), and a real 90 s render takes the static branch and passes
-(slow). The preset comment carries the numbers and the reason.
-
---- 3. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
-
-No voice-leading engine exists; harmony is modal stasis. This is the biggest
-identity change and the biggest blast radius. Spike it first (a /tmp harness
-with a pre-declared falsifier and a measured A/B) before it touches the
-planner.
+Nothing. This slot used to hold the "c27-C: the ambient's timbre" item, which
+shipped in df005d2.
 
 =====================================================================
 A KNOWN CAVEAT ABOUT GATE 7 IN ONE LANE
 =====================================================================
 
-indie-noise passes gate 7 at every duration now, but at 45 s it passes
-because the sparser build SPLIT the intro/build flux cluster, not because
-the plateau boundary produces a peak: the flux there is 72300 against a
-threshold of 100353. At 90 s the peaks do track the section boundaries. So
-a green gate 7 in this lane is still not proof that every section change is
-audible. Do not read it as one, and do not tune this lane against gate 7
-without measuring the flux at the boundaries first - the dense wall gives
-the flux a permanently high baseline (median ~68000) and only a large
-spectral change clears the threshold.
+indie-noise passes gate 7 at every duration, but at 45 s it passes because
+the sparser build SPLIT the intro/build flux cluster, not because the plateau
+boundary produces a peak: the flux there is 72300 against a threshold of
+100353. At 90 s the peaks do track the section boundaries. A green gate 7 in
+this lane is not proof that every section change is audible. Do not tune this
+lane against gate 7 without measuring the flux at the boundaries first.
 
-Five candidate fixes for this lane were built and measured before the
-mechanism that worked was found (a second wall, a kick, a snare, a pad, a
-poly-period); four of them turned no failing case into a passing one and
-were cut, with their numbers recorded. The kick was also rejected because
-tests/test_bus.py asserts that indie-noise has no kick. That assertion is a
-contract: the lane is defined as a lane without one.
+Five candidate fixes were built and measured for this lane; four turned no
+failing case into a passing one and were cut, with their numbers recorded. A
+kick was rejected because tests/test_bus.py asserts that indie-noise has no
+kick - that assertion is a contract.
 
 =====================================================================
-THE RADIO (state as of c31, unchanged by c32)
+THE RADIO (state as of c31, unchanged since)
 =====================================================================
 
 ~/Work/radio/music holds 20 tracks, all generated by c31 (seeds 4000-4019,
@@ -267,12 +227,10 @@ MOVED OUT, not deleted, to /tmp/opencode/radio-old/.
 
 Adding files to music/ needs no restart (reload_mode = "watch"). REMOVING
 them does: liquidsoap keeps deleted tracks in its in-memory playlist, so
-`docker compose restart liquidsoap` in ~/Work/radio is required. That was
-done once, at the operator's request.
+`docker compose restart liquidsoap` in ~/Work/radio is required.
 
 NOTE: c32 changed indie-noise's audio, so the 20 tracks on the radio are
-pre-c32. Re-installing is a decision for the operator, not a step of this
-change.
+pre-c32. c33 changed no audio. Re-installing is a decision for the operator.
 
 scripts/smoke.sh reports 29/29. The one historical failure was a Caddy 302
 assertion caused by the RADIO repo's webcam token-in-URL fallback (de02e9a),
@@ -281,52 +239,38 @@ reverting it to Location: / will FAIL the smoke suite; the accepted exposure
 is the browser URL only, not the stream.
 
 =====================================================================
-METHOD THAT HAS WORKED HERE - AND THE WAYS IT WENT WRONG IN c32
+METHOD THAT HAS WORKED HERE
 =====================================================================
 
-c32 turned up three defects the suite did not see, and the method that found
-them is the one to keep: measure before writing code, give every spike a
-pre-declared falsifier, and when a claim breaks, root-cause it or record the
-deviation out loud.
+Measure before writing code, give every spike a pre-declared falsifier, and
+when a claim breaks, root-cause it or record the deviation out loud.
 
-Four things went wrong in c32. They are worth more than the fixes:
-
-1. FIFTEEN HARNESS RUNS MEASURED THE WRONG PLAN. The CLI builds its plan as
-   director(compose(...)) (cli.py:116). The harnesses called compose() alone,
-   so every plan they measured had no Director - no strategy-deck moves and
-   no _reshape_motif. It surfaced only because a plan-level gate (13,
-   "director fires") reported zero on a plan the CLI accepts, which is
-   impossible. THE CHEAPEST CHECK IS THE HASH: compare the harness's
-   plan_sha256 with the CLI's for the same preset/seed/seconds before
-   trusting a sweep. That hash was in hand from the first run.
-
-2. A CAP ON A DRAWN COUNT MUST BE FLOORED AT THE DECLARED MINIMUM. The first
-   version of c32's section-count cap used max(1, ...); at a test's five
-   seconds that is one section, _walk_graph has no arrangement of one, and
-   35 tests died with PlanError. The draw's range is what the rest of the
-   pipeline assumes.
-
-3. TWO HYPOTHESES WERE MEASURED DEAD. The motif's count-based placement was
-   c32's root cause for a while, and a change to it DID make the gate pass -
-   by altering the bright-onset rate, which is exactly BRIEF 11's "do not add
-   a filter sweep to satisfy this gate" failure mode. It was reverted. The
-   dub chain's sidechain was the second suspect and was also innocent. The
-   real cause was one line of bar-versus-frame gating in a different file.
-
-4. c31's STANDARD, APPLIED TO ITS SUCCESSORS. Five crest candidates were
-   built and measured for indie-noise; the four that turned no failing case
-   into a passing one were CUT rather than shipped, with their numbers
-   recorded. That is the shelf precedent doing its job.
+The c33 session is the best recent example of that last rule: four claims
+failed measurement in one session. The handover said the drum-tail defect was
+open (it had been fixed by 4ed10b5), said the ambient timbre was open (it had
+shipped), said no voice-leading engine existed (one does), and the change's
+own AC3 - "bit-identical at production block size" - was false twice, once
+because the voices key their noise on the hit's frame and once because the
+Director windows hits by frame. The cheapest instrument every time was a git
+worktree at the previous commit plus a hash comparison, and the 480 s
+duration caught the Director one, which 20 s and 90 s could not.
 
 Habits worth keeping, all learned the hard way:
 - When you add a stage to the render, prove bit-identity against a pre-change
-  `git worktree` (PYTHONPATH override the venv's editable install).
+  `git worktree` (PYTHONPATH override the venv's editable install). Compare
+  hashes, not impressions.
+- Compare at a LONG duration as well as a short one. Arrangement-level
+  effects appear only where the arrangement has room to differ.
 - Do not trust a measured number's label. c31 found a mislabelled unit, a
   stale figure and two README claims that contradicted the README's tables.
-  c32 found that the measured table's indie-noise row was stale the moment
-  the wall changed - re-derive a table row when the thing it measures moves,
-  and remember the goldens do not cover every lane (they cover motorik's plan
-  and ambient's PCM).
-- Never loosen a gate to make a number pass. Four c32 candidates died on
-  that rule and the fifth earned its place.
+  c32 found a stale table row; c33 found that the whole table had gone stale
+  when 4ed10b5 moved the harmony. Re-derive a row when the thing it measures
+  moves, and remember the goldens do not cover every lane (they cover
+  motorik's plan and ambient's PCM).
+- Never loosen a gate to make a number pass. When c33's drift pushed a hit
+  one frame across a section line, the fix was to ask grid_frame(), not to
+  widen the assertion into a tolerance.
+- A change that moves no audio is worth paying some structural cost for. c33
+  moved the control stream out of synth/ and taught four readers to ask the
+  grid frame, and in exchange no gate verdict could move.
 ```
