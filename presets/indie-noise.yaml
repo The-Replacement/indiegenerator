@@ -37,7 +37,7 @@ fx_sends:
 techniques:
   # T7: the 1/f control signals.
   - kind: pink
-    velocity_depth_millibels: 700
+    velocity_depth_millibels: 7000
     micro_timing_frames: 14
     pan_drift_permille: 260
 
@@ -72,7 +72,7 @@ techniques:
       condition_period: 1
       min_density: 55
       ghost_permille: 340
-      velocity_millibels: -1200
+      velocity_millibels: -12000
       # c32: the wall's density follows the section's, so it crests in the
       # plateau instead of being identical in the build and the plateau.
       # euclid(16, 16) is already a hit on every step, so the crest can

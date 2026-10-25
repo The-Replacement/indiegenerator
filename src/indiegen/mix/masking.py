@@ -20,7 +20,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from indiegen.gain import millibels_to_gain
+from indiegen.gain import millibels_to_gain, unity_block
+from indiegen.mix.sidechain import hit_decay_envelope
 from indiegen.plan import DuckSpec
 from indiegen.synth.filter import apply_biquad, bandpass_sos
 
@@ -40,7 +41,7 @@ def duck_envelope(start: int, count: int, hits: list[int], spec: DuckSpec) -> np
     frame index and the hit list, which is what makes a block-wise render and
     a whole-track one agree exactly - no state is carried and none is needed.
     """
-    gain = np.ones(count, dtype=np.float64)
+    gain = unity_block(count)
     if not hits:
         return gain
     samples = np.arange(start, start + count, dtype=np.int64)
@@ -52,7 +53,7 @@ def duck_envelope(start: int, count: int, hits: list[int], spec: DuckSpec) -> np
         return gain
     level = millibels_to_gain(spec.depth_millibels)
     age = (samples[active] - ordered[position[active]]).astype(np.float64)
-    gain[active] = 1.0 - (1.0 - level) * np.exp(-age / spec.release_frames)
+    gain[active] = hit_decay_envelope(age, level, spec.release_frames)
     return gain
 
 

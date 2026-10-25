@@ -11,10 +11,10 @@ from __future__ import annotations
 from indiegen.compose.director import director
 from indiegen.compose.planner import _segment_roots, compose
 from indiegen.config import load_preset
-from indiegen.plan import PadEvent
+from indiegen.plan import PadEvent, Plan
 
 
-def _plan_with_segments(segments: int, seed: int = 1042, seconds: int = 10):
+def _plan_with_segments(segments: int, seed: int = 1042, seconds: int = 10) -> Plan:
     preset = load_preset("motorik")
     if segments != 1:
         station = preset.station.model_copy(update={"chord_segments_per_section": segments})
@@ -51,7 +51,7 @@ def test_segments_2_doubles_pad_events_and_changes_roots() -> None:
         by_start.setdefault(e.start_frame // (p2.duration_frames // 4 or 1), []).append(e)
     # At least one section-root pair must show distinct midi values among pads
     # that share a start frame bucket; weaker but non-trivial.
-    roots_by_sec = {}
+    roots_by_sec: dict[int, int] = {}
     for e in pads2:
         roots_by_sec.setdefault(e.midi, 0)
         roots_by_sec[e.midi] += 1

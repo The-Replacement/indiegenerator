@@ -124,11 +124,11 @@ class BusGain(FrozenModel):
 class DrumBusComp(FrozenModel):
     """A compressor on the drum bus: threshold, ratio, attack, release, makeup, mix."""
 
-    threshold_millibels: int = Field(default=0, ge=-6000, le=0)
+    threshold_millibels: int = Field(default=0, ge=-60000, le=0)
     ratio_permille: int = Field(default=2000, ge=2000, le=10000)
     attack_frames: int = Field(default=10, ge=10, le=500)
     release_frames: int = Field(default=1000, ge=1000, le=100000)
-    makeup_millibels: int = Field(default=0, ge=0, le=6000)
+    makeup_millibels: int = Field(default=0, ge=0, le=60000)
     mix_permille: int = Field(default=0, ge=0, le=1000)
 
 
@@ -143,7 +143,7 @@ class DuckSpec(FrozenModel):
     ``None`` on the Plan means the lane does not duck at all.
     """
 
-    depth_millibels: int = Field(ge=-12000, le=0)
+    depth_millibels: int = Field(ge=-120000, le=0)
     release_frames: int = Field(gt=0)
 
 
@@ -532,7 +532,7 @@ class Plan(FrozenModel):
     dither_lsb: int
     target_lufs_millibels: int
     ceiling_millibels: int
-    saturation_drive_millibels: int = Field(default=0, ge=0, le=1800)
+    saturation_drive_millibels: int = Field(default=0, ge=0, le=18000)
     saturation_mix_permille: int = Field(default=0, ge=0, le=1000)
     bus_gains: list[BusGain] = Field(max_length=16)
     drum_bus_comp: DrumBusComp | None = None
@@ -558,7 +558,7 @@ class Plan(FrozenModel):
             )
         if len(self.events) > MAX_EVENTS:
             raise PlanError(f"plan carries {len(self.events)} events; the ceiling is {MAX_EVENTS}")
-        hits = sum(len(getattr(event, "hits", ())) for event in self.events)
+        hits = sum(len(event.hits) for event in self.events if isinstance(event, RhythmEvent))
         if hits > MAX_HITS:
             raise PlanError(f"plan carries {hits} drum hits; the ceiling is {MAX_HITS}")
         return self

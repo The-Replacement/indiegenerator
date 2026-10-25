@@ -77,7 +77,7 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
                 duration_frames=card.note_frames,
                 midi=midi,
                 pan_permille=rng.between(-300, 300),
-                amplitude_millibels=-600,
+                amplitude_millibels=-6000,
                 attack_frames=0,
                 release_frames=0,
                 feedback=Rational(numerator=card.feedback_num, denominator=card.feedback_den),

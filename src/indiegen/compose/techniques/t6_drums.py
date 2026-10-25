@@ -149,7 +149,7 @@ def _hit_frames(
                 if card.ghost_permille and rng.below(1000) < card.ghost_permille:
                     frame = bar_start + step * step_frames
                     if section_start <= frame < section_end and _audible(ctx, frame, card):
-                        hits.append((frame, card.velocity_millibels - 1200))
+                        hits.append((frame, card.velocity_millibels - 12000))
                 continue
             if not _condition_holds(
                 card.condition,

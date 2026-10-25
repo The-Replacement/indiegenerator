@@ -14,13 +14,13 @@ import pytest
 
 from indiegen.compose.director import director
 from indiegen.compose.planner import compose
-from indiegen.config import load_preset
+from indiegen.config import Preset, load_preset
 from indiegen.errors import PlanError
-from indiegen.plan import PadEnvelopeSegment, PadEvent
+from indiegen.plan import PadEnvelopeSegment, PadEvent, Plan
 from indiegen.synth.pad import pad_state, render_pad_block
 
 
-def _make_segmented_preset():
+def _make_segmented_preset() -> Preset:
     preset = load_preset("motorik")
     lanes = list(preset.lanes)
     entry = lanes[0]
@@ -32,7 +32,7 @@ def _make_segmented_preset():
     return preset.model_copy(update={"lanes": lanes})
 
 
-def _segmented_pad(plan) -> PadEvent:
+def _segmented_pad(plan: Plan) -> PadEvent:
     return next(e for e in plan.events if isinstance(e, PadEvent) and e.envelope_segments)
 
 

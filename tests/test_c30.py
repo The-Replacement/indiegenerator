@@ -12,8 +12,9 @@ import numpy as np
 
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
+from indiegen.plan import HatEvent
 from indiegen.render import render_plan
-from indiegen.synth.drums import HatEvent, render_hat
+from indiegen.synth.drums import render_hat
 from indiegen.synth.grit import MAX_DRIVE, drive_gain, waveshape
 
 RATE = 44100

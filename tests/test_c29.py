@@ -19,12 +19,13 @@ from indiegen.cli import app
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
 from indiegen.master.chain import master
+from indiegen.plan import Plan
 from indiegen.render import BLOCK_SIZE, render_plan, write_mix_stem
 
 RATE = 44100
 
 
-def _plan():
+def _plan() -> Plan:
     return director(compose(load_preset("motorik"), 1042, 8 * RATE))
 
 

@@ -27,7 +27,6 @@ import math
 
 import numpy as np
 
-from indiegen.errors import RenderError
 from indiegen.gain import decibels_to_gain, millibels_to_gain
 from indiegen.master.dither import tpdf
 from indiegen.master.limiter import LOOKAHEAD_FRAMES, LimiterState, limit_block, peak_envelope_block
@@ -87,12 +86,17 @@ def master(plan: Plan, stereo: np.ndarray, block: int) -> np.ndarray:
     heap.
     """
     frames = stereo.shape[0]
+    from indiegen.errors import raise_if_nonfinite
+
     for start in range(0, frames, MEASURE_BLOCK):
         stop = min(frames, start + MEASURE_BLOCK)
-        if not bool(np.all(np.isfinite(stereo[start:stop]))):
-            raise RenderError(
-                "non-finite sample in the mix", preset=plan.preset, seed=plan.seed, block_index=start // block
-            )
+        raise_if_nonfinite(
+            stereo[start:stop],
+            "non-finite sample in the mix",
+            preset=plan.preset,
+            seed=plan.seed,
+            block_index=start // block,
+        )
     target = plan.target_lufs_millibels / 1000.0
     ceiling = millibels_to_gain(plan.ceiling_millibels)
 

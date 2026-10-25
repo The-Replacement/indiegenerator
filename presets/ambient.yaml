@@ -54,7 +54,7 @@ techniques:
     detune_lfo_rate: {numerator: 1, denominator: 10}
     detune_lfo_depth_cents: 12
     amplitude_lfo_rate: {numerator: 1, denominator: 13}
-    amplitude_lfo_depth_millibels: 400
+    amplitude_lfo_depth_millibels: 4000
     min_density: 0
     ratios:
       - {numerator: 1, denominator: 1}
@@ -76,7 +76,7 @@ techniques:
     duration_seconds: {min: 3, max: 6}
     spacing_seconds: {min: 4, max: 12}
 
-section_count_range: [2, 4]
+section_count_range: [3, 4]
 # The durations this lane may be rendered at: the full tracks, the
 # longforms and the interludes of BRIEF 15's batch.
 duration_range_seconds: [45, 900]
@@ -96,4 +96,4 @@ reverb:
   # -0.32 dB at eight). Eight frames is a fifth of a millisecond, and the
   # width comes from the combs, not from it.
   stereo_spread_frames: 8
-  send_millibels: -600
+  send_millibels: -6000

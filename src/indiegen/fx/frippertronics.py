@@ -64,6 +64,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import lfilter
 
+from indiegen.fx.line import zero_wet
 from indiegen.plan import FrippertronicsSpec
 
 # The effect's own chunk. It is never longer than the delay, so the reads
@@ -175,7 +176,7 @@ def render_frippertronics(
     of it is what goes back into the line, together with the dry input.
     """
     count = int(block.shape[0])
-    wet = np.zeros(block.shape, dtype=np.float64)
+    wet = zero_wet(block)
     if count == 0:
         return wet, state
 

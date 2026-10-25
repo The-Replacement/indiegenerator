@@ -9,8 +9,19 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from indiegen.gain import millibels_to_gain
 from indiegen.plan import BusGain
+
+
+def silent_bus(count: int, channels: int) -> np.ndarray:
+    """A silent bus block of ``count`` frames over ``channels`` channels.
+
+    Every bus in the render starts from exact float64 silence and is summed
+    into; the shape and dtype of that start live here, once.
+    """
+    return np.zeros((count, channels), dtype=np.float64)
 
 
 def pan_gains(pan_permille: int) -> tuple[float, float]:

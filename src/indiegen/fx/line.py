@@ -13,6 +13,16 @@ from __future__ import annotations
 import numpy as np
 
 
+def zero_wet(block: np.ndarray) -> np.ndarray:
+    """A silent wet block, shaped and typed exactly like ``block``.
+
+    Every effect sums its wet into silence; the wet is float64 whatever the
+    block's own dtype claims, so the shape is taken from the block and the
+    dtype is fixed here, once.
+    """
+    return np.zeros(block.shape, dtype=np.float64)
+
+
 def comb_line(
     signal: np.ndarray,
     delay: int,

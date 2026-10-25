@@ -144,8 +144,11 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
   plateau (80) were identical and the lane's documented "it crests in the
   plateau" was never implemented. At 1000 the wall plays 9 of 16 pulses at
   density 55 and 13 at 80. Measured: 4.73 -> 5.81 hits/s.
-- A unit trap worth remembering: a millibel in this project is 1/100 dB
-  (gain.py: 10 ** (millibels / 2000)). -6000 is -60 dB, not -6 dB.
+- The millibel is the SI millibel: 1/1000 dB, so gain.py is
+  `10 ** (millibels / 20000)` and `-6000` is -6 dB. The unit was 1/100 dB
+  until 2026-10-25 and every stored level was re-expressed x10 when it
+  changed; the audio is bit-identical (the frozen S0 hash and the ambient
+  PCM hash both still match), only the numbers got a digit.
 - Declared deviations, in the s4-mix-master-spec record: gate 10 is "the
   same seed must NOT give a different hash"; the limiter is not safety-only
   on indie-noise; the LRA range has the documented dub exception; the Python

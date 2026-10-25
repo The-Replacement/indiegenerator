@@ -12,10 +12,10 @@ from __future__ import annotations
 from indiegen.compose.director import director
 from indiegen.compose.planner import _planar_offset, compose
 from indiegen.config import load_preset
-from indiegen.plan import PolyPeriodEvent
+from indiegen.plan import Plan, PolyPeriodEvent
 
 
-def _ambient():
+def _ambient() -> Plan:
     return director(compose(load_preset("ambient"), 1042, 10 * 44100))
 
 

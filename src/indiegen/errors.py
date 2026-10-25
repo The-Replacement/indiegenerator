@@ -9,6 +9,11 @@ unchanged instead of wrapping them into a ``ValidationError``.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+
 
 class PlanError(Exception):
     """The plan cannot be built: bad preset, unknown name, broken invariant."""
@@ -44,6 +49,15 @@ class RenderError(Exception):
         self.preset = preset
         self.seed = seed
         self.block_index = block_index
+
+
+def raise_if_nonfinite(arr: np.ndarray, message: str, *, preset: str, seed: int, block_index: int) -> None:
+    """Raise :class:`RenderError` if ``arr`` contains any non-finite values."""
+
+    import numpy as _np
+
+    if not bool(_np.all(_np.isfinite(arr))):
+        raise RenderError(message, preset=preset, seed=seed, block_index=block_index)
 
 
 class DecodeError(Exception):

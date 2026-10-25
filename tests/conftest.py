@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
+from indiegen.plan import Plan
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[1]
 PRESETS_DIR: Path = REPO_ROOT / "presets"
@@ -40,13 +41,13 @@ def cli_runner() -> CliRunner:
 
 
 @pytest.fixture(scope="session")
-def composed_plan() -> Any:
+def composed_plan() -> Plan:
     """The plan before the Director runs."""
     return compose(load_preset("motorik"), SEED, SECONDS * 44100)
 
 
 @pytest.fixture(scope="session")
-def reference_plan() -> Any:
+def reference_plan() -> Plan:
     """The composed and directed plan for the canonical preset and seed."""
     return director(compose(load_preset("motorik"), SEED, SECONDS * 44100))
 
@@ -91,5 +92,6 @@ def decoded(rendered: dict[str, Any]) -> np.ndarray:
     """The decoded int16 of the canonical render."""
     import soundfile as sf
 
+    data: np.ndarray
     data, _ = sf.read(rendered["flac"], dtype="int16", always_2d=True)
     return data

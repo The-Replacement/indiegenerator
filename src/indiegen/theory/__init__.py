@@ -18,13 +18,16 @@ from indiegen.theory.motif import (
 )
 from indiegen.theory.scales import (
     MODE_INTERVALS,
+    RELATIVE_INTERVALS,
     RELATIVE_MODES,
     mode_scale,
     nearest_scale_note,
+    relative_of,
 )
 
 __all__ = (
     "MODE_INTERVALS",
+    "RELATIVE_INTERVALS",
     "RELATIVE_MODES",
     "Cell",
     "augment",
@@ -32,6 +35,7 @@ __all__ = (
     "invert",
     "mode_scale",
     "nearest_scale_note",
+    "relative_of",
     "retrograde",
     "transform",
     "transpose",

@@ -221,14 +221,21 @@ def _drum_voice(event: DrumEvent, hit: DrumHit | BassHit, sample_rate: int, gain
             raise PlanError(f"unknown drum kind {unknown!r}")
 
 
-def _mix_pending(pending: tuple[PendingHit, ...], block: np.ndarray, count: int) -> None:
-    """Mix the tails of the hits that began in the block that has gone by."""
+def _mix_pending(pending: tuple[PendingHit, ...], block: np.ndarray, count: int) -> list[PendingHit]:
+    """Mix the tails of the hits that began in the block that has gone by.
+
+    Tails that still extend past this block are re-carried (c31 bug).
+    """
+    carried: list[PendingHit] = []
     for tail in pending:
         until = min(count, tail.voice.size - tail.skip)
         if until <= 0:
             continue
         block[:until, 0] += tail.voice[tail.skip : tail.skip + until] * tail.left
         block[:until, 1] += tail.voice[tail.skip : tail.skip + until] * tail.right
+        if tail.skip + until < tail.voice.size:
+            carried.append(PendingHit(voice=tail.voice, left=tail.left, right=tail.right, skip=tail.skip + until))
+    return carried
 
 
 def render_drum_block(
@@ -264,9 +271,8 @@ def render_drum_block(
         cursor += 1
 
     # The hits whose voice began in the last block: their tail is here.
-    _mix_pending(state.pending, block, count)
+    carried = _mix_pending(state.pending, block, count)
 
-    carried: list[PendingHit] = []
     for hit in event.hits[cursor:]:
         if hit.frame >= stop:
             break

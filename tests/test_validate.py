@@ -6,6 +6,8 @@ tracks." Every measurement here is driven by a signal built for the purpose.
 
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 
 from indiegen.plan import MotifAppearance, MotifCell, MotifNote, Plan
@@ -215,7 +217,7 @@ def _plan(
     frames: int = 60 * RATE,
     levels: list[int] | None = None,
     centroids: list[int] | None = None,
-    pulse: str = "bars",
+    pulse: Literal["bars", "seconds"] = "bars",
 ) -> Plan:
     """A plan with the given number of sections, tiling the track."""
     from indiegen.plan import SectionPlan
@@ -337,7 +339,7 @@ def test_a_piece_that_changes_four_times_has_novelty() -> None:
 
 def test_the_energy_trajectory_has_to_follow_the_plan() -> None:
     """Gate 5: the delivered energy follows the planned level curve."""
-    plan = _plan(sections=4, frames=20 * RATE, levels=[0, -600, 0, -600])
+    plan = _plan(sections=4, frames=20 * RATE, levels=[0, -6000, 0, -6000])
     time = np.arange(plan.duration_frames) / RATE
     mix = np.zeros((plan.duration_frames, 2))
     for section in plan.sections:
@@ -349,7 +351,7 @@ def test_the_energy_trajectory_has_to_follow_the_plan() -> None:
 
 def test_an_energy_trajectory_against_the_plan_fails_gate_five() -> None:
     """The plan says the piece gets quieter, and it does not: the gate says so."""
-    plan = _plan(sections=4, frames=20 * RATE, levels=[0, -600, 0, -600])
+    plan = _plan(sections=4, frames=20 * RATE, levels=[0, -6000, 0, -6000])
     time = np.arange(plan.duration_frames) / RATE
     mix = np.zeros((plan.duration_frames, 2))
     for section in plan.sections:

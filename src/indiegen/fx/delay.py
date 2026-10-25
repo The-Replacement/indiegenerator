@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import lfilter
 
-from indiegen.fx.line import delay_line
+from indiegen.fx.line import delay_line, zero_wet
 from indiegen.plan import DelaySend
 
 
@@ -41,7 +41,7 @@ def render_delay(block: np.ndarray, state: DelayState, send: DelaySend) -> tuple
     """Delay one block of the KS bus."""
     feedback = send.feedback.numerator / send.feedback.denominator
     damping = send.damping.numerator / send.damping.denominator
-    wet = np.zeros(block.shape, dtype=np.float64)
+    wet = zero_wet(block)
     new_states: list[tuple[np.ndarray, np.ndarray]] = []
     new_damping: list[np.ndarray] = []
     for channel in range(block.shape[1]):

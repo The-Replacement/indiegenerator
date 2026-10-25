@@ -140,7 +140,7 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
     if not pitches:
         raise PlanError("poly-period chord has no voices left", preset=ctx.preset, seed=ctx.seed)
 
-    partials = [Partial(ratio=ratio, amplitude_millibels=-300, detune_cents=0) for ratio in card.partial_ratios]
+    partials = [Partial(ratio=ratio, amplitude_millibels=-3000, detune_cents=0) for ratio in card.partial_ratios]
     voices = [
         PolyPeriodVoice(period_frames=period, on_frames=on, phase_frames=phase, midi=pitch)
         for period, on, phase, pitch in zip(periods, ons, phases, pitches, strict=True)

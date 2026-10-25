@@ -34,7 +34,7 @@ def _pluck(start: int, duration: int = 5000) -> PluckEvent:
         duration_frames=duration,
         midi=57,
         pan_permille=0,
-        amplitude_millibels=-600,
+        amplitude_millibels=-6000,
         attack_frames=0,
         release_frames=0,
         feedback=Rational(numerator=997, denominator=1000),

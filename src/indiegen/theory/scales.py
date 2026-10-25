@@ -28,9 +28,10 @@ MODE_INTERVALS: Mapping[str, tuple[int, ...]] = MappingProxyType(
     }
 )
 
-# The relative of a mode: the mode a minor third below, which shares its
-# notes. Dorian and phrygian are relatives, mixolydian and dorian are
-# relatives, lydian and mixolydian are relatives.
+# The relative of a mode: the mode that shares its notes, so the section and
+# the transposed notes still agree after the move. Dorian and phrygian are
+# relatives, mixolydian and dorian are relatives, lydian and mixolydian are
+# relatives, aeolian and lydian are relatives.
 RELATIVE_MODES: Mapping[str, str] = MappingProxyType(
     {
         "dorian": "phrygian",
@@ -43,8 +44,34 @@ RELATIVE_MODES: Mapping[str, str] = MappingProxyType(
     }
 )
 
-# The relative minor sits a minor third below the root.
-RELATIVE_INTERVAL: int = -3
+# How far the root moves with it, in semitones, keyed by the mode being left.
+# The offset is a property of the pair, not one constant for every mode:
+# aeolian's relative is a major third below (A aeolian -> F lydian), dorian's
+# is a whole tone above and mixolydian's is a fifth below. The one rule every
+# entry follows is that the scale is left unchanged - the same notes, heard
+# from a different centre - which is what lets a note written before the move
+# stay inside the mode that holds it after.
+RELATIVE_INTERVALS: Mapping[str, int] = MappingProxyType(
+    {
+        "dorian": 2,
+        "phrygian": -2,
+        "lydian": 2,
+        "mixolydian": -5,
+        "aeolian": -4,
+        "whole_tone": 0,
+        "octatonic": -3,
+    }
+)
+
+
+def relative_of(mode: str) -> tuple[str, int]:
+    """The relative of a mode: the mode it shares its notes with, and how far
+    its root moves to get there.
+
+    Both call sites need the pair together, so the pair is built once. A mode
+    that is not in the tables has no relative and does not move.
+    """
+    return RELATIVE_MODES.get(mode, mode), RELATIVE_INTERVALS.get(mode, 0)
 
 
 def mode_scale(mode: str, root_midi: int, octaves: int = 2) -> list[int]:

@@ -65,7 +65,8 @@ def _centroid(window: np.ndarray) -> float:
 def _crossings(signal: np.ndarray) -> np.ndarray:
     """The distances between the zero crossings of a signal."""
     sign = np.signbit(signal)
-    return np.diff(np.nonzero(sign[1:] != sign[:-1])[0]).astype(float)
+    indices: np.ndarray = np.nonzero(sign[1:] != sign[:-1])[0]
+    return np.diff(indices).astype(float)
 
 
 def _arrival(wet: np.ndarray, period: int) -> int:

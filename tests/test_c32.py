@@ -26,17 +26,16 @@ import pytest
 from indiegen.compose import compose, director
 from indiegen.compose.planner import MINIMUM_SECTION_BARS
 from indiegen.compose.techniques.t6_drums import _pulses
-from indiegen.config import load_preset
-from indiegen.plan import SAMPLE_RATE
+from indiegen.config import BassCard, HatCard, KickCard, SnareCard, load_preset
+from indiegen.plan import SAMPLE_RATE, HatEvent, Plan, RhythmEvent
 from indiegen.render import schedule
 
 SEED = 1042
 RATE = SAMPLE_RATE
 PULSED_LANES = ("motorik", "kosmische", "dub-electronic", "indie-noise")
-DRUM_VOICES = ("kick", "snare", "hat", "bass")
 
 
-def _plan(lane: str, seconds: int):
+def _plan(lane: str, seconds: int) -> Plan:
     return director(compose(load_preset(lane), SEED, seconds * RATE))
 
 
@@ -65,7 +64,7 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
     minimums = {
         card.kind: card.pattern.min_density
         for card in presets.techniques
-        if getattr(card, "kind", None) in DRUM_VOICES and hasattr(card, "pattern")
+        if isinstance(card, (KickCard, SnareCard, HatCard, BassCard))
     }
     events = schedule(plan)
     for section in plan.sections:
@@ -75,8 +74,8 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
             stray = [
                 hit
                 for event in events
-                if getattr(event, "instrument", None) == voice
-                for hit in getattr(event, "hits", [])
+                if event.instrument == voice
+                for hit in (event.hits if isinstance(event, RhythmEvent) else ())
                 if section.start_frame <= hit.frame < section.end_frame
             ]
             assert not stray, (
@@ -113,7 +112,8 @@ def test_the_density_scale_is_a_strict_no_op_at_zero() -> None:
 def test_the_wall_crests_because_its_density_follows_the_section() -> None:
     """The lane's own comment claims the crest; this pins that it exists."""
     plan = _plan("indie-noise", 60)
-    wall = next(event for event in schedule(plan) if getattr(event, "instrument", None) == "hat")
+    wall = next(event for event in schedule(plan) if event.instrument == "hat")
+    assert isinstance(wall, HatEvent)
     rates: dict[str, float] = {}
     for section in plan.sections:
         seconds = (section.end_frame - section.start_frame) / RATE

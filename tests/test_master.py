@@ -25,6 +25,7 @@ from indiegen.master.limiter import (
     peak_envelope,
 )
 from indiegen.master.loudness import integrated_lufs, to_float, true_peak_dbtp
+from indiegen.plan import Plan
 
 PACKAGE: Path = Path(__file__).resolve().parents[1] / "src" / "indiegen"
 RATE: int = 44100
@@ -42,7 +43,8 @@ def _noise(seconds: float, amplitude: float, seed: int = 5) -> np.ndarray:
     generator = np.random.default_rng(seed)
     count = int(seconds * RATE)
     signal = generator.standard_normal((count, 2))
-    return signal / np.max(np.abs(signal)) * amplitude
+    peak: float = float(np.max(np.abs(signal)))
+    return signal / peak * amplitude
 
 
 def test_the_dither_is_deterministic_for_a_seed() -> None:
@@ -59,7 +61,7 @@ def test_the_dither_is_triangular_and_centred() -> None:
     assert abs(float(np.max(np.abs(values)))) <= 1.0
 
 
-def test_the_plan_carries_an_integer_dither_seed(reference_plan: object) -> None:
+def test_the_plan_carries_an_integer_dither_seed(reference_plan: Plan) -> None:
     seed = reference_plan.dither_seed
     assert isinstance(seed, int)
     assert seed >= 0
@@ -79,10 +81,10 @@ def test_the_master_module_constructs_no_rng() -> None:
             assert node.id not in {"default_rng", "RandomState", "Generator"}
 
 
-def test_the_master_output_is_int16_and_finite(reference_plan: object) -> None:
+def test_the_master_output_is_int16_and_finite(reference_plan: Plan) -> None:
     from indiegen.render import render_plan
 
-    plan = reference_plan  # type: ignore[assignment]
+    plan = reference_plan
     stereo = render_plan(plan)
     pcm = master(plan, stereo, 8192)
     assert pcm.dtype == np.int16
@@ -175,29 +177,29 @@ def test_the_model_margin_is_a_third_of_a_decibel() -> None:
     assert 0.2 <= MODEL_MARGIN_DB <= 0.5
 
 
-def test_the_master_lands_on_the_loudness_target(reference_plan: object) -> None:
+def test_the_master_lands_on_the_loudness_target(reference_plan: Plan) -> None:
     from indiegen.render import render_plan
 
-    plan = reference_plan  # type: ignore[assignment]
+    plan = reference_plan
     stereo = render_plan(plan)
     pcm = master(plan, stereo, 8192)
     loudness = integrated_lufs(to_float(pcm), plan.sample_rate)
     assert abs(loudness - plan.target_lufs_millibels / 1000.0) <= 1.0
 
 
-def test_the_master_holds_the_true_peak_ceiling(reference_plan: object) -> None:
+def test_the_master_holds_the_true_peak_ceiling(reference_plan: Plan) -> None:
     from indiegen.render import render_plan
 
-    plan = reference_plan  # type: ignore[assignment]
+    plan = reference_plan
     stereo = render_plan(plan)
     pcm = master(plan, stereo, 8192)
     assert true_peak_dbtp(to_float(pcm)) <= -1.5 + 1e-6
 
 
-def test_the_master_does_not_depend_on_the_block_size(reference_plan: object) -> None:
+def test_the_master_does_not_depend_on_the_block_size(reference_plan: Plan) -> None:
     from indiegen.render import render_plan
 
-    plan = reference_plan  # type: ignore[assignment]
+    plan = reference_plan
     stereo = render_plan(plan)
     first = master(plan, stereo, 8192)
     second = master(plan, stereo, 8192 * 2)

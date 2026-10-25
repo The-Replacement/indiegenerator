@@ -4,11 +4,30 @@ from __future__ import annotations
 
 import numpy as np
 
-from indiegen.gain import millibels_to_gain_array
+from indiegen.gain import millibels_to_gain_array, unity_block
 from indiegen.plan import EventBase, Plan
 from indiegen.synth.filter import one_pole_highpass, one_pole_highpass_state
 
 DC_BLOCKER_HZ: float = 20.0
+
+
+def dc_blocker_state() -> np.ndarray:
+    """Zero state for the DC blocker."""
+
+    return np.zeros(1, dtype=np.float64)
+
+
+def dc_blocked_block(signal: np.ndarray, sample_rate: int, state: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """DC-block a finished voice block, carrying the blocker state.
+
+    This is the shared tail of the blockwise voice skeleton: allocate a
+    silent block (``synth.osc.zero_block``), accumulate the voice's own
+    partials into it - that loop is each instrument's alone and is not
+    shared - then finish here. The pluck, the poly-period voice and the
+    drone all end this way; the pad is the one exception, because it is
+    never DC-blocked (see ``dc_block``).
+    """
+    return dc_block_state(signal, sample_rate, state)
 
 
 def dc_block(signal: np.ndarray, sample_rate: int) -> np.ndarray:
@@ -50,7 +69,7 @@ def note_envelope_block(event: EventBase, start: int, stop: int) -> np.ndarray:
     numbers and not by the block's.
     """
     count = stop - start
-    gain = np.ones(count, dtype=np.float64)
+    gain = unity_block(count)
     if event.attack_frames > 0:
         if event.envelope_curve == 1:
             ramp = 1.0 - np.exp(-4.0 * np.arange(start, stop, dtype=np.float64) / event.attack_frames)
@@ -154,11 +173,11 @@ def fade_gain(plan: Plan, start: int, count: int) -> np.ndarray:
     of the fade is the same fade.
     """
     index = np.arange(start, start + count, dtype=np.float64)
-    gain = np.ones(count, dtype=np.float64)
+    gain = unity_block(count)
     if plan.fade_in_frames > 0:
         mask = index < plan.fade_in_frames
         gain[mask] = index[mask] / plan.fade_in_frames
     if plan.fade_out_frames > 0:
         mask = index >= plan.duration_frames - plan.fade_out_frames
         gain[mask] = (plan.duration_frames - 1 - index[mask]) / plan.fade_out_frames
-    return np.clip(gain, 0.0, 1.0)
+    return np.asarray(np.clip(gain, 0.0, 1.0), dtype=np.float64)

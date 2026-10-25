@@ -48,7 +48,7 @@ def test_the_artist_and_album_come_from_the_lane(reference_plan: Any) -> None:
 
 
 def test_the_written_file_carries_the_tags(rendered: dict[str, Any]) -> None:
-    flac = FLAC(rendered["flac"])
+    flac = FLAC(rendered["flac"])  # type: ignore[no-untyped-call]  # mutagen ships untyped stubs
     # mutagen's FLAC is dict-like, not a dict: the attribute is the interface.
     keys = {key.lower() for key in flac.keys()}  # noqa: SIM118
     assert {"title", "artist", "album", "date", "genre", "comment", "tracknumber"} <= keys
@@ -59,5 +59,6 @@ def test_the_written_file_carries_the_tags(rendered: dict[str, Any]) -> None:
 
 def reference_alias(rendered: dict[str, Any]) -> str:
     """The artist tag of the rendered file."""
-    flac = FLAC(rendered["flac"])
-    return flac["artist"][0]
+    flac = FLAC(rendered["flac"])  # type: ignore[no-untyped-call]  # mutagen ships untyped stubs
+    artist: list[str] = flac["artist"]
+    return artist[0]

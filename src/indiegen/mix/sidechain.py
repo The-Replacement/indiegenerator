@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from indiegen.gain import millibels_to_gain
+from indiegen.gain import millibels_to_gain, unity_block
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,11 @@ def duck_level(depth_millibels: int) -> float:
     return millibels_to_gain(depth_millibels)
 
 
+def hit_decay_envelope(age: np.ndarray, level: float, release_frames: int) -> np.ndarray:
+    """Exponential decay envelope from a hit: returns gain in [level, 1]."""
+    return 1.0 - (1.0 - level) * np.exp(-age / release_frames)
+
+
 def render_sidechain(
     block_start: int,
     count: int,
@@ -49,7 +54,7 @@ def render_sidechain(
     happened, and the most recent hit is always the lowest one, so the
     envelope is restarted at every hit and recovered exponentially.
     """
-    gain = np.ones(count, dtype=np.float64)
+    gain = unity_block(count)
     if not hits or release_frames <= 0:
         return gain, state
     index = state.next_hit
@@ -59,14 +64,14 @@ def render_sidechain(
     samples = np.arange(block_start, block_start + count, dtype=np.int64)
     if index > 0:
         age = np.maximum(samples - hits[index - 1], 0).astype(np.float64)
-        gain = 1.0 - (1.0 - level) * np.exp(-age / release_frames)
+        gain = hit_decay_envelope(age, level, release_frames)
     inside = 0
     for hit in hits[index:]:
         if hit >= block_start + count:
             break
         local = hit - block_start
         age = np.arange(count - local, dtype=np.float64)
-        envelope = 1.0 - (1.0 - level) * np.exp(-age / release_frames)
+        envelope = hit_decay_envelope(age, level, release_frames)
         gain[local:] = np.minimum(gain[local:], envelope)
         inside += 1
     return gain, SidechainState(next_hit=index + inside)

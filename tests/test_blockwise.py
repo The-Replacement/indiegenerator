@@ -15,7 +15,7 @@ import pytest
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
 from indiegen.master.chain import master
-from indiegen.plan import DroneEvent, PadEvent, PluckEvent, PolyPeriodEvent
+from indiegen.plan import DroneEvent, PadEvent, Plan, PluckEvent, PolyPeriodEvent
 from indiegen.render import render_plan
 from indiegen.synth import drone, ks, pad, poly_period
 
@@ -24,31 +24,31 @@ SEED: int = 1042
 
 
 @pytest.fixture(scope="module")
-def ambient_plan() -> object:
+def ambient_plan() -> Plan:
     """A short ambient plan: a poly-period loop, a drone and some plucks."""
     return director(compose(load_preset("ambient"), SEED, 20 * RATE))
 
 
 @pytest.fixture(scope="module")
-def station_plan() -> object:
+def station_plan() -> Plan:
     """A short station plan: the pad."""
     return director(compose(load_preset("motorik"), SEED, 20 * RATE))
 
 
 @pytest.fixture(scope="module")
-def motorik_plan() -> object:
+def motorik_plan() -> Plan:
     """A short motorik plan: the drums, the pad and the deja-vu."""
     return director(compose(load_preset("motorik"), SEED, 20 * RATE))
 
 
 @pytest.fixture(scope="module")
-def mix(ambient_plan: object) -> np.ndarray:
+def mix(ambient_plan: Plan) -> np.ndarray:
     """The ambient plan, rendered once."""
     return render_plan(ambient_plan)
 
 
 @pytest.fixture(scope="module")
-def pcm(ambient_plan: object, mix: np.ndarray) -> np.ndarray:
+def pcm(ambient_plan: Plan, mix: np.ndarray) -> np.ndarray:
     """The ambient plan, mastered once."""
     return master(ambient_plan, mix, 8192)
 
@@ -58,7 +58,7 @@ def _blocks(count: int, size: int) -> list[tuple[int, int]]:
     return [(start, min(count, start + size)) for start in range(0, count, size)]
 
 
-def test_the_pad_is_the_same_in_blocks(station_plan: object) -> None:
+def test_the_pad_is_the_same_in_blocks(station_plan: Plan) -> None:
     event = next(event for event in station_plan.events if isinstance(event, PadEvent))
     whole = pad.render_pad(event, RATE)
     pieces: list[np.ndarray] = []
@@ -69,7 +69,7 @@ def test_the_pad_is_the_same_in_blocks(station_plan: object) -> None:
     assert np.array_equal(np.concatenate(pieces), whole)
 
 
-def test_the_poly_period_voice_is_the_same_in_blocks(ambient_plan: object) -> None:
+def test_the_poly_period_voice_is_the_same_in_blocks(ambient_plan: Plan) -> None:
     event = next(event for event in ambient_plan.events if isinstance(event, PolyPeriodEvent))
     whole = poly_period.render_poly_period(event, RATE)
     pieces: list[np.ndarray] = []
@@ -80,7 +80,7 @@ def test_the_poly_period_voice_is_the_same_in_blocks(ambient_plan: object) -> No
     assert np.array_equal(np.concatenate(pieces), whole)
 
 
-def test_the_drone_is_the_same_in_blocks(ambient_plan: object) -> None:
+def test_the_drone_is_the_same_in_blocks(ambient_plan: Plan) -> None:
     event = next(event for event in ambient_plan.events if isinstance(event, DroneEvent))
     whole = drone.render_drone(event, RATE)
     pieces: list[np.ndarray] = []
@@ -91,7 +91,7 @@ def test_the_drone_is_the_same_in_blocks(ambient_plan: object) -> None:
     assert np.array_equal(np.concatenate(pieces), whole)
 
 
-def test_the_pluck_is_the_same_in_blocks(ambient_plan: object) -> None:
+def test_the_pluck_is_the_same_in_blocks(ambient_plan: Plan) -> None:
     event = next(event for event in ambient_plan.events if isinstance(event, PluckEvent))
     whole = ks.render_pluck(event, RATE)
     pieces: list[np.ndarray] = []
@@ -102,7 +102,7 @@ def test_the_pluck_is_the_same_in_blocks(ambient_plan: object) -> None:
     assert np.array_equal(np.concatenate(pieces), whole)
 
 
-def test_the_render_is_the_same_in_blocks(ambient_plan: object, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_render_is_the_same_in_blocks(ambient_plan: Plan, monkeypatch: pytest.MonkeyPatch) -> None:
     """The bus graph does not care how the track is cut up.
 
     The voices, the delay, the filter, the reverb and the gains all carry
@@ -118,7 +118,7 @@ def test_the_render_is_the_same_in_blocks(ambient_plan: object, monkeypatch: pyt
 
 
 def test_a_drum_hit_that_crosses_a_block_boundary_keeps_its_tail(
-    motorik_plan: object, monkeypatch: pytest.MonkeyPatch
+    motorik_plan: Plan, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A hit whose voice runs past the end of a block is not cut.
 
@@ -135,7 +135,7 @@ def test_a_drum_hit_that_crosses_a_block_boundary_keeps_its_tail(
     assert np.array_equal(pieces, whole)
 
 
-def test_the_master_is_the_same_in_blocks(ambient_plan: object, mix: np.ndarray) -> None:
+def test_the_master_is_the_same_in_blocks(ambient_plan: Plan, mix: np.ndarray) -> None:
     """The master chain does not care how the mix is cut up.
 
     The limiter's gain is the smallest over the blocks, so it is the block
@@ -150,7 +150,7 @@ def test_the_master_is_the_same_in_blocks(ambient_plan: object, mix: np.ndarray)
         assert np.array_equal(master(ambient_plan, mix, size), reference)
 
 
-def test_the_meter_is_the_same_in_blocks(ambient_plan: object, pcm: np.ndarray) -> None:
+def test_the_meter_is_the_same_in_blocks(ambient_plan: Plan, pcm: np.ndarray) -> None:
     """The loudness meter does not care how the track is cut up."""
     from indiegen.master.loudness import LoudnessMeter, measure, to_float
 
@@ -165,7 +165,7 @@ def test_the_meter_is_the_same_in_blocks(ambient_plan: object, pcm: np.ndarray) 
         assert meter.true_peak_dbtp() == reference["true_peak_dbtp"]
 
 
-def test_the_voice_that_starts_inside_a_block_is_the_same(ambient_plan: object) -> None:
+def test_the_voice_that_starts_inside_a_block_is_the_same(ambient_plan: Plan) -> None:
     """A block that starts in the middle of a voice is the same voice.
 
     The envelopes and the drift streams are cut at the block's own frames,

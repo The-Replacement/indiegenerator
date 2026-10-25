@@ -20,10 +20,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from indiegen.gain import millibels_to_gain
+from indiegen.gain import millibels_to_gain, unity_block
 from indiegen.plan import PolyPeriodEvent, PolyPeriodVoice
-from indiegen.synth.env import dc_block_state
-from indiegen.synth.osc import cumulative_sum, midi_to_hz
+from indiegen.synth.env import dc_blocked_block, dc_blocker_state
+from indiegen.synth.osc import cumulative_sum, midi_to_hz, sine_from_phase, zero_block, zero_carries
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,8 @@ class PolyPeriodState:
 def poly_period_state(event: PolyPeriodEvent) -> PolyPeriodState:
     """The zero state of a poly-period loop."""
     return PolyPeriodState(
-        carries=tuple(0.0 for _ in range(len(event.voices) * len(event.partials))),
-        dc=np.zeros(1, dtype=np.float64),
+        carries=zero_carries(len(event.voices) * len(event.partials)),
+        dc=dc_blocker_state(),
     )
 
 
@@ -56,7 +56,7 @@ def voice_envelope_block(
     ramp of a cycle is a function of the cycle and not of the block: a ramp
     cut short would be a different ramp.
     """
-    envelope = np.zeros(stop - start, dtype=np.float64)
+    envelope = zero_block(stop - start)
     cycle = voice.phase_frames
     while cycle < stop:
         window_start = cycle
@@ -67,7 +67,7 @@ def voice_envelope_block(
             length = overlap_end - overlap_start
             base = overlap_start - window_start
             window_length = window_end - window_start
-            shape = np.ones(length, dtype=np.float64)
+            shape = unity_block(length)
             if attack > 0:
                 ramp = min(attack, window_length)
                 values = np.linspace(0.0, 1.0, ramp)
@@ -100,7 +100,7 @@ def render_poly_period_block(
 ) -> tuple[np.ndarray, PolyPeriodState]:
     """One poly-period loop, over the local frames ``[start, stop)``."""
     count = stop - start
-    voice = np.zeros(count, dtype=np.float64)
+    voice = zero_block(count)
     carries = list(state.carries)
     index = 0
     for entry in event.voices:
@@ -117,11 +117,9 @@ def render_poly_period_block(
             ratio = partial.ratio.numerator / partial.ratio.denominator
             frequency = base * ratio * math.pow(2.0, partial.detune_cents / 1200.0)
             phase, carries[index] = cumulative_sum(carries[index], np.full(count, frequency, dtype=np.float64))
-            voice += (
-                envelope * np.sin(2.0 * np.pi * phase / sample_rate) * millibels_to_gain(partial.amplitude_millibels)
-            )
+            voice += envelope * sine_from_phase(phase, sample_rate) * millibels_to_gain(partial.amplitude_millibels)
             index += 1
-    blocked, dc_carry = dc_block_state(voice, sample_rate, state.dc)
+    blocked, dc_carry = dc_blocked_block(voice, sample_rate, state.dc)
     return blocked, PolyPeriodState(carries=tuple(carries), dc=dc_carry)
 
 

@@ -178,12 +178,12 @@ def test_the_sidechain_ducks_everything_but_the_kick() -> None:
     from indiegen.mix.sidechain import duck_level, render_sidechain, sidechain_state
 
     hits = [0, RATE]
-    gain, state = render_sidechain(0, 2 * RATE, hits, sidechain_state(), RATE, -900)
+    gain, state = render_sidechain(0, 2 * RATE, hits, sidechain_state(), RATE, -9000)
     assert gain.size == 2 * RATE
     assert gain[0] < 0.5
     assert gain[RATE] < 0.5
     assert gain[-1] > gain[0]
-    assert duck_level(-900) < 0.5
+    assert duck_level(-9000) < 0.5
     assert state.next_hit == 2
 
 

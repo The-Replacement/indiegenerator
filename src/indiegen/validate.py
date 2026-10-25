@@ -43,7 +43,7 @@ ENERGY_CORRELATION_LIMIT: float = 0.5
 # section swings by more than this for reasons that are not the
 # arrangement. BRIEF 11: a section the plan marked static must not be
 # failed for being static.
-STATIC_LEVEL_SPREAD_MILLIBELS: int = 300
+STATIC_LEVEL_SPREAD_MILLIBELS: int = 3000
 
 # Gate 6: the delivered timbre trajectory has to follow the planned one.
 TIMBRE_CORRELATION_LIMIT: float = 0.4

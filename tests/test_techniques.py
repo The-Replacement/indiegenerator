@@ -9,6 +9,7 @@ frozen plan.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -23,7 +24,7 @@ from indiegen.plan import DroneEvent, Plan, PluckEvent
 
 
 @pytest.fixture(scope="module")
-def ambient_plan(presets_dir: object) -> Plan:
+def ambient_plan(presets_dir: Path) -> Plan:
     """The directed ambient plan for the canonical seed."""
     return director(compose(load_preset("ambient", presets_dir=presets_dir), 1042, 90 * 44100))
 
@@ -142,7 +143,7 @@ def test_the_poly_period_voice_is_a_tone(ambient_plan: Plan) -> None:
     assert abs(1200.0 * math.log2(measured / expected)) < 10.0
 
 
-def test_a_density_outside_the_band_raises_a_plan_error(presets_dir: object) -> None:
+def test_a_density_outside_the_band_raises_a_plan_error(presets_dir: Path) -> None:
     """A configuration that cannot reach the band must fail, not pass quietly."""
     lane = load_preset("ambient", presets_dir=presets_dir).lanes[0].parameters
     card = next(item for item in lane.techniques if item.kind == "poly_period")
@@ -220,7 +221,7 @@ def test_the_dotted_eighth_delay_is_resolved_at_compose_time(ambient_plan: Plan)
     assert send.delay_frames == 3 * ambient_plan.frames_per_beat // 4
 
 
-def test_the_voices_take_a_prefix_of_the_chord_intervals(ambient_plan: Plan, presets_dir: object) -> None:
+def test_the_voices_take_a_prefix_of_the_chord_intervals(ambient_plan: Plan, presets_dir: Path) -> None:
     """The offsets are a prefix of the declared list, not a cycle of it."""
     lane = load_preset("ambient", presets_dir=presets_dir).lanes[0].parameters
     card = next(item for item in lane.techniques if item.kind == "poly_period")

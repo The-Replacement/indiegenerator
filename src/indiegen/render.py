@@ -41,13 +41,13 @@ from typing import cast
 
 import numpy as np
 
-from indiegen.errors import PlanError, RenderError
+from indiegen.errors import PlanError
 from indiegen.fx.delay import DelayState, delay_state, render_delay
 from indiegen.fx.dub import DubChainState, dub_chain_state, render_dub_chain
 from indiegen.fx.frippertronics import FrippertronicsState, frippertronics_state, render_frippertronics
 from indiegen.fx.reverb import ReverbState, render_reverb, reverb_state
 from indiegen.gain import millibels_to_gain
-from indiegen.mix.bus import bus_gains, pan_gains, trim
+from indiegen.mix.bus import bus_gains, pan_gains, silent_bus, trim
 from indiegen.mix.masking import DUCK_HIGH_HZ, DUCK_LOW_HZ, apply_duck, duck_band, duck_envelope
 from indiegen.mix.sidechain import SidechainState, render_sidechain, sidechain_state
 from indiegen.plan import (
@@ -224,9 +224,9 @@ def _mix_voices(
     from them and not from the whole mix.
     """
     count = stop - start
-    main = np.zeros((count, plan.channels), dtype=np.float64)
-    drum_bus = np.zeros((count, plan.channels), dtype=np.float64)
-    ks_bus = np.zeros((count, plan.channels), dtype=np.float64)
+    main = silent_bus(count, plan.channels)
+    drum_bus = silent_bus(count, plan.channels)
+    ks_bus = silent_bus(count, plan.channels)
 
     for index, event in enumerate(events):
         si = _section_index_of(event.start_frame, plan)
@@ -304,13 +304,15 @@ def _apply_effects(
         for fx_send in plan.fx_sends:
             sos = lowpass_sos(fx_send.cutoff_hz, fx_send.q_num, fx_send.q_den, plan.sample_rate)
             filtered, filter_state = apply_biquad(sos, main, filter_state)
-            if not bool(np.all(np.isfinite(filtered))):
-                raise RenderError(
-                    "non-finite sample after filtering",
-                    preset=plan.preset,
-                    seed=plan.seed,
-                    block_index=start // BLOCK_SIZE,
-                )
+            from indiegen.errors import raise_if_nonfinite
+
+            raise_if_nonfinite(
+                filtered,
+                "non-finite sample after filtering",
+                preset=plan.preset,
+                seed=plan.seed,
+                block_index=start // BLOCK_SIZE,
+            )
             level = millibels_to_gain(fx_send.send_millibels)
             main = main + (filtered - main) * level
 
@@ -410,7 +412,7 @@ def _render_block(
 
 def render_plan(plan: Plan) -> np.ndarray:
     """Render the plan into a stereo float64 buffer."""
-    mix = np.zeros((plan.duration_frames, plan.channels), dtype=np.float64)
+    mix = silent_bus(plan.duration_frames, plan.channels)
     _render_into(plan, mix)
     return mix
 

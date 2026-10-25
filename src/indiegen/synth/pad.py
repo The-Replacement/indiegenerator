@@ -16,7 +16,7 @@ import numpy as np
 
 from indiegen.gain import millibels_to_gain
 from indiegen.plan import PadEvent
-from indiegen.synth.osc import cumulative_sum, midi_to_hz
+from indiegen.synth.osc import cumulative_sum, midi_to_hz, sine_from_phase, zero_block, zero_carries
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class PadState:
 
 def pad_state(event: PadEvent) -> PadState:
     """The zero state of the pad."""
-    return PadState(carries=tuple(0.0 for _ in event.partials))
+    return PadState(carries=zero_carries(len(event.partials)))
 
 
 def render_pad_block(
@@ -59,7 +59,7 @@ def render_pad_block(
         cursor += segment.delta_frames
         boundaries.append(cursor)
 
-    voice = np.zeros(count, dtype=np.float64)
+    voice = zero_block(count)
     carries = list(state.carries)
     run_start = start
     segment_index = 0
@@ -99,7 +99,7 @@ def _render_pad_run(
     rate = event.lfo_rate.numerator / event.lfo_rate.denominator
     lfo = np.sin(2.0 * np.pi * rate * times)
     base = midi_to_hz(event.midi)
-    voice = np.zeros(count, dtype=np.float64)
+    voice = zero_block(count)
     carries = list(state.carries)
     for index, partial in enumerate(event.partials):
         ratio = partial.ratio.numerator / partial.ratio.denominator
@@ -108,7 +108,7 @@ def _render_pad_run(
         phase, carries[index] = cumulative_sum(carries[index], frequency)
         weight = event.partials[permutation[index]].amplitude_millibels
         partial_amp = millibels_to_gain(weight)
-        voice += partial_amp * np.sin(2.0 * np.pi * phase / sample_rate)
+        voice += partial_amp * sine_from_phase(phase, sample_rate)
     amplitude = millibels_to_gain(event.amplitude_millibels)
     return voice * amplitude, PadState(carries=tuple(carries))
 

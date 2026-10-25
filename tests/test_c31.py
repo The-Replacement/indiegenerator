@@ -40,7 +40,7 @@ from indiegen.synth.filter import bandpass_sos, initial_state
 
 RATE = 44100
 SEED = 1042
-DUCK = DuckSpec(depth_millibels=-600, release_frames=8820)
+DUCK = DuckSpec(depth_millibels=-6000, release_frames=8820)
 
 
 def absolute_energy(signal: np.ndarray, low_hz: float, high_hz: float) -> float:

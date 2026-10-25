@@ -19,10 +19,10 @@ from pathlib import Path
 
 import pytest
 
-from indiegen.batch import batch, batch_forms, form_slots, render_track
+from indiegen.batch import TrackOutcome, batch, batch_forms, form_slots, render_track
 from indiegen.catalog import build_catalog, write_catalog
 from indiegen.compose import compose, director
-from indiegen.config import FormCard, load_preset
+from indiegen.config import FormCard, Preset, load_preset
 from indiegen.errors import PlanError
 from indiegen.filecheck import check_file
 from indiegen.install import install
@@ -32,7 +32,7 @@ RATE: int = 44100
 
 
 @pytest.fixture()
-def short_preset():
+def short_preset() -> Preset:
     """A station whose forms are seconds long, so a test batch is quick."""
     preset = copy.deepcopy(load_preset("motorik"))
     station = preset.station.model_copy(
@@ -58,7 +58,7 @@ def no_trajectory_gates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(scope="session")
-def real_track(tmp_path_factory: pytest.TempPathFactory):
+def real_track(tmp_path_factory: pytest.TempPathFactory) -> TrackOutcome:
     """A real sixty second track, with its sidecar, rendered once."""
     preset = load_preset("motorik")
     plan = director(compose(preset, 1042, 60 * RATE))
@@ -99,7 +99,9 @@ def test_the_forms_are_spread_over_the_batch() -> None:
     assert "longform" in drawn[10:]
 
 
-def test_a_batch_renders_the_tracks_and_writes_the_catalog(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_a_batch_renders_the_tracks_and_writes_the_catalog(
+    short_preset: Preset, no_trajectory_gates: None, tmp_path: Path
+) -> None:
     result = batch(short_preset, 4, 2000, tmp_path)
     assert len(result.tracks) == 4
     assert [track.seed for track in result.tracks] == [2000, 2001, 2002, 2003]
@@ -111,7 +113,7 @@ def test_a_batch_renders_the_tracks_and_writes_the_catalog(short_preset, no_traj
 
 
 def test_a_batch_refuses_a_seed_that_is_already_in_the_library(
-    short_preset, no_trajectory_gates, tmp_path: Path
+    short_preset: Preset, no_trajectory_gates: None, tmp_path: Path
 ) -> None:
     batch(short_preset, 2, 2000, tmp_path)
     with pytest.raises(PlanError) as failure:
@@ -119,12 +121,14 @@ def test_a_batch_refuses_a_seed_that_is_already_in_the_library(
     assert "already in the library" in str(failure.value)
 
 
-def test_a_batch_needs_at_least_one_track(short_preset, tmp_path: Path) -> None:
+def test_a_batch_needs_at_least_one_track(short_preset: Preset, tmp_path: Path) -> None:
     with pytest.raises(PlanError):
         batch(short_preset, 0, 2000, tmp_path)
 
 
-def test_the_catalog_is_keyed_by_the_decoded_hash(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_the_catalog_is_keyed_by_the_decoded_hash(
+    short_preset: Preset, no_trajectory_gates: None, tmp_path: Path
+) -> None:
     result = batch(short_preset, 2, 2000, tmp_path)
     catalog = build_catalog(tmp_path)
     for track in result.tracks:
@@ -139,7 +143,7 @@ def test_the_catalog_is_keyed_by_the_decoded_hash(short_preset, no_trajectory_ga
         assert entry.path.endswith(".flac")
 
 
-def test_the_catalog_reports_a_hash_duplicate(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_the_catalog_reports_a_hash_duplicate(short_preset: Preset, no_trajectory_gates: None, tmp_path: Path) -> None:
     """Two seeds that produce the same audio share a key, and the catalog says so."""
     result = batch(short_preset, 2, 2000, tmp_path)
     first = result.tracks[0]
@@ -155,7 +159,7 @@ def test_the_catalog_reports_a_hash_duplicate(short_preset, no_trajectory_gates,
     assert not catalog.duplicate_seeds
 
 
-def test_the_catalog_reports_a_seed_duplicate(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_the_catalog_reports_a_seed_duplicate(short_preset: Preset, no_trajectory_gates: None, tmp_path: Path) -> None:
     """Two files under one seed are a seed duplicate."""
     result = batch(short_preset, 2, 2000, tmp_path)
     first = result.tracks[0]
@@ -168,7 +172,7 @@ def test_the_catalog_reports_a_seed_duplicate(short_preset, no_trajectory_gates,
     assert any(entry["seed"] == first.seed for entry in catalog.duplicate_seeds)
 
 
-def test_the_catalog_is_written_atomically(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_the_catalog_is_written_atomically(short_preset: Preset, no_trajectory_gates: None, tmp_path: Path) -> None:
     batch(short_preset, 1, 2000, tmp_path)
     path = write_catalog(tmp_path, build_catalog(tmp_path))
     assert path.is_file()
@@ -178,13 +182,13 @@ def test_the_catalog_is_written_atomically(short_preset, no_trajectory_gates, tm
     assert "tracks" in payload
 
 
-def test_a_file_checks_against_its_sidecar(real_track) -> None:
+def test_a_file_checks_against_its_sidecar(real_track: TrackOutcome) -> None:
     check = check_file(real_track.path, with_codec=False)
     assert check.ok
     assert not check.failures
 
 
-def test_a_file_whose_sidecar_is_missing_is_unverifiable(real_track, tmp_path: Path) -> None:
+def test_a_file_whose_sidecar_is_missing_is_unverifiable(real_track: TrackOutcome, tmp_path: Path) -> None:
     copy_of = tmp_path / "orphan.flac"
     copy_of.write_bytes(real_track.path.read_bytes())
     check = check_file(copy_of, with_codec=False)
@@ -193,7 +197,7 @@ def test_a_file_whose_sidecar_is_missing_is_unverifiable(real_track, tmp_path: P
     assert any(failure.gate == 10 for failure in check.failures)
 
 
-def test_a_file_whose_sidecar_does_not_match_it_fails(real_track, tmp_path: Path) -> None:
+def test_a_file_whose_sidecar_does_not_match_it_fails(real_track: TrackOutcome, tmp_path: Path) -> None:
     directory = tmp_path / "out"
     directory.mkdir()
     flac = directory / real_track.path.name
@@ -206,7 +210,7 @@ def test_a_file_whose_sidecar_does_not_match_it_fails(real_track, tmp_path: Path
     assert any(failure.gate == 10 for failure in check.failures)
 
 
-def test_the_install_copies_the_valid_tracks(real_track, tmp_path: Path) -> None:
+def test_the_install_copies_the_valid_tracks(real_track: TrackOutcome, tmp_path: Path) -> None:
     directory = tmp_path / "out"
     directory.mkdir()
     (directory / real_track.path.name).write_bytes(real_track.path.read_bytes())
@@ -220,7 +224,7 @@ def test_the_install_copies_the_valid_tracks(real_track, tmp_path: Path) -> None
         assert path.parent == target
 
 
-def test_the_install_refuses_a_track_that_failed_the_gates(real_track, tmp_path: Path) -> None:
+def test_the_install_refuses_a_track_that_failed_the_gates(real_track: TrackOutcome, tmp_path: Path) -> None:
     directory = tmp_path / "out"
     directory.mkdir()
     (directory / real_track.path.name).write_bytes(real_track.path.read_bytes())
@@ -235,7 +239,7 @@ def test_the_install_refuses_a_track_that_failed_the_gates(real_track, tmp_path:
     assert not list((tmp_path / "installed").glob("*.flac"))
 
 
-def test_a_render_that_fails_the_gates_writes_nothing(short_preset, tmp_path: Path) -> None:
+def test_a_render_that_fails_the_gates_writes_nothing(short_preset: Preset, tmp_path: Path) -> None:
     plan = director(compose(short_preset, 4242, 4 * SAMPLE_RATE))
     result = render_track(plan, tmp_path)
     assert result.failure is not None
@@ -251,7 +255,7 @@ def test_the_plan_declares_its_form() -> None:
     assert short.form == "interlude"
 
 
-def test_the_batch_draws_the_form_it_is_given(short_preset, no_trajectory_gates, tmp_path: Path) -> None:
+def test_the_batch_draws_the_form_it_is_given(short_preset: Preset, no_trajectory_gates: None, tmp_path: Path) -> None:
     plan = director(compose(short_preset, 2000, None, "longform"))
     assert plan.form == "longform"
     low, high = short_preset.station.forms[1].duration_range_seconds

@@ -55,7 +55,7 @@ def _fitted_rt60(wet: np.ndarray) -> float:
     peak = float(np.max(envelope))
     tail = np.nonzero(envelope > peak - 30.0)[0]
     assert tail.size >= 5
-    slope = np.polyfit(tail, envelope[tail], 1)[0]
+    slope = float(np.polyfit(tail, envelope[tail], 1)[0])
     assert slope < 0.0
     return -60.0 / (slope * RATE)
 

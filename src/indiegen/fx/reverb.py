@@ -17,9 +17,9 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import lfilter
 
-from indiegen.fx.line import allpass_line, comb_line
+from indiegen.fx.line import allpass_line, comb_line, zero_wet
 from indiegen.plan import ReverbSpec
-from indiegen.synth.env import dc_block_state
+from indiegen.synth.env import dc_block_state, dc_blocker_state
 
 
 @dataclass(frozen=True)
@@ -46,8 +46,8 @@ def reverb_state(spec: ReverbSpec) -> ReverbState:
     return ReverbState(
         comb_states=tuple(comb_states),
         allpass_states=tuple(allpass_states),
-        dc_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
-        dc_sum_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
+        dc_states=tuple(dc_blocker_state() for _ in range(2)),
+        dc_sum_states=tuple(dc_blocker_state() for _ in range(2)),
         damping_states=tuple(np.zeros(1, dtype=np.float64) for _ in range(2)),
     )
 
@@ -63,7 +63,7 @@ def render_reverb(
     allpass_feedback = spec.allpass_feedback.numerator / spec.allpass_feedback.denominator
     damping = spec.damping.numerator / spec.damping.denominator
 
-    wet = np.zeros(block.shape, dtype=np.float64)
+    wet = zero_wet(block)
     new_comb_states: list[tuple[np.ndarray, ...]] = []
     new_allpass_states: list[tuple[np.ndarray, ...]] = []
     new_dc_states: list[np.ndarray] = []

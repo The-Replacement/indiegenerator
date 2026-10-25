@@ -19,10 +19,10 @@ import numpy as np
 from scipy.signal import lfilter
 
 from indiegen.plan import PluckEvent
-from indiegen.synth.env import dc_block_state
+from indiegen.synth.env import dc_blocked_block, dc_blocker_state
 from indiegen.synth.grit import waveshape
 from indiegen.synth.noise import uniform_stream
-from indiegen.synth.osc import midi_to_hz
+from indiegen.synth.osc import midi_to_hz, zero_block
 
 
 @dataclass(frozen=True)
@@ -96,7 +96,7 @@ def pluck_state(event: PluckEvent, sample_rate: int) -> PluckState:
         numerators=numerators,
         excitation=excitation,
         filter_state=np.zeros(coefficients.size - 1, dtype=np.float64),
-        dc=np.zeros(1, dtype=np.float64),
+        dc=dc_blocker_state(),
         offset=0,
     )
 
@@ -113,12 +113,12 @@ def render_pluck_block(
     excitation = state.excitation
     begin = state.offset
     end = min(begin + count, excitation.size)
-    block = np.zeros(count, dtype=np.float64)
+    block = zero_block(count)
     if end > begin:
         block[: end - begin] = excitation[begin:end]
     filtered, carry = lfilter(state.numerators, state.coefficients, block, zi=state.filter_state)
     shaped = waveshape(filtered, event.drive_permille)
-    blocked, dc_carry = dc_block_state(shaped, sample_rate, state.dc)
+    blocked, dc_carry = dc_blocked_block(shaped, sample_rate, state.dc)
     return blocked, PluckState(
         coefficients=state.coefficients,
         numerators=state.numerators,

@@ -15,6 +15,33 @@ def midi_to_hz(midi: int) -> float:
     return A4_HZ * math.pow(2.0, (midi - A4_MIDI) / 12.0)
 
 
+def zero_carries(count: int) -> tuple[float, ...]:
+    """Zero initial carries."""
+    return tuple(0.0 for _ in range(count))
+
+
+def zero_block(count: int) -> np.ndarray:
+    """A silent mono block of ``count`` frames.
+
+    The shared allocation of the blockwise voices: every voice accumulates
+    into exact float64 silence, so a block-wise render holds the same bits
+    as a whole-track one. Only the count is a parameter - shape and dtype
+    are the knowledge being kept in one place.
+    """
+    return np.zeros(count, dtype=np.float64)
+
+
+def sine_from_phase(phase: np.ndarray, sample_rate: int) -> np.ndarray:
+    """A sine wave from a running phase: ``sin(2 * pi * phase / sample_rate)``.
+
+    ``phase`` is the running sum of a frequency (see ``cumulative_sum``).
+    The gain deliberately stays at the call site: the voices scale by a
+    scalar, by an array, and on different sides of the product, and keeping
+    that multiplication where it is written keeps every call bit-identical.
+    """
+    return np.sin(2.0 * np.pi * phase / sample_rate)
+
+
 def sine(frequency_hz: float, count: int, sample_rate: int) -> np.ndarray:
     """A sine of ``count`` samples. The phase starts at zero."""
     times = np.arange(count, dtype=np.float64) / sample_rate

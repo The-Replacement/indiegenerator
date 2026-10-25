@@ -19,6 +19,7 @@ import numpy as np
 from scipy.signal import lfilter
 
 from indiegen.mixing import MASK64, mix64, mix64_array
+from indiegen.synth.osc import zero_block
 
 CONTROL_RATE: int = 4410
 SOURCE_COUNT: int = 12
@@ -81,7 +82,7 @@ def pink_stream_block(
     The one-pole filters carry their own state, so a block of the stream is
     bit-identical to the same block of the whole one.
     """
-    total = np.zeros(count, dtype=np.float64)
+    total = zero_block(count)
     weight_sum = 0.0
     filters: list[np.ndarray] = []
     for index in range(SOURCE_COUNT):

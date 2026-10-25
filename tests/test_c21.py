@@ -6,6 +6,7 @@ import numpy as np
 
 from indiegen.plan import EventBase
 from indiegen.synth.env import note_envelope
+from indiegen.theory.scales import MODE_INTERVALS
 
 
 def _event(attack: int, curve: int) -> EventBase:
@@ -53,11 +54,9 @@ def test_envelope_curve_default_linear_unchanged() -> None:
 
 def test_ambient_dorian_beat_rate_le_6hz() -> None:
     f0 = 220.0
-    # dorian scale degrees in 12-TET
-    dorian_intervals = [0, 2, 3, 5, 7, 9, 10]
-    scale = [f0 * (2 ** (i / 12.0)) for i in dorian_intervals]
     # pool with 5/4 dropped
     pool = [(1, 1), (9, 8), (4, 3), (3, 2)]
+    scale = [f0 * (2 ** (i / 12.0)) for i in MODE_INTERVALS["dorian"]]
     max_beat = 0.0
     for num, den in pool:
         partial = f0 * num / den
@@ -68,7 +67,7 @@ def test_ambient_dorian_beat_rate_le_6hz() -> None:
             max_beat = beat
     # baseline reference: 5/4 partial beats at 13.37 Hz (recorded, not asserted)
     baseline_5_4_beat = abs(f0 * 5 / 4 - (f0 * (2 ** (3 / 12.0))))
-    assert baseline_5_4_beat > 10.0  # ~13.37
+    assert abs(baseline_5_4_beat - 13.37) < 0.01  # the 13.37 Hz the bound below comes from
     assert max_beat <= 6.0
 
 
@@ -99,6 +98,11 @@ def test_pad_n9_cpu_budget_measured() -> None:
     t0 = time.perf_counter()
     render_pad_block(event, 44100, 0, 131072, state)
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
-    # reference annotation: ~95.3 ms measured; budget <= ~96 ms
-    assert elapsed_ms <= 200.0  # loose bound; record actual
+    # reference annotation: ~95.3 ms measured on the machine this was written
+    # on. 200 ms keeps 2x headroom for a loaded box; the bound that means
+    # something is the realtime one - 131072 samples at 44.1 kHz are 2.97 s of
+    # audio, and a block has to be cheaper than the audio it produces.
+    block_ms = 131072 / 44100 * 1000.0
+    assert elapsed_ms <= 200.0, f"pad N=9 block took {elapsed_ms:.2f} ms; reference ~95.3 ms"
+    assert elapsed_ms < block_ms, f"pad N=9 block took {elapsed_ms:.2f} ms for {block_ms:.2f} ms of audio"
     print(f"pad N=9 block time: {elapsed_ms:.2f} ms")

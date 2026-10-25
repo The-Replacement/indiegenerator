@@ -11,7 +11,7 @@ from indiegen.synth.drumcomp import drum_comp_state, render_drum_comp_block
 
 def test_drum_comp_restart_from_state_bit_identical() -> None:
     comp = DrumBusComp(
-        threshold_millibels=-600,
+        threshold_millibels=-6000,
         ratio_permille=4000,
         attack_frames=10,
         release_frames=1000,
@@ -37,7 +37,7 @@ def test_drum_comp_bypass_mix_zero_bit_identical_to_none() -> None:
 
     plan = director(compose(load_preset("motorik"), 1042, 5 * 44100))
     comp_bypass = DrumBusComp(
-        threshold_millibels=-600,
+        threshold_millibels=-6000,
         ratio_permille=4000,
         attack_frames=10,
         release_frames=1000,

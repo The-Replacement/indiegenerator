@@ -11,19 +11,19 @@ from __future__ import annotations
 from indiegen.compose.director import director
 from indiegen.compose.planner import _ornament_events, compose
 from indiegen.config import load_preset
-from indiegen.plan import PluckEvent
+from indiegen.plan import Plan, PluckEvent
 
 
-def _ambient():
+def _ambient() -> Plan:
     return director(compose(load_preset("motorik"), 1042, 60 * 44100))
 
 
 def test_ornament_zero_is_no_op() -> None:
     plan = _ambient()
-    assert _ornament_events(list(plan.events), plan.sections, 1042, 0, 500) == list(plan.events)
+    assert _ornament_events(list(plan.events), _boundaries(plan), 1042, 0, 500) == list(plan.events)
 
 
-def _boundaries(plan):
+def _boundaries(plan: Plan) -> list[int]:
     return [s.start_frame for s in plan.sections] + [plan.duration_frames]
 
 

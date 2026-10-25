@@ -27,7 +27,7 @@ snap_permille: 350
 
 # c31: the masking duck - see motorik.yaml. This lane already has the kick
 # sidechain; the duck carves the band the bass itself occupies.
-duck: {depth_millibels: -600, release_frames: 8820}
+duck: {depth_millibels: -6000, release_frames: 8820}
 
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
@@ -40,7 +40,7 @@ fx_sends:
 techniques:
   # T7: the 1/f control signals of the lane.
   - kind: pink
-    velocity_depth_millibels: 450
+    velocity_depth_millibels: 4500
     micro_timing_frames: 9
     pan_drift_permille: 120
 
@@ -71,7 +71,7 @@ techniques:
       condition_period: 1
       min_density: 40
       ghost_permille: 150
-      velocity_millibels: -300
+      velocity_millibels: -3000
     body_hz: 200
     body_decay_frames: 3000
     noise_decay_frames: 8000
@@ -85,7 +85,7 @@ techniques:
       condition_period: 1
       min_density: 70
       ghost_permille: 200
-      velocity_millibels: -700
+      velocity_millibels: -7000
     cutoff_hz: 8200
     decay_frames: 2200
     # c31: BRIEF 6's codec rule - keep the essential content below 14 kHz.
@@ -117,7 +117,7 @@ techniques:
       condition_period: 1
       min_density: 40
       ghost_permille: 0
-      velocity_millibels: -200
+      velocity_millibels: -2000
     cutoff_hz: 380
     decay_frames: 6500
     octave_jump_permille: 200
@@ -132,8 +132,8 @@ techniques:
     bandpass_q_num: 2
     bandpass_q_den: 1
     drift_depth_hz: 120
-    send_millibels: -200
-    sidechain_depth_millibels: -900
+    send_millibels: -2000
+    sidechain_depth_millibels: -9000
     sidechain_release_frames: 12000
     min_density: 40
 

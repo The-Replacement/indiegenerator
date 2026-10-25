@@ -39,7 +39,7 @@ def plan_drone(
         partials.append(
             DriftingPartial(
                 ratio=ratio,
-                amplitude_millibels=-300 - index * 120,
+                amplitude_millibels=-3000 - index * 1200,
                 detune_cents=detune,
                 detune_lfo=DetuneLfo(rate=card.detune_lfo_rate, depth_cents=card.detune_lfo_depth_cents),
                 amplitude_lfo=AmplitudeLfo(

@@ -12,7 +12,7 @@ import ast
 from pathlib import Path
 
 from indiegen.compose import director
-from indiegen.plan import Plan, canonical_json
+from indiegen.plan import HatEvent, KickEvent, Plan, SnareEvent, canonical_json
 
 
 def test_director_is_pure(composed_plan: Plan) -> None:
@@ -125,6 +125,93 @@ def test_the_transposition_moves_the_material_up(composed_plan: Plan) -> None:
     assert any(midi - 5 in before for midi in after)
 
 
+def _reharmonized(composed_plan: Plan) -> Plan:
+    """The plan after one `reharmonize_relative` move over the whole track.
+
+    The move is drawn here instead of left to the deck so that both tests
+    below look at the same thing: every section moved, none of them skipped.
+    """
+    from indiegen.plan import DirectorMove
+
+    move = DirectorMove(
+        sample=0,
+        strategy="reharmonize_relative",
+        detail="reharmonize to the relative mode",
+        parameter=0,
+        crossfade_frames=0,
+        applies_to=["bass"],
+    )
+    directed = director(composed_plan.model_copy(update={"strategy_deck": [move]}))
+    assert len(directed.director_log) == 1
+    return directed
+
+
+def _notes_out_of_scale(plan: Plan) -> set[int]:
+    """The melodic notes that sit outside the section they play in.
+
+    The composer is allowed to write a chromatic note - the lane declares a
+    chromatic budget and the motorik plan has one - so this is compared before
+    and after a move rather than against empty: a move that adds one has
+    broken the section's own claim on its notes.
+    """
+    from indiegen.plan import BassEvent, PluckEvent
+    from indiegen.theory.scales import mode_scale
+
+    found: set[int] = set()
+    for section in plan.sections:
+        scale = {note % 12 for note in mode_scale(section.mode, section.root_midi, 1)}
+        for event in plan.events:
+            if isinstance(event, BassEvent):
+                notes = [(hit.frame, hit.midi) for hit in event.hits]
+            elif isinstance(event, PluckEvent):
+                notes = [(event.start_frame, event.midi)]
+            else:
+                continue
+            for frame, midi in notes:
+                if section.start_frame <= frame < section.end_frame and midi % 12 not in scale:
+                    found.add(midi)
+    return found
+
+
+def test_the_reharmonize_move_puts_every_section_on_its_relative(composed_plan: Plan) -> None:
+    """Every section moves to the mode it shares its notes with.
+
+    That is the whole claim of a relative: the pitch content is unchanged and
+    only the centre moves, which is what lets the notes already written stay
+    inside the section after the Director has run. Nothing downstream
+    re-derives a pitch from a section, so a mismatch would ship.
+    """
+    from indiegen.theory.scales import mode_scale, relative_of
+
+    directed = _reharmonized(composed_plan)
+    assert len(directed.sections) == len(composed_plan.sections)
+    for before, after in zip(composed_plan.sections, directed.sections, strict=True):
+        relative, interval = relative_of(before.mode)
+        assert (after.mode, after.root_midi) == (relative, before.root_midi + interval)
+        old_scale = {note % 12 for note in mode_scale(before.mode, before.root_midi, 1)}
+        new_scale = {note % 12 for note in mode_scale(after.mode, after.root_midi, 1)}
+        assert old_scale == new_scale, f"{before.mode} -> {after.mode} is not the same scale"
+
+
+def test_the_reharmonize_move_follows_the_centre_with_the_bass_alone(composed_plan: Plan) -> None:
+    """The bass moves to the new centre, the melody holds, nothing falls out.
+
+    The last assertion is the one the old transposing move fails: it moved the
+    plucks with the root, and a quarter of the motorik plucks then sat on a
+    pitch class the section's own scale does not contain.
+    """
+    from indiegen.plan import BassEvent, PluckEvent
+
+    directed = _reharmonized(composed_plan)
+    bass_before = {hit.midi for e in composed_plan.events if isinstance(e, BassEvent) for hit in e.hits}
+    bass_after = {hit.midi for e in directed.events if isinstance(e, BassEvent) for hit in e.hits}
+    assert bass_after != bass_before, "the bass did not follow the new centre"
+    melody_before = {event.midi for event in composed_plan.events if isinstance(event, PluckEvent)}
+    melody_after = {event.midi for event in directed.events if isinstance(event, PluckEvent)}
+    assert melody_after == melody_before, "the melody was moved instead of reinterpreted"
+    assert _notes_out_of_scale(directed) <= _notes_out_of_scale(composed_plan)
+
+
 def test_the_motif_transforms_rewrite_the_appearances(composed_plan: Plan) -> None:
     """A motif move changes the plan's appearances and the plucks with them."""
     from indiegen.plan import DirectorMove
@@ -165,6 +252,8 @@ def test_the_drum_drops_take_the_hits_out(composed_plan: Plan) -> None:
     directed = director(plan)
     assert len(directed.director_log) == 1
     for event in directed.events:
+        if not isinstance(event, (KickEvent, SnareEvent, HatEvent)):
+            continue
         if event.instrument not in ("kick", "snare", "hat"):
             continue
         for hit in event.hits:

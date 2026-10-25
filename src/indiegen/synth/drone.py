@@ -19,7 +19,7 @@ import numpy as np
 
 from indiegen.gain import millibels_to_gain_array
 from indiegen.plan import DroneEvent
-from indiegen.synth.env import dc_block_state
+from indiegen.synth.env import dc_blocked_block, dc_blocker_state
 from indiegen.synth.noise import (
     AMPLITUDE_STREAM,
     CONTROL_RATE,
@@ -31,7 +31,7 @@ from indiegen.synth.noise import (
     pink_state,
     stream_key,
 )
-from indiegen.synth.osc import cumulative_sum, midi_to_hz
+from indiegen.synth.osc import cumulative_sum, midi_to_hz, sine_from_phase, zero_block, zero_carries
 
 
 @dataclass(frozen=True)
@@ -49,8 +49,8 @@ def drone_state(event: DroneEvent) -> DroneState:
     return DroneState(
         detune=tuple(pink_state() for _ in event.partials),
         amplitude=tuple(pink_state() for _ in event.partials),
-        carries=tuple(0.0 for _ in event.partials),
-        dc=np.zeros(1, dtype=np.float64),
+        carries=zero_carries(len(event.partials)),
+        dc=dc_blocker_state(),
     )
 
 
@@ -68,7 +68,7 @@ def render_drone_block(
     low = start * CONTROL_RATE // sample_rate
     high = (stop - 1) * CONTROL_RATE // sample_rate + 1
 
-    voice = np.zeros(count, dtype=np.float64)
+    voice = zero_block(count)
     detune_states = list(state.detune)
     amplitude_states = list(state.amplitude)
     carries = list(state.carries)
@@ -104,9 +104,9 @@ def render_drone_block(
             1.0,
         )
         millibels = partial.amplitude_millibels + partial.amplitude_lfo.depth_millibels * amplitude_signal
-        voice += np.sin(2.0 * np.pi * phase / sample_rate) * millibels_to_gain_array(millibels)
+        voice += sine_from_phase(phase, sample_rate) * millibels_to_gain_array(millibels)
 
-    blocked, dc_carry = dc_block_state(voice, sample_rate, state.dc)
+    blocked, dc_carry = dc_blocked_block(voice, sample_rate, state.dc)
     return blocked, DroneState(
         detune=tuple(detune_states),
         amplitude=tuple(amplitude_states),

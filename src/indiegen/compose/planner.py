@@ -70,7 +70,7 @@ from indiegen.plan import (
     SectionPlan,
     SectionProfile,
 )
-from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES, mode_scale
+from indiegen.theory.scales import mode_scale, relative_of
 
 # The three forms of a release: a full track, a longform and an interlude.
 Form = Literal["full", "longform", "interlude"]
@@ -338,8 +338,8 @@ def _assign_modes(
             )
             if 0 <= original < len(assigned):
                 original_mode, original_root = assigned[original]
-                mode = RELATIVE_MODES.get(original_mode, original_mode)
-                root = original_root + RELATIVE_INTERVAL
+                mode, interval = relative_of(original_mode)
+                root = original_root + interval
                 held_bars = 0
         assigned.append((mode, root))
         held_bars += bars
@@ -717,12 +717,12 @@ def _pattern_min_density(card: TechniqueCard) -> int:
     return card.pattern.min_density  # type: ignore[union-attr]
 
 
-def _card_min_density(card: object) -> int:
+def _card_min_density(card: TechniqueCard) -> int:
     """The density at which a card's layer starts to play."""
-    spec = CARD_SPECS.get(getattr(card, "kind", ""))
+    spec = CARD_SPECS.get(card.kind)
     if spec is None:
         return 0
-    return spec.min_density(card)  # type: ignore[arg-type]
+    return spec.min_density(card)
 
 
 def _card_instrument(card: TechniqueCard) -> str | None:
@@ -1195,6 +1195,15 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     events = _apply_timbre(events, lane.drive_permille, lane.snap_permille)
     events = _ornament_events(events, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
     events = _double_events(events, station.double_copies, station.double_offset_frames, frames)
+    events, appearances = _apply_voice_leading(
+        events,
+        appearances,
+        boundaries,
+        section_roots,
+        [mode for mode, _ in modes],
+        section_scales,
+        lane,
+    )
 
     sections = _section_plans(nodes, boundaries, lengths, frames_per_bar, modes, section_roots, lane, events)
     rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
@@ -1480,13 +1489,204 @@ def _double_events(events: list[Event], copies: int, offset: int, total_frames: 
             if new_start >= total_frames:
                 continue
             cloned = event.model_copy(update={"start_frame": new_start})
-            hits = getattr(event, "hits", None)
-            if hits is not None and hits:
+            if isinstance(event, RhythmEvent) and event.hits:
                 cloned = cloned.model_copy(
-                    update={"hits": [h.model_copy(update={"frame": h.frame + delta}) for h in hits]}
+                    update={"hits": [h.model_copy(update={"frame": h.frame + delta}) for h in event.hits]}
                 )
             remaining = total_frames - new_start
             if cloned.duration_frames > remaining:
                 cloned = cloned.model_copy(update={"duration_frames": remaining})
             out.append(cloned)
     return out
+
+
+def _section_at_frame(boundaries: list[int], frame: int) -> int:
+    for index in range(len(boundaries) - 1):
+        if boundaries[index] <= frame < boundaries[index + 1]:
+            return index
+    if boundaries:
+        return len(boundaries) - 2
+    return 0
+
+
+def _smoothed_pluck(scale: list[int], previous: int, current: int) -> int | None:
+    """The scale note that makes a leap between two plucks less of a leap.
+
+    The score keeps the note close to both ends, weighting the note it came
+    from heavily and the note it is going to loosely, and the candidate has to
+    be a real improvement - two semitones better, in the same register - or
+    the leap stays as written.
+    """
+    interval = abs(current - previous)
+    candidates = []
+    for note in scale:
+        if note < 36 or note > 96:
+            continue
+        dist_from_previous = abs(note - previous)
+        if dist_from_previous < interval - 2:  # must be meaningfully better
+            candidates.append((dist_from_previous + abs(note - current) * 0.3, note))
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[0][1]
+
+
+def _pluck_indices_by_instrument(out: list[Event]) -> dict[str, list[int]]:
+    """Pluck event indices grouped by instrument, in plan order."""
+    from indiegen.plan import PluckEvent
+
+    by_inst: dict[str, list[int]] = {}
+    for idx, event in enumerate(out):
+        if isinstance(event, PluckEvent):
+            by_inst.setdefault(event.instrument, []).append(idx)
+    return by_inst
+
+
+def _lead_one_instrument(
+    out: list[Event],
+    boundaries: list[int],
+    section_scales: list[list[int]],
+    instrument: str,
+    indices: list[int],
+) -> dict[tuple[int, int], int]:
+    """Smooth leaps for one instrument; return motif moves to track for appearances."""
+    from indiegen.plan import PluckEvent
+
+    moved_motif: dict[tuple[int, int], int] = {}
+    if instrument == "bass":
+        return moved_motif
+    ordered = sorted(indices, key=lambda i: out[i].start_frame)
+    for position in range(1, len(ordered)):
+        previous = out[ordered[position - 1]]
+        current = out[ordered[position]]
+        if not isinstance(previous, PluckEvent) or not isinstance(current, PluckEvent):
+            continue
+        if abs(current.midi - previous.midi) <= 6:  # already smooth enough
+            continue
+        section = _section_at_frame(boundaries, current.start_frame)
+        scale = section_scales[section] if section < len(section_scales) else []
+        if not scale:
+            continue
+        new_midi = _smoothed_pluck(scale, previous.midi, current.midi)
+        if new_midi is None:
+            continue
+        out[ordered[position]] = current.model_copy(update={"midi": new_midi})
+        if instrument == "motif":
+            moved_motif[(current.start_frame, position)] = new_midi
+    return moved_motif
+
+
+def _lead_plucks(
+    out: list[Event],
+    boundaries: list[int],
+    section_scales: list[list[int]],
+) -> dict[tuple[int, int], int]:
+    """Smooth the leaps between consecutive plucks of one instrument at a time.
+
+    Only the plucks move, only when the interval is more than a tritone, and
+    only to a note the section's own scale contains: the pass exists to stop a
+    line jumping around, not to rewrite it. Returns the motif notes it moved,
+    keyed the way the appearance update expects them.
+    """
+    moved_motif: dict[tuple[int, int], int] = {}
+    for instrument, indices in _pluck_indices_by_instrument(out).items():
+        moved_motif.update(_lead_one_instrument(out, boundaries, section_scales, instrument, indices))
+    return moved_motif
+
+
+def _smoothed_bass(scale: list[int], previous: int, current: int) -> int | None:
+    """The scale note that keeps a bass line stepwise across a big leap.
+
+    The bass rule is stricter than the pluck's: the note has to land within
+    five semitones of where it came from, because a bass that wanders takes
+    the harmonic floor with it.
+    """
+    interval = abs(current - previous)
+    candidates = []
+    for note in scale:
+        if note < 24 or note > 72:
+            continue
+        dist = abs(note - previous)
+        if dist < interval - 1 and dist <= 5:  # stepwise preferred
+            candidates.append((dist, note))
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[0][1]
+
+
+def _lead_bass(out: list[Event], boundaries: list[int], section_scales: list[list[int]]) -> None:
+    """Voice lead the bass line in place, hit by hit, more conservatively."""
+    from indiegen.plan import BassEvent
+
+    for idx, event in enumerate(out):
+        if not isinstance(event, BassEvent):
+            continue
+        new_hits = []
+        previous_midi: int | None = None
+        for hit in event.hits:
+            if previous_midi is not None and abs(hit.midi - previous_midi) > 7:  # large leap in bass
+                section = _section_at_frame(boundaries, hit.frame)
+                scale = section_scales[section] if section < len(section_scales) else []
+                new_midi = _smoothed_bass(scale, previous_midi, hit.midi) if scale else None
+                if new_midi is not None:
+                    new_hits.append(hit.model_copy(update={"midi": new_midi}))
+                    previous_midi = new_midi
+                    continue
+            new_hits.append(hit)
+            previous_midi = hit.midi
+        if new_hits != event.hits:
+            out[idx] = event.model_copy(update={"hits": new_hits})
+
+
+def _appearance_notes(
+    appearances: list[MotifAppearance],
+    out: list[Event],
+    moved_motif: dict[tuple[int, int], int],
+) -> list[MotifAppearance]:
+    """Bring the recorded appearances in line with the notes that were moved."""
+    if not moved_motif:
+        return appearances
+    from indiegen.plan import PluckEvent
+
+    new_appearances: list[MotifAppearance] = []
+    for appearance in appearances:
+        notes = list(appearance.notes)
+        # Find motif plucks for this appearance
+        app_plucks = [
+            ev
+            for ev in out
+            if isinstance(ev, PluckEvent)
+            and ev.instrument == "motif"
+            and appearance.start_frame <= ev.start_frame < appearance.start_frame + sum(appearance.durations)
+        ]
+        app_plucks.sort(key=lambda ev: ev.start_frame)
+        for position, pluck in enumerate(app_plucks):
+            if position < len(notes):
+                notes[position] = pluck.midi
+        new_appearances.append(appearance.model_copy(update={"notes": notes}))
+    return new_appearances
+
+
+def _apply_voice_leading(
+    events: list[Event],
+    appearances: list[MotifAppearance],
+    boundaries: list[int],
+    section_roots: list[int],
+    section_modes: list[str],
+    section_scales: list[list[int]],
+    lane: LanePreset,
+) -> tuple[list[Event], list[MotifAppearance]]:
+    """Conservative voice leading pass: smooth large leaps while staying in scale.
+
+    Only adjusts plucks (including motif), keeps changes minimal to avoid
+    breaking modal character or creating functional cadences.
+
+    The pass is three moves in a fixed order - the plucks, the bass, and the
+    appearances that record what the plucks used to say - and each one lives
+    in its own function because they answer to different rules.
+    """
+    out = list(events)
+    moved_motif = _lead_plucks(out, boundaries, section_scales)
+    _lead_bass(out, boundaries, section_scales)
+    return out, _appearance_notes(appearances, out, moved_motif)

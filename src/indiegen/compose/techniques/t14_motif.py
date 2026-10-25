@@ -22,7 +22,7 @@ from indiegen.plan import MotifAppearance, PluckEvent, Rational
 from indiegen.theory.motif import TRANSFORMS, Cell, transform
 
 # The motif's amplitude, the same as the deja-vu's stabs.
-MOTIF_AMPLITUDE_MILLIBELS: int = -600
+MOTIF_AMPLITUDE_MILLIBELS: int = -6000
 
 # The transposition of a transformed statement, in semitones.
 TRANSPOSE_RANGE: int = 5

@@ -29,11 +29,10 @@ from indiegen.plan import (
     KickEvent,
     MotifAppearance,
     Plan,
-    PluckEvent,
     SectionPlan,
     SnareEvent,
 )
-from indiegen.theory.scales import RELATIVE_INTERVAL, RELATIVE_MODES
+from indiegen.theory.scales import mode_scale, relative_of
 
 TRANSPOSE_UP_FOURTH: str = "transpose_up_fourth"
 TRANSPOSE_MOTIF: str = "transpose_motif"
@@ -169,6 +168,41 @@ def _half_time(events: list[Event], move: DirectorMove, frames_per_beat: int, en
     return result
 
 
+def _degree_of(midi: int, scale: list[int]) -> int:
+    """Where a note sits in a scale, or where the nearest note sits if it is outside.
+
+    A bass note is drawn from the section's own scale, so the first case is
+    the one that happens; the second keeps a note written chromatically from
+    falling off the end of the list.
+    """
+    return min(range(len(scale)), key=lambda index: (abs(scale[index] - midi), index))
+
+
+def _moved_sections(
+    sections: list[SectionPlan],
+    move: DirectorMove,
+) -> tuple[list[SectionPlan], dict[int, tuple[list[int], list[int]]]]:
+    """The sections after the move, and the two scales each one moved between.
+
+    Both scales are built over the same span from their own root, so a note's
+    index in the first is the same degree in the second.
+    """
+    new_sections: list[SectionPlan] = []
+    scales: dict[int, tuple[list[int], list[int]]] = {}
+    for section in sections:
+        if section.start_frame < move.sample:
+            new_sections.append(section)
+            continue
+        relative, interval = relative_of(section.mode)
+        root = section.root_midi + interval
+        scales[section.index] = (
+            mode_scale(section.mode, section.root_midi - 12, 4),
+            mode_scale(relative, root - 12, 4),
+        )
+        new_sections.append(section.model_copy(update={"mode": relative, "root_midi": root}))
+    return new_sections, scales
+
+
 def _reharmonize(
     events: list[Event],
     sections: list[SectionPlan],
@@ -176,39 +210,36 @@ def _reharmonize(
 ) -> tuple[list[Event], list[SectionPlan]]:
     """Move the harmonic centre of the sections after the move to the relative mode.
 
-    The notes move with the centre: the relative mode is a minor third
-    below, and the notes of the section are transposed by that interval so
-    that the section and the notes still agree.
+    The relative of a mode is the mode it shares its notes with, so the notes
+    already written are still notes of the section's scale after the move and
+    nothing has to be transposed for them to agree with it. What moves is the
+    bass: each hit keeps its degree of the old scale and takes the same degree
+    of the new one, so the root follows the centre while the melody, the pad
+    and the drums hold the notes they were written with.
     """
-    new_sections: list[SectionPlan] = []
-    deltas: dict[int, int] = {}
-    for section in sections:
-        if section.start_frame < move.sample:
-            new_sections.append(section)
-            continue
-        relative = RELATIVE_MODES.get(section.mode, section.mode)
-        root = section.root_midi + RELATIVE_INTERVAL
-        deltas[section.index] = root - section.root_midi
-        new_sections.append(section.model_copy(update={"mode": relative, "root_midi": root}))
-    if not deltas:
+    new_sections, scales = _moved_sections(sections, move)
+    if not scales:
         return events, new_sections
 
-    def delta_at(frame: int) -> int:
+    def scales_at(frame: int) -> tuple[list[int], list[int]] | None:
         for section in new_sections:
-            if section.start_frame <= frame < section.end_frame and section.index in deltas:
-                return deltas[section.index]
-        return 0
+            if section.start_frame <= frame < section.end_frame and section.index in scales:
+                return scales[section.index]
+        return None
 
     new_events: list[Event] = []
     for event in events:
-        if isinstance(event, PluckEvent):
-            new_events.append(event.model_copy(update={"midi": event.midi + delta_at(event.start_frame)}))
+        if not isinstance(event, BassEvent):
+            new_events.append(event)
             continue
-        if isinstance(event, BassEvent):
-            hits = [hit.model_copy(update={"midi": hit.midi + delta_at(hit.frame)}) for hit in event.hits]
-            new_events.append(event.model_copy(update={"hits": hits}))
-            continue
-        new_events.append(event)
+        hits = list(event.hits)
+        for index, hit in enumerate(event.hits):
+            pair = scales_at(hit.frame)
+            if pair is None:
+                continue
+            before, after = pair
+            hits[index] = hit.model_copy(update={"midi": after[_degree_of(hit.midi, before)]})
+        new_events.append(event.model_copy(update={"hits": hits}))
     return new_events, new_sections
 
 

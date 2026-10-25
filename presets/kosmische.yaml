@@ -36,7 +36,7 @@ techniques:
   # T7: the 1/f control signals. The drift is what makes the drone played
   # rather than programmed.
   - kind: pink
-    velocity_depth_millibels: 600
+    velocity_depth_millibels: 6000
     micro_timing_frames: 10
     pan_drift_permille: 200
 
@@ -47,7 +47,7 @@ techniques:
     detune_lfo_rate: {numerator: 1, denominator: 9}
     detune_lfo_depth_cents: 12
     amplitude_lfo_rate: {numerator: 1, denominator: 14}
-    amplitude_lfo_depth_millibels: 400
+    amplitude_lfo_depth_millibels: 4000
     min_density: 0
     ratios:
       - {numerator: 1, denominator: 1}
@@ -84,7 +84,7 @@ techniques:
     saturation_permille: 600
     wow_depth_permille: 500
     wow_rate_hz: {min: 3, max: 10}
-    send_millibels: -300
+    send_millibels: -3000
     min_density: 55
 
 section_count_range: [4, 6]

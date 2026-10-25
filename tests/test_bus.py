@@ -11,17 +11,17 @@ import pytest
 
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
-from indiegen.plan import SAMPLE_RATE, BusGain
+from indiegen.plan import SAMPLE_RATE, BusGain, Plan
 from indiegen.render import render_plan
 
 
-def _plan(lane: str = "motorik", seconds: int = 30, seed: int = 1042):
+def _plan(lane: str = "motorik", seconds: int = 30, seed: int = 1042) -> Plan:
     return director(compose(load_preset(lane), seed, seconds * SAMPLE_RATE))
 
 
 def test_a_trim_is_applied_to_the_voice_it_names() -> None:
     plan = _plan().model_copy(update={"bus_gains": []})
-    trimmed = plan.model_copy(update={"bus_gains": [BusGain(kind="pad", gain_millibels=-600)]})
+    trimmed = plan.model_copy(update={"bus_gains": [BusGain(kind="pad", gain_millibels=-6000)]})
     plain = render_plan(plan)
     cut = render_plan(trimmed)
     # The pad is the loudest voice in the motorik lane, so the trim shows.
@@ -36,7 +36,7 @@ def test_a_trim_of_zero_changes_nothing() -> None:
 
 def test_a_trim_of_the_wrong_kind_changes_nothing() -> None:
     plan = _plan().model_copy(update={"bus_gains": []})
-    same = plan.model_copy(update={"bus_gains": [BusGain(kind="nothing_like_it", gain_millibels=-600)]})
+    same = plan.model_copy(update={"bus_gains": [BusGain(kind="nothing_like_it", gain_millibels=-6000)]})
     assert np.array_equal(render_plan(plan), render_plan(same))
 
 

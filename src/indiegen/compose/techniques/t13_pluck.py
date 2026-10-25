@@ -46,7 +46,7 @@ def plan_plucks(card: PluckCard, rng: SplitMix64, ctx: TechniqueContext) -> list
                     duration_frames=length,
                     midi=ctx.root_midi,
                     pan_permille=0,
-                    amplitude_millibels=-400,
+                    amplitude_millibels=-4000,
                     attack_frames=0,
                     release_frames=0,
                     feedback=feedback,
