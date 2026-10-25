@@ -21,6 +21,7 @@ from typing import Literal, cast
 
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
+from indiegen.compose.microtiming import apply_micro_timing
 from indiegen.compose.rng import SplitMix64, groove_offsets, seed_from_bytes
 from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
@@ -1213,6 +1214,11 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     delay_send, reverb, frippertronics, dub_chain, deck, replay = _build_fx_deck_and_replay(
         station, lane, frames, frames_per_beat, frames_per_bar, pulsed, events, nodes, boundaries, rng
     )
+
+    # The performance jitter is the last thing compose() does, and every
+    # reader of a hit's position - the renderer's bus keyframes, the
+    # Director's windows, the section-density test - asks grid_frame(). c33.
+    events = apply_micro_timing(events, frames, SAMPLE_RATE)
 
     inputs = _PlanInputs(
         preset_name=preset.name,

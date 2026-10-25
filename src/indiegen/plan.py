@@ -288,10 +288,24 @@ class PluckEvent(EventBase):
 
 
 class HitBase(FrozenModel):
-    """What every hit carries: where it lands and how hard it is."""
+    """What every hit carries: where it lands and how hard it is.
+
+    ``frame`` is where the hit PLAYS: the plan carries the micro-timing
+    drift, so the renderer places the voice at this frame and never adds an
+    offset of its own (c33). ``drift_frames`` is how far the performance
+    pulled the hit off the grid, and the grid frame is ``frame -
+    drift_frames``. The voice's noise is keyed on the grid frame, because a
+    drummer's drift is a timing decision and must not re-draw the sound of
+    the drum. A hit that sits on the grid carries 0.
+    """
 
     frame: int = Field(ge=0)
     velocity_millibels: int
+    drift_frames: int = 0
+
+    def grid_frame(self) -> int:
+        """The frame the arrangement wrote, before the micro-timing drift."""
+        return self.frame - self.drift_frames
 
 
 class DrumHit(HitBase):

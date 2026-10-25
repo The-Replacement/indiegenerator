@@ -12,13 +12,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from indiegen.synth.noise import (
+from indiegen.control import (
     CONTROL_RATE,
-    interpolate_to,
     pink_stream,
     stream_key,
     uniform_stream,
 )
+from indiegen.synth.noise import interpolate_to
 
 RATE: int = 44100
 

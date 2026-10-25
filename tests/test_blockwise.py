@@ -135,6 +135,46 @@ def test_a_drum_hit_that_crosses_a_block_boundary_keeps_its_tail(
     assert np.array_equal(pieces, whole)
 
 
+def test_a_drum_hit_at_a_block_boundary_is_not_lost(motorik_plan: Plan, monkeypatch: pytest.MonkeyPatch) -> None:
+    """c33: the block size that used to swallow the snare at 219240.
+
+    4060 divides that hit's grid frame exactly (4060 x 54). The render-time
+    micro-timing offset used to push the hit one frame out of its own block,
+    and both neighbours refused it. The drift is frozen in the plan now, so
+    the frame is the frame whatever the block size is. 65536 - the size the
+    old tail test used - could never have caught this.
+    """
+    from indiegen import render as render_module
+
+    whole = render_module.render_plan(motorik_plan)
+    monkeypatch.setattr(render_module, "RENDER_BLOCK", 4060)
+    pieces = render_module.render_plan(motorik_plan)
+    assert np.array_equal(pieces, whole)
+
+
+def test_every_drum_hit_is_played_once_whatever_the_block_size(
+    motorik_plan: Plan, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dropped hit is a missing voice, not a moved one; count them."""
+    from indiegen import render as render_module
+    from indiegen.synth import drums
+
+    planned = sum(len(event.hits) for event in motorik_plan.events if event.kind in {"kick", "snare", "hat", "bass"})
+    original = drums._drum_voice
+    played: list[int] = []
+
+    def counting(event, hit, sample_rate, gain):  # type: ignore[no-untyped-def]
+        played.append(hit.frame)
+        return original(event, hit, sample_rate, gain)
+
+    monkeypatch.setattr(drums, "_drum_voice", counting)
+    for size in (131072, 8191, 4099, 4060):
+        played.clear()
+        monkeypatch.setattr(render_module, "RENDER_BLOCK", size)
+        render_module.render_plan(motorik_plan)
+        assert len(played) == planned, f"RENDER_BLOCK {size} played {len(played)} of {planned} hits"
+
+
 def test_the_master_is_the_same_in_blocks(ambient_plan: Plan, mix: np.ndarray) -> None:
     """The master chain does not care how the mix is cut up.
 

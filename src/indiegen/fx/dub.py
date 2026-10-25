@@ -46,9 +46,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import butter, sosfilt
 
-from indiegen.plan import CHANNELS, DubChainSpec
-from indiegen.synth.filter import initial_state
-from indiegen.synth.noise import (
+from indiegen.control import (
     CONTROL_RATE,
     HIGHEST_CUTOFF_HZ,
     LOWEST_CUTOFF_HZ,
@@ -56,10 +54,12 @@ from indiegen.synth.noise import (
     WEIGHT_EXPONENT,
     PinkState,
     control_slice,
-    interpolate_block,
     pink_state,
     stream_key,
 )
+from indiegen.plan import CHANNELS, DubChainSpec
+from indiegen.synth.filter import initial_state
+from indiegen.synth.noise import interpolate_block
 
 MIN_CENTRE_HZ: float = 20.0
 """The lowest centre the band may take, so the lower edge stays above zero."""

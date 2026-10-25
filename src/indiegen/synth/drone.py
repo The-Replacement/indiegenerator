@@ -17,20 +17,20 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from indiegen.gain import millibels_to_gain_array
-from indiegen.plan import DroneEvent
-from indiegen.synth.env import dc_blocked_block, dc_blocker_state
-from indiegen.synth.noise import (
+from indiegen.control import (
     AMPLITUDE_STREAM,
     CONTROL_RATE,
     DETUNE_STREAM,
     PinkState,
     control_count,
     control_slice,
-    interpolate_block,
     pink_state,
     stream_key,
 )
+from indiegen.gain import millibels_to_gain_array
+from indiegen.plan import DroneEvent
+from indiegen.synth.env import dc_blocked_block, dc_blocker_state
+from indiegen.synth.noise import interpolate_block
 from indiegen.synth.osc import cumulative_sum, midi_to_hz, sine_from_phase, zero_block, zero_carries
 
 

@@ -148,7 +148,7 @@ def _drop_hits(
         if event.instrument not in instruments or not isinstance(event, (KickEvent, SnareEvent, HatEvent, BassEvent)):
             result.append(event)
             continue
-        hits = [hit for hit in event.hits if not (move.sample <= hit.frame < stop)]
+        hits = [hit for hit in event.hits if not (move.sample <= hit.grid_frame() < stop)]
         result.append(event.model_copy(update={"hits": hits}))
     return result
 
@@ -163,7 +163,11 @@ def _half_time(events: list[Event], move: DirectorMove, frames_per_beat: int, en
         ):
             result.append(event)
             continue
-        hits = [hit for hit in event.hits if not (move.sample <= hit.frame < stop) or hit.frame % frames_per_beat == 0]
+        hits = [
+            hit
+            for hit in event.hits
+            if not (move.sample <= hit.grid_frame() < stop) or hit.grid_frame() % frames_per_beat == 0
+        ]
         result.append(event.model_copy(update={"hits": hits}))
     return result
 
@@ -234,7 +238,7 @@ def _reharmonize(
             continue
         hits = list(event.hits)
         for index, hit in enumerate(event.hits):
-            pair = scales_at(hit.frame)
+            pair = scales_at(hit.grid_frame())
             if pair is None:
                 continue
             before, after = pair

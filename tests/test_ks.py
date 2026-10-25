@@ -91,7 +91,7 @@ def test_the_string_matches_the_closed_form_recursion() -> None:
 
 
 def test_the_pluck_position_shapes_the_excitation() -> None:
-    from indiegen.synth.noise import uniform_stream
+    from indiegen.control import uniform_stream
 
     excitation = pluck_excitation(500, 250, 99)
     assert excitation.size == 500

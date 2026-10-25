@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import numpy as np
 
+from indiegen.control import (
+    CONTROL_RATE,
+    uniform_stream,
+)
 from indiegen.fx.dub import bit_reduce, drift_signal, dub_chain_state, render_dub_chain
 from indiegen.plan import DubChainSpec
-from indiegen.synth.noise import CONTROL_RATE, uniform_stream
 
 RATE: int = 44100
 

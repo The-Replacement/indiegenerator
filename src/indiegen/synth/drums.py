@@ -18,13 +18,22 @@ from typing import cast
 
 import numpy as np
 
+from indiegen.control import (
+    CONTROL_RATE,
+    PAN_STREAM,
+    VELOCITY_STREAM,
+    PinkState,
+    control_slice,
+    pink_state,
+    stream_key,
+    uniform_stream,
+)
 from indiegen.errors import PlanError
 from indiegen.gain import millibels_to_gain
 from indiegen.mix.bus import pan_gains
 from indiegen.plan import BassEvent, BassHit, DrumHit, HatEvent, KickEvent, RhythmEvent, SnareEvent
 from indiegen.synth.env import dc_block
 from indiegen.synth.filter import apply_biquad, initial_state, lowpass_sos, one_pole_highpass, one_pole_lowpass
-from indiegen.synth.noise import CONTROL_RATE, PinkState, control_slice, pink_state, stream_key, uniform_stream
 from indiegen.synth.osc import midi_to_hz
 
 DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
@@ -32,9 +41,6 @@ DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
 SNARE_STREAM: int = 0
 HAT_STREAM: int = 1
 CLICK_STREAM: int = 2
-VELOCITY_STREAM: int = 0
-PAN_STREAM: int = 1
-TIMING_STREAM: int = 2
 
 
 @dataclass(frozen=True)
@@ -57,13 +63,15 @@ class DrumState:
     """The 1/f control signals of a drum pattern, and the hit cursor.
 
     The control signals are pink noise at the control rate: the velocity
-    drifts, the pan drifts, and the micro-timing drifts. They are the
-    difference between a machine and a player.
+    drifts and the pan drifts. They are the difference between a machine and
+    a player, and both are continuous gains, so they do not care where a
+    block starts. The micro-timing drift is NOT here: it moves a hit to a
+    different frame, and a frame that depended on the block size would make
+    the render depend on the block size (c33). It is in the Plan instead.
     """
 
     velocity: PinkState
     pan: PinkState
-    timing: PinkState
     cursor: int
     pending: tuple[PendingHit, ...] = ()
 
@@ -101,7 +109,7 @@ def _snap(event: RhythmEvent, hit: DrumHit | BassHit, count: int, sample_rate: i
     """
     if event.snap_permille <= 0:
         return 0.0
-    click = uniform_stream(event.noise_seed, hit.frame, CLICK_STREAM, count)
+    click = uniform_stream(event.noise_seed, hit.grid_frame(), CLICK_STREAM, count)
     times = np.arange(count, dtype=np.float64) / np.float64(sample_rate)
     decay = np.exp(-times * np.float64(sample_rate) / float(SNAP_DECAY_FRAMES))
     level = SNAP_LEVEL * (event.snap_permille / 1000.0)
@@ -117,7 +125,7 @@ def render_kick(event: KickEvent, hit: DrumHit, sample_rate: int, velocity: floa
     phase = 2.0 * np.pi * np.cumsum(frequency) / np.float64(sample_rate)
     body = np.sin(phase)
     envelope = _envelope(count, event.decay_frames, sample_rate)
-    click = uniform_stream(event.noise_seed, hit.frame, CLICK_STREAM, count)
+    click = uniform_stream(event.noise_seed, hit.grid_frame(), CLICK_STREAM, count)
     click = click * np.exp(-times * np.float64(sample_rate) / 88.0)
     voice = body * envelope + click * 0.2 + _snap(event, hit, count, sample_rate)
     # The click is a burst of noise and carries an offset with it; the
@@ -132,7 +140,7 @@ def render_snare(event: SnareEvent, hit: DrumHit, sample_rate: int, velocity: fl
     times = np.arange(count, dtype=np.float64) / np.float64(sample_rate)
     body = np.sin(2.0 * math.pi * np.float64(event.body_hz) * times)
     body = body * _envelope(count, event.body_decay_frames, sample_rate)
-    noise = uniform_stream(event.noise_seed, hit.frame, SNARE_STREAM, count)
+    noise = uniform_stream(event.noise_seed, hit.grid_frame(), SNARE_STREAM, count)
     noise = _highpass(noise, 220.0, sample_rate)
     noise = noise * _envelope(count, event.noise_decay_frames, sample_rate)
     voice = body + noise * 0.8 + _snap(event, hit, count, sample_rate)
@@ -164,7 +172,7 @@ def render_hat(event: HatEvent, hit: DrumHit, sample_rate: int, velocity: float)
     this is a band pass, not a low pass.
     """
     count = event.decay_frames
-    noise = uniform_stream(event.noise_seed, hit.frame, HAT_STREAM, count)
+    noise = uniform_stream(event.noise_seed, hit.grid_frame(), HAT_STREAM, count)
     shaped = _highpass(noise, float(event.cutoff_hz), sample_rate)
     voice = shaped * _envelope(count, event.decay_frames, sample_rate) + _snap(event, hit, count, sample_rate)
     voice = _band_limit(voice, event.lowpass_hz, sample_rate)
@@ -198,7 +206,7 @@ def voice_frames(event: KickEvent | SnareEvent | HatEvent | BassEvent) -> int:
 
 def drum_state(event: RhythmEvent) -> DrumState:
     """The zero state of a drum pattern."""
-    return DrumState(velocity=pink_state(), pan=pink_state(), timing=pink_state(), cursor=0, pending=())
+    return DrumState(velocity=pink_state(), pan=pink_state(), cursor=0, pending=())
 
 
 def _clip(value: float) -> float:
@@ -247,8 +255,8 @@ def render_drum_block(
 ) -> tuple[np.ndarray, DrumState]:
     """One block of a drum pattern, as a stereo buffer.
 
-    The hits are resolved at compose time; this plays them, with the 1/f
-    control signals riding on the velocity, the pan and the micro-timing.
+    The hits are resolved at compose time, drift included; this plays them,
+    with the 1/f control signals riding on the velocity and the pan.
     """
     count = stop - start
     block = np.zeros((count, 2), dtype=np.float64)
@@ -260,9 +268,6 @@ def render_drum_block(
     )
     pan_control, pan_state = control_slice(
         state.pan, stream_key(event.noise_seed, 1, PAN_STREAM), low, high, CONTROL_RATE
-    )
-    timing_control, timing_state = control_slice(
-        state.timing, stream_key(event.noise_seed, 2, TIMING_STREAM), low, high, CONTROL_RATE
     )
 
     length = voice_frames(event)
@@ -280,15 +285,7 @@ def render_drum_block(
             # Its voice began in the block that has gone by, and it is
             # already carried.
             continue
-        offset = int(
-            round(
-                _clip(float(timing_control[(hit.frame * CONTROL_RATE) // sample_rate - low]))
-                * event.micro_timing_frames
-            )
-        )
-        frame = hit.frame + offset
-        if frame < start or frame >= stop:
-            continue
+        frame = hit.frame
         index = (frame * CONTROL_RATE) // sample_rate - low
         drift = _clip(float(velocity_control[index])) * event.velocity_depth_millibels
         gain = millibels_to_gain(hit.velocity_millibels + drift)
@@ -308,7 +305,6 @@ def render_drum_block(
     return block, DrumState(
         velocity=velocity_state,
         pan=pan_state,
-        timing=timing_state,
         cursor=cursor,
         pending=tuple(carried),
     )

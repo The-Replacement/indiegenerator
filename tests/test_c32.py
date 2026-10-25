@@ -58,7 +58,17 @@ def test_every_pulsed_section_reaches_the_four_bar_floor(lane: str, seconds: int
 @pytest.mark.parametrize("lane", PULSED_LANES)
 @pytest.mark.parametrize("seconds", [45, 60, 90, 120])
 def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, seconds: int) -> None:
-    """The density gate belongs to the hit's frame, not to its bar."""
+    """The density gate belongs to the hit's frame, not to its bar.
+
+    c33 moved the micro-timing drift into the Plan, so a hit now carries two
+    frames: the one it plays on and the grid frame the arrangement wrote.
+    This gate is about the DENSITY of the section the hit was scheduled into,
+    which is the grid frame - the drift can pull a hit up to
+    ``micro_timing_frames`` across a section line, and it always could: before
+    c33 the plan hid it, because the renderer added the offset after the gate
+    had looked. Asking the grid frame keeps the assertion strict instead of
+    widening it into a tolerance.
+    """
     plan = _plan(lane, seconds)
     presets = load_preset(lane).lanes[0].parameters
     minimums = {
@@ -76,7 +86,7 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
                 for event in events
                 if event.instrument == voice
                 for hit in (event.hits if isinstance(event, RhythmEvent) else ())
-                if section.start_frame <= hit.frame < section.end_frame
+                if section.start_frame <= hit.grid_frame() < section.end_frame
             ]
             assert not stray, (
                 f"{lane} {seconds}s: {len(stray)} {voice} hit(s) in {section.function} "

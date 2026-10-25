@@ -18,10 +18,10 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.signal import lfilter
 
+from indiegen.control import uniform_stream
 from indiegen.plan import PluckEvent
 from indiegen.synth.env import dc_blocked_block, dc_blocker_state
 from indiegen.synth.grit import waveshape
-from indiegen.synth.noise import uniform_stream
 from indiegen.synth.osc import midi_to_hz, zero_block
 
 

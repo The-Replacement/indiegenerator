@@ -423,8 +423,15 @@ def _render_into(plan: Plan, target: np.ndarray) -> None:
     events = schedule(plan)
     voices = [_voice_state(event, plan.sample_rate) for event in events]
     bus = _bus_state(plan, events)
-    kick_hits = [hit.frame for event in events if isinstance(event, KickEvent) for hit in event.hits]
-    bass_hits = sorted(hit.frame for event in events if isinstance(event, BassEvent) for hit in event.hits)
+    # c33: the bus keyframes are GRID frames, not played frames. The duck and
+    # the kick sidechain were always keyed on where the arrangement put a hit,
+    # and the drift moved the audio away from that key by up to
+    # micro_timing_frames. Keeping the grid here makes c33 a representation
+    # move that changes no audio. Re-keying them on the played frame is a
+    # real, audible change (measured: 9.4e-2 in the 200-500 Hz band on
+    # motorik) and it belongs in its own change with its own gates.
+    kick_hits = [hit.grid_frame() for event in events if isinstance(event, KickEvent) for hit in event.hits]
+    bass_hits = sorted(hit.grid_frame() for event in events if isinstance(event, BassEvent) for hit in event.hits)
     for start in range(0, frames, RENDER_BLOCK):
         stop = min(frames, start + RENDER_BLOCK)
         block, bus = _render_block(plan, events, voices, bus, start, stop, kick_hits, bass_hits)
