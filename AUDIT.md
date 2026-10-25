@@ -118,6 +118,7 @@ Applied (safe, non-schema-breaking):
 - D2: `synth/drums.py` uses `midi_to_hz` instead of inline 440*pow.
 - D3: extracted `energy_correlation_ok` and `timbre_ok` predicates in `validate.py`; `filecheck.py` recorded checks now share them.
 - Y5/Y6: replaced `getattr(plan/envelope_curve)` with direct access where the field is guaranteed.
+- Y7: `BassCard.midi_offset_semitones` is consumed — `t6_drums.plan_bass` adds it to the section root — so the field is kept as an opt-in plan knob (default -12). `tests/test_c23.py` now proves the line moves with it.
 - O11: `install._copy_atomic` uses `shutil.copyfile(..., follow_symlinks=False)`.
 
 Completed via SDD (audit-deferred):
