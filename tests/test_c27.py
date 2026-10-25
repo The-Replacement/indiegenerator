@@ -26,10 +26,19 @@ import pytest
 from indiegen.compose import compose, director
 from indiegen.config import load_preset
 from indiegen.plan import Plan
-from indiegen.validate import STATIC_LEVEL_SPREAD_MILLIBELS, energy_correlation
+from indiegen.render import render_plan
+from indiegen.validate import (
+    STATIC_CENTROID_TOLERANCE,
+    STATIC_LEVEL_SPREAD_MILLIBELS,
+    check_gate_6,
+    energy_correlation,
+    timbre_measurement,
+    timbre_ok,
+)
 
 RATE = 44100
 AMBIENT_SECONDS = 90
+AMBIENT_CENTROID_HZ = 560
 
 # BRIEF 11: "4-8 sections per track (ambient 2-4)".
 AMBIENT_SECTIONS = (2, 4)
@@ -126,3 +135,31 @@ def test_the_directed_plan_is_what_gate_five_sees() -> None:
     directed = director(plan)
     assert [s.level_millibels for s in directed.sections] == [s.level_millibels for s in plan.sections]
     assert _spread(directed) > STATIC_LEVEL_SPREAD_MILLIBELS
+
+
+def test_the_ambient_declares_a_flat_timbre() -> None:
+    """c27-C: the flat table is the lane's declaration, not an oversight.
+
+    The lane predicts no timbre arc, so every function declares the same
+    centroid and gate 6 has to take its static branch. The measured reason
+    is in the preset: the delivered per-section centroid moves with the
+    track's duration, so a per-function table fitted at one duration does
+    not hold at another.
+    """
+    plan = _ambient(1042)
+    centroids = [section.centroid_hz for section in plan.sections]
+    assert len(set(centroids)) == 1
+    assert centroids[0] == AMBIENT_CENTROID_HZ
+    planned = np.array(centroids, dtype=np.float64)
+    assert planned.max() - planned.min() <= STATIC_CENTROID_TOLERANCE * planned.mean()
+
+
+@pytest.mark.slow
+def test_the_ambient_passes_gate_six_by_variance() -> None:
+    """The declaration is what the gate actually measures on a real render."""
+    plan = _ambient(1042)
+    mix = render_plan(plan)
+    measured, static = timbre_measurement(plan, mix)
+    assert static == 1.0
+    assert timbre_ok(measured, True)
+    assert check_gate_6(plan, mix) == []

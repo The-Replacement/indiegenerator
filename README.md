@@ -194,7 +194,10 @@ a track through the fast gates only.
   spectral centroid, measured per section, has to correlate with the plan's
   predicted centroids at 0.4 or better. A plan that declared a static timbre
   is measured by its variance instead (≤ 0.25 relative), and a filter sweep
-  added to pass this gate is exactly the slop it exists to catch.
+  added to pass this gate is exactly the slop it exists to catch. The ambient
+  is the lane that declares a static timbre: its table holds one centroid for
+  every function because the delivered centroid moves with the track's
+  duration rather than with the section's function (c27-C).
 - **Gate 7** — the piece is novel enough: the brief's own detector (the
   spectral flux on the one second frames, the peaks above the mean plus two
   sigma, the peaks closer than four seconds merged) must find at least

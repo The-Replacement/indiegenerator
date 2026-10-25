@@ -171,7 +171,7 @@ test uses 65536, so the suite gives false confidence. It matters because
 RENDER_BLOCK is the obvious next memory dial after c29. Full detail: memory
 topic c31-preexisting-drum-tail-block.
 
---- 2. c27-C: THE SHORT AMBIENT'S ARC (HALF DONE) ------------------------
+--- 2. c27-C: THE AMBIENT'S TIMBRE IS A DECLARATION (DECIDED) -----------
 
 The ambient used to draw a two-section intro -> outro plan, a sixteen-minute
 piece with 0.2 dB of shape, and it passed gate 5 only because of c27's
@@ -179,12 +179,62 @@ static-plan tolerance. **Done for gate 5:** the lane's section_count_range is
 now [3, 4], so it builds 3-4 sections with 8-9 dB of arc and gate 5 correlates
 it like any other lane. test_c27.py pins the measured counts and spreads and
 tests the exemption on plans built for it (at the threshold, one millibel
-under, one millibel over). **Still open for gate 6:** ambient's timbre table is
-800 Hz for EVERY function, so gate 6 takes its static-variance branch there and
-never correlates a curve. Anything that gives the ambient a timbre shape has to
-decide what that means for the declaration.
+under, one millibel over).
 
---- 3. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
+**Gate 6 is decided, not open: the ambient DECLARES A FLAT TIMBRE**, so the
+gate measures the lane's variance (relative sigma <= 0.25) and never
+correlates a curve. The decision is measured, not aesthetic. On the raw mix
+the gates see, four seeds, 45-900 s (harness:
+/tmp/opencode/c27c/measure_ambient_timbre.py):
+
+| cell                  | intro | build | plateau | outro | gate-6 variance |
+|-----------------------|-------|-------|---------|-------|-----------------|
+| 1042 @ 90 s           | 714   | 661   | 542     | 727   | 0.130           |
+| 1042 @ 240 s          | 599   | 532   | 534     | 561   | 0.049           |
+| 1042 @ 480 s          | 552   | 501   | 515     | 578   | 0.054           |
+| 2000 @ 90 s           | 716   | 482   | -       | 599   | 0.171           |
+| 3005 @ 45 s           | 694   | 784   | 650     | 474   | 0.201           |
+| 4002 @ 45 s           | 773   | 729   | 733     | 578   | 0.133           |
+| 1042 @ 900 s          | 518   | 565   | 588     | 567   | 0.046           |
+
+The same function does not hold its centroid across durations: seed 1042's
+intro reads 714 Hz at 90 s, 599 at 240 s and 552 at 480 s, and its plateau is
+the dimmest section at 90 s but the brightest at 900 s. No function owns the
+brightest centroid either: the outro is brightest in 8 of the 15 cells, the
+intro in 5, the plateau and the build in one each, and at 45 s the outro is
+the DARKEST in two of three seeds. A per-function table fitted at 90 s
+correlates -0.37 / -0.28 / +0.35 at 45 s, i.e. it does not survive the lane's
+own duration range. That is the same duration-dependent declaration c32
+documented for kosmische: a function-keyed centroid is a function of section
+LENGTH, and no single constant is right at both ends. So the flat table is
+the declaration.
+
+The declared value moved 800 -> 560 Hz: 560 is the measured median of the
+delivered per-section centroid over those 15 cells (range 412-861), and it
+is the scale of the variance check, not a claim about any section. A flat
+table at the old 800 made the check 43% more lenient than the lane's real
+centroid. test_c27.py now pins both halves: the table is one value for every
+function (fast), and a real 90 s render takes the static branch and passes
+(slow). The preset comment carries the numbers and the reason.
+
+--- 3. THE AMBIENT CANNOT COMPOSE AT 45 s (c27-C FALLOUT) ----------------
+
+The lane declares duration_range_seconds [45, 900] and the station's
+interlude form is 45-120 s, but seed 1042 at 45 s now refuses:
+
+    poly-period density 0.471 is outside [0.5, 2.0]
+
+The [2, 4] -> [3, 4] section-count change (4ed10b5, the c27-C arc) draws
+four sections at 45 s for that seed, and four 11.25 s sections push
+_fit_density under the floor. Control: the same seed composes with [2, 4]
+(three sections, 15 s); seeds 2000, 3005 and 4002 compose at 45 s today.
+NOT fixed with the timbre change, because the fix is a design choice between
+the arc guarantee and the legal 45 s: restore [2, 4] for short durations
+only, raise the ambient's poly-period on-fraction floor, or cap the drawn
+periods by the section length. The c28 sweep renders 240 s only, so the
+suite cannot see this; add the interlude band to the sweep with the fix.
+
+--- 4. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 
 No voice-leading engine exists; harmony is modal stasis. This is the biggest
 identity change and the biggest blast radius. Spike it first (a /tmp harness

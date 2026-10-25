@@ -24,9 +24,25 @@ melodic_jitter_frames: 30
 drive_permille: 150
 
 # The timbre this lane expects for each kind of section, in hertz.
-# Measured on real renders of this lane (BRIEF 5: measured, then tuned),
-# and asserted by gate 6.
-timbre: {intro: 800, build: 800, plateau: 800, peak: 800, break: 800, drift: 800, return: 800, outro: 800}
+# FLAT BY DECLARATION (c27-C), not by omission: this lane predicts no
+# timbre arc. Its centroid is set by the drone bed and the pluck stream,
+# not by the section's function, and the delivered per-section centroid
+# moves with the track's duration instead. Measured on the raw mix the
+# gates see, four seeds, 45-900 s (15 cells): no function owns the
+# brightest centroid - the outro is brightest in 8 cells, the intro in 5,
+# the plateau and the build in one each - and the same function drifts with
+# duration: at seed 1042 the intro reads 714 Hz at 90 s, 599 at 240 s and
+# 552 at 480 s, and the plateau is the dimmest section at 90 s but the
+# brightest at 900 s. At 45 s the outro is the DARKEST in two of three
+# seeds. A per-function table fitted at one duration does not hold at
+# another (the 90 s 1042 table correlates -0.37 / -0.28 / +0.35 at 45 s),
+# which is the duration-dependent declaration c32 documented for
+# kosmische. So every function declares the same centroid and gate 6
+# measures this lane's VARIANCE (relative sigma <= 0.25), not a curve.
+# 560 Hz is the measured median of the delivered per-section centroid over
+# those 15 cells (range 412-861); it is the scale of that check, not a
+# claim that a section sits there.
+timbre: {intro: 560, build: 560, plateau: 560, peak: 560, break: 560, drift: 560, return: 560, outro: 560}
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 5000, q_num: 1, q_den: 1}
