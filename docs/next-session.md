@@ -171,15 +171,18 @@ test uses 65536, so the suite gives false confidence. It matters because
 RENDER_BLOCK is the obvious next memory dial after c29. Full detail: memory
 topic c31-preexisting-drum-tail-block.
 
---- 2. c27-C: THE SHORT AMBIENT'S ARC (deferred from c27) ----------------
+--- 2. c27-C: THE SHORT AMBIENT'S ARC (HALF DONE) ------------------------
 
-The ambient can draw a two-section intro(-1200) -> outro(-1400) plan, a
-sixteen-minute piece with 0.2 dB of shape; it passes gate 5 only because of
-c27's static-plan tolerance. Give it a real arc, without leaning on the
-exemption. Note that ambient's timbre table is 800 Hz for EVERY function, so
-gate 6 takes its static-variance branch there and never correlates a curve -
-anything that gives the ambient a shape has to decide what that means for
-the declaration.
+The ambient used to draw a two-section intro -> outro plan, a sixteen-minute
+piece with 0.2 dB of shape, and it passed gate 5 only because of c27's
+static-plan tolerance. **Done for gate 5:** the lane's section_count_range is
+now [3, 4], so it builds 3-4 sections with 8-9 dB of arc and gate 5 correlates
+it like any other lane. test_c27.py pins the measured counts and spreads and
+tests the exemption on plans built for it (at the threshold, one millibel
+under, one millibel over). **Still open for gate 6:** ambient's timbre table is
+800 Hz for EVERY function, so gate 6 takes its static-variance branch there and
+never correlates a curve. Anything that gives the ambient a timbre shape has to
+decide what that means for the declaration.
 
 --- 3. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 

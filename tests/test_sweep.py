@@ -11,9 +11,9 @@ runs as its own CI job: it is minutes of rendering, and the default run should
 not pay for it.
 
 The seeds are chosen, not random: 1042 is the committed golden, 2000 and 4002
-both drew a two-section ambient (2000 failed before c27), and every lane is
-rendered at each so a lane-specific failure cannot hide behind a station
-blend.
+both drew a two-section ambient before c27-C widened the lane's section graph,
+and every lane is rendered at each so a lane-specific failure cannot hide
+behind a station blend.
 """
 
 from __future__ import annotations
