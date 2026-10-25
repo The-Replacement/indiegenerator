@@ -107,6 +107,17 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
   only fall.
 - Gates 5 and 6 judge the plan against itself, and a static plan must not be
   failed for being static (c27).
+- c27-C: the ambient declares a FLAT timbre - one centroid for every
+  function - so gate 6 measures its variance, not a curve. Its delivered
+  centroid moves with the track's DURATION, not with the section's function:
+  a table fitted at 90 s correlates -0.37 / -0.28 / +0.35 at 45 s. Do not
+  "fix" the table without a mechanism that makes the centroid duration-aware.
+- c27-C fallout, fixed: a poly-period phase is drawn INSIDE THE TRACK. It
+  used to be drawn inside the period, so a 58 s period on a 45 s track could
+  start at 50.95 s, never sound, and refuse the plan (density 0.471 < 0.5):
+  _fit_density scales windows, not start phases. Renders at or above the
+  card's longest period (90 s) are bit-identical; only shorter tracks move.
+  tests/test_presets.py composes every lane at its declared minimum.
 - Micro-timing: swing on odd beats and 1/f onset jitter on plucks, at
   compose time, from a dedicated sub-RNG (c26).
 - Grit: a per-lane drive, tanh(x*gain)/gain, identity at 0, applied in
@@ -217,24 +228,7 @@ centroid. test_c27.py now pins both halves: the table is one value for every
 function (fast), and a real 90 s render takes the static branch and passes
 (slow). The preset comment carries the numbers and the reason.
 
---- 3. THE AMBIENT CANNOT COMPOSE AT 45 s (c27-C FALLOUT) ----------------
-
-The lane declares duration_range_seconds [45, 900] and the station's
-interlude form is 45-120 s, but seed 1042 at 45 s now refuses:
-
-    poly-period density 0.471 is outside [0.5, 2.0]
-
-The [2, 4] -> [3, 4] section-count change (4ed10b5, the c27-C arc) draws
-four sections at 45 s for that seed, and four 11.25 s sections push
-_fit_density under the floor. Control: the same seed composes with [2, 4]
-(three sections, 15 s); seeds 2000, 3005 and 4002 compose at 45 s today.
-NOT fixed with the timbre change, because the fix is a design choice between
-the arc guarantee and the legal 45 s: restore [2, 4] for short durations
-only, raise the ambient's poly-period on-fraction floor, or cap the drawn
-periods by the section length. The c28 sweep renders 240 s only, so the
-suite cannot see this; add the interlude band to the sweep with the fix.
-
---- 4. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
+--- 3. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 
 No voice-leading engine exists; harmony is modal stasis. This is the biggest
 identity change and the biggest blast radius. Spike it first (a /tmp harness

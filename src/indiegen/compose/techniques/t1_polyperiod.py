@@ -112,7 +112,15 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
     periods = _draw_periods(rng, card, voice_count, ctx.sample_rate)
 
     fractions = [rng.between(card.on_fraction_permille.min, card.on_fraction_permille.max) for _ in range(voice_count)]
-    phases = [rng.below(period) for period in periods]
+    # A voice whose first window starts after the track ends never sounds,
+    # and no on-window can fix that: _fit_density scales windows, not start
+    # phases. So the phase is drawn inside the track. The bound equals the
+    # period whenever the period fits inside the track (every render at or
+    # above the card's longest period is bit-identical); it only pulls a
+    # period that outlasts the track back into it. Without this, a 45 s
+    # ambient of three voices could lose one to a 50.95 s phase and land at
+    # density 0.471, below the declared floor.
+    phases = [rng.below(min(period, ctx.duration_frames)) for period in periods]
     phases[0] = 0  # the gate-8 safety rule: a voice is present from the first frame
 
     ons = [max(1, period * fraction // 1000) for period, fraction in zip(periods, fractions, strict=True)]

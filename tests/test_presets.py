@@ -8,8 +8,10 @@ from typing import Any
 import pytest
 import yaml
 
+from indiegen.compose import compose
 from indiegen.config import LANE_NAMES, load_preset
 from indiegen.errors import PlanError
+from indiegen.plan import SAMPLE_RATE
 
 ALIAS_TABLE: dict[str, tuple[str, str]] = {
     "motorik": ("Steady Hand", "Sixteen Steps"),
@@ -92,3 +94,21 @@ def test_lane_file_token_has_no_hyphen(presets_dir: Path) -> None:
         parameters = load_preset(lane, presets_dir=presets_dir).lanes[0].parameters
         assert "-" not in parameters.file_token
         assert parameters.file_token.isalnum()
+
+
+@pytest.mark.parametrize("lane", LANE_NAMES)
+@pytest.mark.parametrize("seed", (1042, 2000, 4002))
+def test_every_lane_composes_at_its_declared_minimum(lane: str, seed: int) -> None:
+    """A lane may not refuse a duration it declares as legal.
+
+    The ambient refused 45 s at seed 1042 after c27-C's section-count change:
+    a poly-period voice drew a 50.95 s phase on a 45 s track, never sounded,
+    and _fit_density could not scale a window that never started. The suite
+    rendered 240 s only, so nothing saw it. Compose-only, so it is cheap.
+    """
+    preset = load_preset(lane)
+    minimum = preset.lanes[0].parameters.duration_range_seconds[0]
+    plan = compose(preset, seed, minimum * SAMPLE_RATE)
+    assert plan.duration_frames == minimum * SAMPLE_RATE
+    low, high = preset.lanes[0].parameters.section_count_range
+    assert low <= plan.section_count <= high
