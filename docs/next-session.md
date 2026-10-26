@@ -18,10 +18,11 @@ contract (especially 6, 8, 11, 15, 16 and 18). Do not modify it.
 THE STATE
 =====================================================================
 
-master is at the c33 commit (fix(c33): freeze the drum's micro-timing in the
-Plan). Clean tree. ruff check ., ruff format --check . and mypy src are
-clean (60 files). pytest -q -m "not sweep and not slow": 650 passed, 20
-deselected. pytest -q -m sweep: 15 passed. pytest -m slow: 5 passed.
+master is at the c35 commit (feat(c35): a batch covers every lane the
+station declares). Clean tree. ruff check ., ruff format --check . and mypy src are
+clean (60 files). pytest -q -m "not sweep and not slow": 663 passed, 20
+deselected (the c33 figure was 650; c34 and c35 added tests without moving
+any audio).
 
 Slices S0-S5 and changes c21-c33 are done. SDD records are in memory under
 sdd-<change_id>-{context,explore,proposal,spec,design,tasks,impl,verify,done}.
@@ -44,6 +45,10 @@ onto -16 LUFS, a true-peak limiter, LRA, seeded TPDF dither); every gate of
 BRIEF 11 in force; the CLI (render, batch, catalog, validate, install,
 explain); the catalog and the atomic writer. The render streams: the mix is a
 float64 memmap stem and the master holds only the int16 output (c29).
+NEW IN c34: gate 12 measures the mp3 roundtrip OVER THE OVERLAP, not as it
+arrives - MP3's 1152-frame tail padding no longer counts (6fa3a73).
+NEW IN c35: a batch draws every lane the station declares (lane policy
+enforced on the batch draw, not left to the seed's luck).
 
 Measured on this machine, eight-minute pieces, seed 1042, after c33. The
 previous table was stale (4ed10b5 moved the harmony; 3a902b7a was the old
@@ -99,7 +104,18 @@ THE RULES THAT ARE NOT NEGOTIABLE
   "Co-Authored-By".
 - One change is one SDD run: memory records sdd-<change_id>-{explore,
   proposal,spec,design,tasks,impl,verify,done} via the n3rv-memory MCP.
-- The project board does not track this project. Skip board updates.
+- The project board DOES track this project now, by the operator's explicit
+  request (2026-10-26): indiegenerator Roadmap,
+  https://github.com/users/juanmanueldaza/projects/11 (project node
+  PVT_kwHOA6VC784BouV2). It superseded the "skip board updates" rule and the
+  unreachable The-Replacement org board (#2, 404 from this token). Column
+  field ids live in n3rv-memory topic_key indiegenerator-board-ids: Status
+  PVTSSF_lAHOA6VC784BouV2zhnNFDU (Todo f75ad846, In Progress 47fc9ee4,
+  Done 98236657); Phase PVTSSF_lAHOA6VC784BouV2zhnNGK4 (Todo 4896e76e,
+  Explore 997fe2f5, Propose 74c441b0, Spec f4492b54, Design a21453e8,
+  Tasks 27782f2d, Apply f22bf1ff, Verify 45296e9c, Done 174a92f6). An SDD
+  phase move = updateProjectV2ItemFieldValue on both fields. The GraphQL
+  value type is ProjectV2ItemFieldSingleSelectValue.
 - Never write into ~/Work/radio except through install, and only when
   asked. Do not start or restart the radio.
 
@@ -170,7 +186,30 @@ DECISIONS ALREADY MADE - DO NOT RE-LITIGATE
 WHAT IS LEFT - IN THIS ORDER
 =====================================================================
 
---- 0. A STATION-DRAWN AMBIENT INTERLUDE CROSSED GATE 6 ----------------
+--- 0. THE RESEARCH WAVE AND ITS CAMPAIGN (2026-10-26) ------------------
+
+An online + codebase research wave (n3rv-memory topic_key
+research-deterministic-music-gen-wave1) produced 29 issues, #7 to #35, on
+the repo, with epic #8 (the deterministic heart) holding the linked task
+list. The board carries all of them at Status/Phase Todo, plus #1-#6 as
+Done (history, including the formally rejected `passes` field, issue #2 -
+T4/T9/T12 must self-sample in memory, NOT via a Plan passes field).
+
+Two of the campaign's claims were corrected by this repo's own research on
+the day they were filed:
+- Issue #7 (seed 5011, gate 6) originally proposed a slow centroid drift.
+  WRONG per F1 - see item 0 below and the issue's corrected body: lift the
+  poly-period noise floor inside the shortest section; do not touch 0.25.
+- The handover itself was stale for four hours after they were filed: it
+  said c33 / 650 tests while master was at c35 / 663. This revision fixes
+  it. Lesson repeated: re-derive the state line whenever the tree moves.
+
+Mapped onto the handover's own "what is left": item 0 = issue #7; item 1
+(voice-leading and modal mixture) = issue #12; item 2 (RENDER_BLOCK)
+= issue #31. Everything else in the epic's task list, whose order is the
+research's, not this file's.
+
+--- 0b. A STATION-DRAWN AMBIENT INTERLUDE CROSSED GATE 6 ----------------
 
 The 2026-10-25 batch refused seed 5011 and was right to: it drew the
 ambient lane as an INTERLUDE, 48.0 s, and c27-C's declared-flat timbre check
