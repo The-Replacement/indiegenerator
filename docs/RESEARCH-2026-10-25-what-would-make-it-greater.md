@@ -155,6 +155,16 @@ The risk to watch is LRA: a sustained voice that sits at one level can *lower*
 the range, and a voice that swells can break the 4–12 band. Measure before
 choosing the swell depth.
 
+**SHIPPED as c37** (issue #36). Spiked first: LRA 10.553 → 10.449 and every gate
+green before a line of the card was written. Acceptance matrix, 480 s and 900 s
+over three seeds: LRA 9.906–11.325, gates 1–13 PASS in all six cells. Two things
+would have shipped broken and are pinned by tests: the deck's
+`transpose_up_fourth` covered `[pad, drone]` and would have left the lead in the
+old key under a transposed bed (18 of 30 seeds draw that move), and a subclass
+cannot narrow a `Literal`, so the lead is a sibling event with a
+`SustainedEvent` union rather than a PadEvent subclass. Audio outside kosmische
+is bit-identical (motorik `29158df2`, dub `b079db6a`, ambient `b727794a`).
+
 ---
 
 ## F3 — The rotation: weights are a mix policy, coverage is a coin flip

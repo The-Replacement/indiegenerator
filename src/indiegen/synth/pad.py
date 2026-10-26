@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from indiegen.gain import millibels_to_gain
-from indiegen.plan import PadEvent
+from indiegen.plan import SustainedEvent
 from indiegen.synth.osc import cumulative_sum, midi_to_hz, sine_from_phase, zero_block, zero_carries
 
 
@@ -26,13 +26,13 @@ class PadState:
     carries: tuple[float, ...]
 
 
-def pad_state(event: PadEvent) -> PadState:
+def pad_state(event: SustainedEvent) -> PadState:
     """The zero state of the pad."""
     return PadState(carries=zero_carries(len(event.partials)))
 
 
 def render_pad_block(
-    event: PadEvent,
+    event: SustainedEvent,
     sample_rate: int,
     start: int,
     stop: int,
@@ -86,7 +86,7 @@ def render_pad_block(
 
 
 def _render_pad_run(
-    event: PadEvent,
+    event: SustainedEvent,
     sample_rate: int,
     start: int,
     stop: int,
@@ -113,7 +113,7 @@ def _render_pad_run(
     return voice * amplitude, PadState(carries=tuple(carries))
 
 
-def render_pad(event: PadEvent, sample_rate: int) -> np.ndarray:
+def render_pad(event: SustainedEvent, sample_rate: int) -> np.ndarray:
     """The pad, as a mono buffer."""
     voice, _ = render_pad_block(event, sample_rate, 0, event.duration_frames, pad_state(event))
     return voice

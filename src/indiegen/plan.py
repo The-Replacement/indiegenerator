@@ -377,8 +377,31 @@ class BassEvent(RhythmEvent):
     decay_frames: int
 
 
+class LeadEvent(EventBase):
+    """A sustained lead: the pad's additive synth, entering where the lane says.
+
+    BRIEF 5 gives kosmische a "two-oscillator detuned lead entering at section
+    3+", and there was no lead voice in the composer at all: the lane ran
+    drone plus arpeggios for eleven minutes with no third act (measured, issue
+    #36). The lead is the pad's instrument with a different palette - a detuned
+    pair, a fifth and an add9 - and its own kind so the section's
+    instrumentation records that it entered, which is the dimension that lane
+    never moved.
+    """
+
+    kind: Literal["lead"]
+    partials: list[Partial] = Field(min_length=1, max_length=9)
+    lfo_rate: Rational
+    lfo_depth_cents: int
+    envelope_segments: list[PadEnvelopeSegment] = Field(default_factory=list, max_length=16)
+
+
+SustainedEvent = PadEvent | LeadEvent
+"""The voices the additive synth renders: the pad and the lead on top of it."""
+
+
 Event = Annotated[
-    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent | KickEvent | SnareEvent | HatEvent | BassEvent,
+    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent | KickEvent | SnareEvent | HatEvent | BassEvent | LeadEvent,
     Field(discriminator="kind"),
 ]
 

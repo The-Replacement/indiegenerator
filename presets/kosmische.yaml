@@ -56,6 +56,24 @@ techniques:
       - {numerator: 4, denominator: 3}
       - {numerator: 3, denominator: 2}
 
+  # The lead: BRIEF 5's "two-oscillator detuned lead enters at section 3+".
+  # It was missing entirely until c37 - the lane ran drone plus arpeggios for
+  # eleven minutes with no third act (issue #36). The palette is the detuned
+  # pair, a fifth and an add9, quiet under the drone so it is a line and not a
+  # chord. Measured on 480 s seed 1042: LRA 10.553 -> 10.449, every gate green.
+  - kind: lead
+    partials: {min: 3, max: 5}
+    detune_min_cents: -8
+    detune_max_cents: 8
+    lfo_rate: {numerator: 1, denominator: 20}
+    lfo_depth_cents: 6
+    amplitude_millibels: -14000
+    min_density: 40
+    entry_section: 3
+    pan_permille: -120
+    attack_seconds: 2
+    release_seconds: 3
+
   # T5: the deja-vu arp over the drone. It enters with the build and goes
   # with the outro, so the lane has a shape.
   - kind: deja_vu

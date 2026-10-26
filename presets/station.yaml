@@ -77,7 +77,7 @@ director:
   seconds_min: 60
   seconds_max: 120
   strategies:
-    - {strategy: transpose_up_fourth, detail: transpose the sustained material up a fourth, parameter_min: 5, parameter_max: 5, applies_to: [pad, drone], crossfade_frames: 11025, span_bars: 0}
+    - {strategy: transpose_up_fourth, detail: transpose the sustained material up a fourth, parameter_min: 5, parameter_max: 5, applies_to: [pad, drone, lead], crossfade_frames: 11025, span_bars: 0}
     - {strategy: transpose_motif, detail: transpose the motif, parameter_min: -5, parameter_max: 5, applies_to: [motif], crossfade_frames: 0, span_bars: 0}
     - {strategy: invert_motif, detail: invert the motif around the harmonic centre, parameter_min: 0, parameter_max: 0, applies_to: [motif], crossfade_frames: 0, span_bars: 0}
     - {strategy: retrograde_motif, detail: play the motif backwards, parameter_min: 0, parameter_max: 0, applies_to: [motif], crossfade_frames: 0, span_bars: 0}

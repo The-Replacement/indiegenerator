@@ -51,6 +51,28 @@ class PadCard(FrozenModel):
     envelope_segments: int = Field(default=0, ge=0, le=4)
 
 
+class LeadCard(FrozenModel):
+    """The lane's sustained lead: BRIEF 5's two-oscillator detuned voice.
+
+    It plays from ``entry_section`` on, which is what "enters at section 3+"
+    means and what makes the section's instrumentation differ for the first
+    time in a lane that used to hold one colour for the whole track.
+    """
+
+    kind: Literal["lead"]
+    partials: RangeInt
+    detune_min_cents: int
+    detune_max_cents: int
+    lfo_rate: Rational
+    lfo_depth_cents: int
+    amplitude_millibels: int
+    min_density: int
+    entry_section: int = Field(default=3, ge=1)
+    pan_permille: int = 0
+    attack_seconds: int = Field(default=2, ge=0)
+    release_seconds: int = Field(default=3, ge=0)
+
+
 class PolyPeriodCard(FrozenModel):
     """T1: poly-period loops with distinct periods and one chord."""
 
@@ -239,7 +261,8 @@ TechniqueCard = Annotated[
     | PinkCard
     | DejaVuCard
     | FrippertronicsCard
-    | DubChainCard,
+    | DubChainCard
+    | LeadCard,
     Field(discriminator="kind"),
 ]
 

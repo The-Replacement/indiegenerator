@@ -37,6 +37,7 @@ from indiegen.config import (
     HatCard,
     KickCard,
     LanePreset,
+    LeadCard,
     PadCard,
     PinkCard,
     PluckCard,
@@ -56,6 +57,7 @@ from indiegen.plan import (
     Event,
     FrippertronicsSpec,
     HitBase,
+    LeadEvent,
     MotifAppearance,
     MotifCell,
     MotifNote,
@@ -1295,6 +1297,63 @@ def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, fra
     return out
 
 
+LEAD_RATIOS: tuple[tuple[int, int], ...] = ((1, 1), (1, 1), (3, 2), (9, 8), (2, 1))
+"""The lead's palette: the detuned pair, then a fifth, an add9 and an octave."""
+
+
+def _lead_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
+    """The lead, from its entry section on, where the section is dense enough.
+
+    BRIEF 5 says the lead enters at section 3+. It enters as ONE voice over the
+    whole section rather than per chord segment: the segments are a bar-level
+    harmonic rhythm, and a lead that restarted on every segment would be a
+    sequence, not a line.
+    """
+    lead = cast(LeadCard, card)
+    out: list[Event] = []
+    for index in range(len(frames.nodes)):
+        if index < lead.entry_section or frames.nodes[index].density < lead.min_density:
+            continue
+        length = frames.lengths[index]
+        count = min(rng.between(lead.partials.min, lead.partials.max), len(LEAD_RATIOS))
+        detunes = [rng.between(lead.detune_min_cents, lead.detune_max_cents) for _ in range(count)]
+        partials: list[Partial] = []
+        for position in range(count):
+            numerator, denominator = LEAD_RATIOS[position]
+            # The first two partials are the detuned pair BRIEF names; the
+            # colour tones sit under them, so the fifth and the add9 are spice
+            # and not a chord.
+            weight = 0 if position < 2 else -min(1200, 900 * (position - 1))
+            partials.append(
+                Partial(
+                    ratio=Rational(numerator=numerator, denominator=denominator),
+                    amplitude_millibels=weight,
+                    detune_cents=detunes[position] if position < 2 else 0,
+                )
+            )
+        # A short section cannot carry a slow attack: both fades are bounded by
+        # the section, or the envelope would still be opening when it ends.
+        attack = min(lead.attack_seconds * ctx.sample_rate, length // 4)
+        release = min(lead.release_seconds * ctx.sample_rate, length // 4)
+        out.append(
+            LeadEvent(
+                kind="lead",
+                instrument="lead",
+                start_frame=frames.boundaries[index],
+                duration_frames=length,
+                midi=frames.section_roots[index] + 12,
+                pan_permille=lead.pan_permille,
+                amplitude_millibels=lead.amplitude_millibels,
+                attack_frames=attack,
+                release_frames=release,
+                partials=partials,
+                lfo_rate=lead.lfo_rate,
+                lfo_depth_cents=lead.lfo_depth_cents,
+            )
+        )
+    return out
+
+
 def _drone_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     """One drone per chord segment, from the same card."""
     drone = cast(DroneCard, card)
@@ -1361,6 +1420,7 @@ def _min_density_card(card: TechniqueCard) -> int:
 CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
     {
         "pad": CardSpec(_pad_events, "pad", _min_density_card),
+        "lead": CardSpec(_lead_events, "lead", _min_density_card),
         "poly_period": CardSpec(_poly_period_events, "poly_period", _min_density_card),
         "pluck": CardSpec(_pluck_events, "ks", _min_density_card),
         "kick": CardSpec(_kick_events, "kick", _pattern_min_density),

@@ -117,7 +117,7 @@ def _voice_state(event: Event, sample_rate: int) -> VoiceState:
             return drone_state(event)
         case "kick" | "snare" | "hat" | "bass":
             return drum_state(event)
-        case "pad":
+        case "pad" | "lead":
             return pad_state(event)
         case unknown:
             raise PlanError(f"unknown event kind {unknown!r}")
@@ -146,7 +146,7 @@ def _voice_block(
             return render_drone_block(event, sample_rate, start, stop, cast(DroneState, state))
         case "kick" | "snare" | "hat" | "bass":
             return render_drum_block(event, sample_rate, start, stop, cast(DrumState, state))
-        case "pad":
+        case "pad" | "lead":
             return render_pad_block(event, sample_rate, start, stop, cast(PadState, state))
         case unknown:
             raise PlanError(f"unknown event kind {unknown!r}")

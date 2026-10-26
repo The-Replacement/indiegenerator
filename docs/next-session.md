@@ -18,11 +18,10 @@ contract (especially 6, 8, 11, 15, 16 and 18). Do not modify it.
 THE STATE
 =====================================================================
 
-master is at the c35 commit (feat(c35): a batch covers every lane the
-station declares). Clean tree. ruff check ., ruff format --check . and mypy src are
-clean (60 files). pytest -q -m "not sweep and not slow": 663 passed, 20
-deselected (the c33 figure was 650; c34 and c35 added tests without moving
-any audio).
+master is at the c37 commit (feat(c37): kosmische gets the lead BRIEF 5 asks
+for). Clean tree. ruff check ., ruff format --check . and mypy src are clean
+(60 files). pytest -q -m "not sweep and not slow": 675 passed, 21 deselected;
+pytest -m slow: 6 passed.
 
 Slices S0-S5 and changes c21-c33 are done. SDD records are in memory under
 sdd-<change_id>-{context,explore,proposal,spec,design,tasks,impl,verify,done}.
@@ -49,6 +48,14 @@ NEW IN c34: gate 12 measures the mp3 roundtrip OVER THE OVERLAP, not as it
 arrives - MP3's 1152-frame tail padding no longer counts (6fa3a73).
 NEW IN c35: a batch draws every lane the station declares (lane policy
 enforced on the batch draw, not left to the seed's luck).
+NEW IN c36: install copies the sidecar with the FLAC, and catalog names any
+FLAC it cannot read instead of reporting a successful zero.
+NEW IN c37: KOSMISCHE HAS A LEAD. The lane had no lead voice at all; BRIEF 5
+asks for a two-oscillator detuned lead entering at section 3+. It is the pad's
+additive synth on its own palette (detuned pair, fifth, add9), a LeadEvent so
+the section's instrumentation records the entry, and it leaves when the
+section is too sparse (the outro). Verified 480 s and 900 s x three seeds:
+LRA 9.9-11.3, every gate green; audio outside kosmische is bit-identical.
 
 Measured on this machine, eight-minute pieces, seed 1042, after c33. The
 previous table was stale (4ed10b5 moved the harmony; 3a902b7a was the old
