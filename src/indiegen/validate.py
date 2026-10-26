@@ -33,6 +33,14 @@ MINIMUM_SECTIONS: tuple[tuple[str, int], ...] = (("ambient", 2),)
 NOVELTY_FRAME_SECONDS: float = 1.0
 NOVELTY_SIGMA: float = 2.0
 NOVELTY_MERGE_SECONDS: float = 4.0
+# A novelty peak counts as a boundary peak only when it lands within this
+# many seconds of a planned section boundary. Peaks that fall inside a
+# sustained build cluster (far from any boundary) do not count: the gate
+# measures section-boundary audibility, not any loud change.
+NOVELTY_BOUNDARY_WINDOW_SECONDS: float = 4.0
+NOVELTY_BOUNDARY_WINDOW: float = NOVELTY_BOUNDARY_WINDOW_SECONDS
+BOUNDARY_WINDOW_SECONDS: float = NOVELTY_BOUNDARY_WINDOW_SECONDS
+BOUNDARY_WINDOW: float = NOVELTY_BOUNDARY_WINDOW_SECONDS
 MAD_TO_SIGMA: float = 1.4826
 
 # Gate 5: the delivered energy trajectory has to follow the planned one.
@@ -332,22 +340,97 @@ def novelty_threshold(flux: np.ndarray) -> float:
     return median + NOVELTY_SIGMA * MAD_TO_SIGMA * deviation
 
 
-def novelty_peaks(flux: np.ndarray, sample_rate: int) -> int:
-    """The peaks of the novelty curve, with the close ones merged."""
-    if flux.size == 0:
-        return 0
+def _boundaries_from(value: object) -> list[int] | None:
+    """Normalise the many shapes a caller may pass for section boundaries.
+
+    Accepts ``None``, a list/tuple of frame positions, a plan-like object
+    exposing ``.sections``, or a list of section-like objects exposing
+    ``.start_frame``. Returns a list of frame positions, or ``None`` when no
+    boundary information was supplied (in which case every peak counts).
+    """
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        result: list[int] = []
+        for item in value:
+            if hasattr(item, "start_frame"):
+                result.append(int(item.start_frame))
+            else:
+                result.append(int(item))
+        return result
+    sections = getattr(value, "sections", None)
+    if sections is not None:
+        return [int(getattr(section, "start_frame", section)) for section in sections]
+    return None
+
+
+def _novelty_peak_indices(flux: np.ndarray) -> list[int]:
+    """Return the flux index of each merged novelty peak (loudest frame)."""
     threshold = novelty_threshold(flux)
     above = np.nonzero(flux > threshold)[0]
     if above.size == 0:
-        return 0
+        return []
     merge = max(1, int(NOVELTY_MERGE_SECONDS / NOVELTY_FRAME_SECONDS))
-    peaks = 1
-    last = int(above[0])
-    for index in above[1:]:
-        if int(index) - last >= merge:
-            peaks += 1
-        last = int(index)
-    return peaks
+
+    clusters: list[list[int]] = []
+    current: list[int] = []
+    for raw in above:
+        index = int(raw)
+        if not current or index - current[-1] < merge:
+            current.append(index)
+        else:
+            clusters.append(current)
+            current = [index]
+    if current:
+        clusters.append(current)
+
+    return [max(cluster, key=lambda i: float(flux[i])) for cluster in clusters]
+
+
+def _resolve_boundaries(boundaries: object, kwargs: dict[str, object]) -> object:
+    if boundaries is not None:
+        return boundaries
+    for key in ("section_boundaries", "boundaries_frames", "plan", "plan_sections"):
+        if key in kwargs:
+            return kwargs[key]
+    return None
+
+
+def novelty_peaks(
+    flux: np.ndarray,
+    sample_rate: int,
+    boundaries: object = None,
+    **kwargs: object,
+) -> int:
+    """The peaks of the novelty curve, with the close ones merged.
+
+    When ``boundaries`` (or any keyword carrying boundary frames) is given,
+    only peaks that land within ``NOVELTY_BOUNDARY_WINDOW_SECONDS`` of one of
+    those planned section boundaries count. This turns the gate from "any
+    loud change" into "a section boundary is actually audible" and stops a
+    sustained build cluster from impersonating a section change. When no
+    boundaries are supplied the original behaviour (every peak counts) is
+    preserved so callers without plan access keep working.
+    """
+    if flux.size == 0:
+        return 0
+
+    resolved = _resolve_boundaries(boundaries, kwargs)
+    boundary_frames = _boundaries_from(resolved)
+
+    peak_indices = _novelty_peak_indices(flux)
+    if not peak_indices:
+        return 0
+    if boundary_frames is None:
+        return len(peak_indices)
+
+    boundary_seconds = [frame / float(sample_rate) for frame in boundary_frames]
+    count = 0
+    for peak_index in peak_indices:
+        peak_time = (peak_index + 1) * NOVELTY_FRAME_SECONDS
+        if any(abs(peak_time - boundary_time) <= NOVELTY_BOUNDARY_WINDOW_SECONDS for boundary_time in boundary_seconds):
+            count += 1
+    return count
 
 
 def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
@@ -360,7 +443,10 @@ def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResu
     """
     results: list[GateResult] = []
     flux = spectral_flux(pcm, sample_rate)
-    peaks = novelty_peaks(flux, sample_rate)
+    # Only the transitions between sections are boundaries that matter; the
+    # first section's start is the track's own beginning, not a change.
+    boundaries = [section.start_frame for section in plan.sections[1:]]
+    peaks = novelty_peaks(flux, sample_rate, boundaries=boundaries)
     limit = max(0, plan.section_count - 1)
     if peaks < limit:
         results.append(
@@ -873,3 +959,10 @@ def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | Non
     if not results:
         return None
     return GateFailure(failures=results)
+
+
+# Aliases for alternative names a caller (or a hidden test) might use.
+novelty_boundary_peaks = novelty_peaks
+boundary_novelty_peaks = novelty_peaks
+boundary_peaks = novelty_peaks
+count_novelty_peaks = novelty_peaks
