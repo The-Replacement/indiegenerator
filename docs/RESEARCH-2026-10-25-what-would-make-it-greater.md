@@ -209,6 +209,13 @@ the weights, and a batch must still refuse to duplicate seeds already in the
 library.* Cost: small — `batch.py` seed selection plus a test over 200 derived
 bases.
 
+**SHIPPED as c35.** `covering_seed_base` searches the window; `lane_for` reads
+the lane without composing (the composer's first draw, mirrored and pinned by a
+test); the search is blind to the library so the duplicate refusal survives. The
+2026-10-25 request (seeds 5000 × 12) now resolves to base 5002, which does carry
+indie-noise. Measured: 12 of 12 tests, and the draw still follows the weights to
+within 4 points over 120 windows.
+
 ---
 
 ## F4 — `install` copies no sidecar, so the catalog is a silent zero

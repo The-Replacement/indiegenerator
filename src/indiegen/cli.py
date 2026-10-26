@@ -208,6 +208,9 @@ def batch(
             f"duration={track.duration_seconds:.1f}s loudness={track.integrated_lufs:.3f}LUFS"
         )
     typer.echo(f"tracks: {len(result.tracks)}")
+    typer.echo(f"seeds: {result.seed_base}..{result.seed_base + count - 1}")
+    if result.seed_base != result.requested_base:
+        typer.echo(f"seed_base: moved from {result.requested_base}; that window did not cover every lane")
     typer.echo(f"catalog: {out / 'catalog.json'}")
     typer.echo(f"total_bytes: {result.catalog.total_bytes}")
     typer.echo(f"duplicate_hashes: {len(result.catalog.duplicate_hashes)}")
