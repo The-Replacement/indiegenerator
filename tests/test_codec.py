@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import shutil
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -73,6 +74,37 @@ def test_the_roundtrip_reports_what_it_measured(flac: Path) -> None:
     assert comparison.correlation > 0.9
     assert comparison.clipped == 0
     assert abs(comparison.lufs_after - comparison.lufs_before) < 0.5
+
+
+def test_a_track_whose_length_is_not_a_whole_mp3_frame_is_measured_not_crashed(
+    tmp_path: Path,
+) -> None:
+    """c34: MP3 pads the last frame, so the decoded array can be longer.
+
+    Measured on this machine: 441 s (19448100 frames, not a multiple of an
+    MP3 frame's 1152) decodes 11 samples longer, and 115207 frames decodes 40
+    longer. The comparison multiplied the two arrays as they arrived and
+    raised a broadcast error instead of a verdict. The precondition is
+    asserted here, so the test cannot quietly stop reproducing.
+    """
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg is not installed")
+    from indiegen.master.codec import FFMPEG
+
+    signal = _signal(6.0)[: 1152 * 100 + 7]
+    path = tmp_path / "ragged.flac"
+    sf.write(path, signal, RATE, subtype="PCM_16")
+    encoded = tmp_path / "ragged.mp3"
+    subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [FFMPEG, "-hide_banner", "-nostats", "-loglevel", "error", "-i", str(path), "-c:a", "libmp3lame", str(encoded)],
+        check=True,
+    )
+    decoded, _ = sf.read(encoded, always_2d=True)
+    assert decoded.shape[0] > signal.shape[0], "the padding this test is about did not happen"
+
+    comparison = mp3_roundtrip(path)
+    assert comparison.correlation > 0.9
+    assert comparison.clipped == 0
 
 
 def test_a_missing_ffmpeg_is_an_error_not_a_crash(tmp_path: Path) -> None:

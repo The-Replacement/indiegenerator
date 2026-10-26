@@ -115,6 +115,16 @@ def mp3_roundtrip(path: Path) -> CodecComparison:
         decoded, decoded_rate = sf.read(encoded, always_2d=True)
     if decoded_rate != rate:
         raise CodecError(f"the roundtrip changed the sample rate: {decoded_rate} and {rate}")
+    # MP3 codes in 1152-sample frames, so a file whose length is not a
+    # multiple of one comes back PADDED at the tail - measured 11 samples on a
+    # 441 s track, with the overlap correlating at 0.99995 against 0.919 for a
+    # leading trim. Comparing the two arrays as they arrive raised a broadcast
+    # error instead of a verdict (c34), so both sides are cut to the overlap.
+    count = min(original.shape[0], decoded.shape[0])
+    if count == 0:
+        raise CodecError(f"{path.name} decoded to nothing")
+    original = original[:count]
+    decoded = decoded[:count]
     left = original[:, 0].astype(np.float64)
     right = decoded[:, 0].astype(np.float64)
     left = left - left.mean()
