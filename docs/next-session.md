@@ -180,13 +180,16 @@ was thinner than it looked, and the first station draw after it shipped
 found the edge.
 
 This is a real gate failure on a real seed, not a tuning artefact, and it is
-NOT fixed. The two things to measure before choosing a fix: the variance
-against duration on the ambient at 45/48/60/90 s over several seeds (is the
-limit met anywhere in the interlude band, or only above it?), and whether the
-static branch is even the right shape for a 48 s ambient - c27-C's argument
-for a flat table was that a function-keyed centroid is a function of section
-LENGTH, and the interlude is where sections are shortest. Do not widen the
-0.25 limit to make the seed pass.
+NOT fixed. It is now diagnosed: see
+docs/RESEARCH-2026-10-25-what-would-make-it-greater.md, finding F1. The short
+version - the ambient's per-second centroid has a relative standard deviation
+of 0.73-0.93, so a 16 s section mean carries a standard error of ~0.18-0.23
+and the 0.25 limit sits INSIDE the null distribution at interlude durations.
+5 of 35 measured cells fail, all between 45 and 60 s, none at 90 or 120 s. An
+F-test shows the gate is wrong about seed 5011 (F 0.81: the sections are
+statistically identical) and lucky about 1042 at 120 s (F 2.31: they differ).
+The recommended fix lowers the noise floor by fitting the poly-period loops
+inside the shortest section, NOT by widening the limit.
 
 --- 1. VOICE-LEADING AND MODAL MIXTURE (the last audit pillar) ----------
 Harmony is modal stasis. There IS a conservative voice-leading pass
