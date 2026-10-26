@@ -235,6 +235,10 @@ def catalog(
     typer.echo(f"total_bytes: {built.total_bytes}")
     typer.echo(f"duplicate_seeds: {len(built.duplicate_seeds)}")
     typer.echo(f"duplicate_hashes: {len(built.duplicate_hashes)}")
+    if built.unsided:
+        typer.echo(f"no_sidecar: {len(built.unsided)} flac(s) cannot be catalogued", err=True)
+        for name in built.unsided:
+            typer.echo(f"  {name}", err=True)
     for duplicate in built.duplicate_hashes:
         typer.echo(f"duplicate: {duplicate['pcm_sha256']} seeds={duplicate['seeds']}")
 

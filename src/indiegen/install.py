@@ -47,6 +47,19 @@ def _copy_atomic(source: Path, target_dir: Path) -> Path:
     return target
 
 
+def _copy_track(flac: Path, target_dir: Path) -> Path:
+    """Copy a track: the audio and the sidecar that explains it.
+
+    The sidecar is half the artifact, not an ornament. ``check_file`` has
+    already refused a track without one (gate 10), so it is here; if it were
+    dropped, the target directory would hold audio the catalog cannot read and
+    ``catalog`` would quietly report fewer tracks than files (c36).
+    """
+    installed = _copy_atomic(flac, target_dir)
+    _copy_atomic(flac.with_suffix(".json"), target_dir)
+    return installed
+
+
 def install(
     directory: Path,
     target_dir: Path,
@@ -65,5 +78,5 @@ def install(
             continue
         for reason in check.skipped:
             result.skipped.append((flac, reason))
-        result.installed.append(_copy_atomic(flac, target_dir))
+        result.installed.append(_copy_track(flac, target_dir))
     return result

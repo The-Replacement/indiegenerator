@@ -222,6 +222,9 @@ def test_the_install_copies_the_valid_tracks(real_track: TrackOutcome, tmp_path:
     for path in installed.installed:
         assert path.is_file()
         assert path.parent == target
+        # c36: the sidecar travels with the track, or the catalog cannot read
+        # what was installed and reports a successful zero.
+        assert path.with_suffix(".json").is_file()
 
 
 def test_the_install_refuses_a_track_that_failed_the_gates(real_track: TrackOutcome, tmp_path: Path) -> None:

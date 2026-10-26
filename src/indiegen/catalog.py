@@ -54,6 +54,14 @@ class Catalog:
     duplicate_seeds: list[dict[str, Any]] = field(default_factory=list)
     duplicate_hashes: list[dict[str, Any]] = field(default_factory=list)
     total_bytes: int = 0
+    unsided: list[str] = field(default_factory=list)
+    """FLACs in the directory that carry no readable sidecar.
+
+    They cannot be catalogued - the sidecar IS the metadata - and leaving them
+    out without saying so turns "the library has eleven tracks" into "the
+    library has nothing" while still printing success (c36). A directory that
+    takes hand-dropped audio, like the radio's, will legitimately have some.
+    """
 
     def as_json(self) -> dict[str, Any]:
         """The catalog as the JSON that lands on disk."""
@@ -139,6 +147,9 @@ def build_catalog(directory: Path) -> Catalog:
     paths_by_seed: dict[int, list[str]] = {}
     if not directory.is_dir():
         return catalog
+    catalog.unsided = [
+        str(flac) for flac in sorted(directory.glob("*.flac")) if read_sidecar(flac.with_suffix(".json")) is None
+    ]
     for sidecar in sorted(directory.glob("*.json")):
         if sidecar.name == CATALOG_NAME:
             continue
