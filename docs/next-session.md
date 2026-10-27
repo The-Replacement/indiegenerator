@@ -20,7 +20,8 @@ THE STATE
 
 master is at the c38 commit (fix(validate): gate 7 counts a boundary fall).
 Clean tree. ruff check ., ruff format --check . and mypy src are clean
-(60 files). pytest -q -m "not sweep and not slow": 677 passed, 21 deselected.
+(60 files). pytest -q -m "not sweep and not slow": 677 passed, 21 deselected;
+pytest -q -m "sweep or slow": 21 passed.
 Two commits this session are reverts: e1582bf (gate 7 boundary filtering,
 regressed two lanes) and d8c057d (issue #7's period cap, brief-incompatible
 and shipped a failing test - #7 is re-opened).
