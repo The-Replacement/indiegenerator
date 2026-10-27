@@ -286,12 +286,16 @@ def check_gate_4(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
     return results
 
 
-def spectral_flux(pcm: np.ndarray, sample_rate: int) -> np.ndarray:
-    """The spectral flux on the one second frames, as a novelty curve.
+def spectral_flux_pair(pcm: np.ndarray, sample_rate: int) -> tuple[np.ndarray, np.ndarray]:
+    """The rises and the falls of the spectrum, frame to frame, in decibels.
 
-    The flux is the half-wave rectified difference of the magnitude
-    spectra in decibels, which is the standard novelty detector: a section
-    that begins is what the ear hears as new.
+    A novelty detector that only counts rises is an onset detector: it is
+    blind to a section that gets quieter, and a fade-out is one of the most
+    audible changes a piece makes. indie-noise cuts to near silence in its
+    outro: at 45 s, seed 1042, the flux there measured 28681 against a
+    threshold of 107505, so the piece's clearest novelty event could not be
+    counted. Both directions are returned; ``check_gate_7`` decides where a
+    fall is a section change.
 
     The decibels matter. On the linear magnitudes the flux is dominated by
     the loud bins, its distribution is heavy-tailed, and a threshold at the
@@ -303,18 +307,30 @@ def spectral_flux(pcm: np.ndarray, sample_rate: int) -> np.ndarray:
     frame = int(NOVELTY_FRAME_SECONDS * sample_rate)
     count = int(pcm.shape[0]) // frame
     if count < 2:
-        return np.zeros(0, dtype=np.float64)
+        return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.float64)
     window = np.hanning(frame)
-    flux = np.zeros(count - 1, dtype=np.float64)
+    rises = np.zeros(count - 1, dtype=np.float64)
+    falls = np.zeros(count - 1, dtype=np.float64)
     previous: np.ndarray | None = None
     for index in range(count):
         chunk = to_float(pcm[index * frame : (index + 1) * frame]).mean(axis=1) * window
         magnitude = 20.0 * np.log10(np.maximum(np.abs(np.fft.rfft(chunk)), 1e-6))
         if previous is not None:
             difference = magnitude - previous
-            flux[index - 1] = float(np.sum(np.maximum(difference, 0.0)))
+            rises[index - 1] = float(np.sum(np.maximum(difference, 0.0)))
+            falls[index - 1] = float(np.sum(np.maximum(-difference, 0.0)))
         previous = magnitude
-    return flux
+    return rises, falls
+
+
+def spectral_flux(pcm: np.ndarray, sample_rate: int) -> np.ndarray:
+    """The rises of the spectrum on the one second frames, as a novelty curve.
+
+    Kept as the one-sided curve because it is the gate's historical
+    detector and the calibration the threshold is measured against. The
+    falls are in :func:`spectral_flux_pair`.
+    """
+    return spectral_flux_pair(pcm, sample_rate)[0]
 
 
 def novelty_threshold(flux: np.ndarray) -> float:
@@ -332,22 +348,49 @@ def novelty_threshold(flux: np.ndarray) -> float:
     return median + NOVELTY_SIGMA * MAD_TO_SIGMA * deviation
 
 
-def novelty_peaks(flux: np.ndarray, sample_rate: int) -> int:
-    """The peaks of the novelty curve, with the close ones merged."""
+def _peak_indices(flux: np.ndarray) -> list[int]:
+    """The frame index of each merged peak above the threshold."""
     if flux.size == 0:
-        return 0
+        return []
     threshold = novelty_threshold(flux)
     above = np.nonzero(flux > threshold)[0]
     if above.size == 0:
-        return 0
+        return []
     merge = max(1, int(NOVELTY_MERGE_SECONDS / NOVELTY_FRAME_SECONDS))
-    peaks = 1
-    last = int(above[0])
-    for index in above[1:]:
-        if int(index) - last >= merge:
-            peaks += 1
-        last = int(index)
-    return peaks
+    clusters: list[list[int]] = [[int(above[0])]]
+    for raw in above[1:]:
+        index = int(raw)
+        if index - clusters[-1][-1] < merge:
+            clusters[-1].append(index)
+        else:
+            clusters.append([index])
+    return [max(cluster, key=lambda index: float(flux[index])) for cluster in clusters]
+
+
+def novelty_peaks(flux: np.ndarray, sample_rate: int) -> int:
+    """The peaks of the novelty curve, with the close ones merged."""
+    return len(_peak_indices(flux))
+
+
+def boundary_falls(falls: np.ndarray, sample_rate: int, boundaries: list[int], rises: list[int]) -> int:
+    """Falls that are a planned section boundary's own novelty event.
+
+    A fall counts when it lands within one merge window of a planned section
+    boundary and is not already within that window of a rise (one boundary
+    that both brightens and darkens is one event). A fall anywhere else - the
+    track's own fade-out, a drum's decay - is not a section change.
+    """
+    merge = max(1, int(NOVELTY_MERGE_SECONDS / NOVELTY_FRAME_SECONDS))
+    seconds = [frame / float(sample_rate) for frame in boundaries]
+    count = 0
+    for peak in _peak_indices(falls):
+        peak_time = (peak + 1) * NOVELTY_FRAME_SECONDS
+        if not any(abs(peak_time - boundary) <= NOVELTY_MERGE_SECONDS for boundary in seconds):
+            continue
+        if any(abs(peak - rise) < merge for rise in rises):
+            continue
+        count += 1
+    return count
 
 
 def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResult]:
@@ -357,10 +400,16 @@ def check_gate_7(plan: Plan, pcm: np.ndarray, sample_rate: int) -> list[GateResu
     spectral flux on the one second frames, the peaks above the mean plus
     two sigma, the peaks closer than four seconds merged, and the count has
     to be at least the planned sections minus one.
+
+    A rise counts anywhere, as it always has. A fall counts only at a
+    planned section boundary: a section that gets quieter is a novelty
+    event, but the track's own fade-out is not a section change.
     """
     results: list[GateResult] = []
-    flux = spectral_flux(pcm, sample_rate)
-    peaks = novelty_peaks(flux, sample_rate)
+    rises, falls = spectral_flux_pair(pcm, sample_rate)
+    rise_peaks = _peak_indices(rises)
+    boundaries = [section.start_frame for section in plan.sections[1:]]
+    peaks = len(rise_peaks) + boundary_falls(falls, sample_rate, boundaries, rise_peaks)
     limit = max(0, plan.section_count - 1)
     if peaks < limit:
         results.append(

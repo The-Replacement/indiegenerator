@@ -337,6 +337,35 @@ def test_a_piece_that_changes_four_times_has_novelty() -> None:
     assert check_gate_7(plan, pcm, RATE) == []
 
 
+def test_a_piece_that_falls_to_silence_is_novel() -> None:
+    """A section that gets quieter is novelty: the detector must not be one-sided.
+
+    Four sections: a tone, silence, a quieter tone, silence. The three
+    boundaries are two falls and one rise. A half-wave rectified flux counts
+    only the rise, so it finds one peak against a limit of three; the
+    two-sided detector counts the two boundary falls as well.
+    """
+    plan = _plan(sections=4, frames=20 * RATE)
+    time = np.arange(plan.duration_frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = np.zeros((plan.duration_frames, 2))
+    for index, amplitude in ((0, 8000.0), (2, 4000.0)):
+        start = index * 5 * RATE
+        stop = start + 5 * RATE
+        pcm[start:stop, :] = (amplitude * tone[start:stop])[:, np.newaxis]
+    assert check_gate_7(plan, _pcm(pcm), RATE) == []
+
+
+def test_a_fall_that_is_not_a_section_boundary_is_not_novelty() -> None:
+    """A drop inside a section is not a section change."""
+    plan = _plan(sections=2, frames=20 * RATE)
+    time = np.arange(plan.duration_frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = np.zeros((plan.duration_frames, 2))
+    pcm[: 2 * RATE, :] = (8000.0 * tone[: 2 * RATE])[:, np.newaxis]
+    assert check_gate_7(plan, _pcm(pcm), RATE) != []
+
+
 def test_the_energy_trajectory_has_to_follow_the_plan() -> None:
     """Gate 5: the delivered energy follows the planned level curve."""
     plan = _plan(sections=4, frames=20 * RATE, levels=[0, -6000, 0, -6000])

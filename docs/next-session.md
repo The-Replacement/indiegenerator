@@ -18,10 +18,12 @@ contract (especially 6, 8, 11, 15, 16 and 18). Do not modify it.
 THE STATE
 =====================================================================
 
-master is at the c37 commit (feat(c37): kosmische gets the lead BRIEF 5 asks
-for). Clean tree. ruff check ., ruff format --check . and mypy src are clean
-(60 files). pytest -q -m "not sweep and not slow": 675 passed, 21 deselected;
-pytest -m slow: 6 passed.
+master is at the c38 commit (fix(validate): gate 7 counts a boundary fall).
+Clean tree. ruff check ., ruff format --check . and mypy src are clean
+(60 files). pytest -q -m "not sweep and not slow": 677 passed, 21 deselected.
+Two commits this session are reverts: e1582bf (gate 7 boundary filtering,
+regressed two lanes) and d8c057d (issue #7's period cap, brief-incompatible
+and shipped a failing test - #7 is re-opened).
 
 Slices S0-S5 and changes c21-c33 are done. SDD records are in memory under
 sdd-<change_id>-{context,explore,proposal,spec,design,tasks,impl,verify,done}.
@@ -56,6 +58,15 @@ additive synth on its own palette (detuned pair, fifth, add9), a LeadEvent so
 the section's instrumentation records the entry, and it leaves when the
 section is too sparse (the outro). Verified 480 s and 900 s x three seeds:
 LRA 9.9-11.3, every gate green; audio outside kosmische is bit-identical.
+
+NEW IN c38: GATE 7 IS TWO-SIDED. A rise counts anywhere (unchanged) and a fall
+counts at a planned section boundary, so a fade-out is the novelty it is. The
+rectified flux could not see indie-noise's outro (28681 against a 107505
+threshold at 45 s); the cell now passes. Seven of the eight pre-existing red
+cells in the 75-cell corpus pass; motorik 60 s seed 2000 still fails (4 vs 5).
+No Plan, preset or golden moved. Also reverted this session: e1582bf (gate 7
+boundary filtering, regressed two lanes) and d8c057d (issue #7's period cap,
+brief-incompatible and shipped a failing test - #7 is re-opened).
 
 Measured on this machine, eight-minute pieces, seed 1042, after c33. The
 previous table was stale (4ed10b5 moved the harmony; 3a902b7a was the old
@@ -267,20 +278,31 @@ Nothing. This slot used to hold the "c27-C: the ambient's timbre" item, which
 shipped in df005d2.
 
 =====================================================================
-A KNOWN CAVEAT ABOUT GATE 7 IN ONE LANE
+GATE 7 IS TWO-SIDED SINCE c38 (and what it did not fix)
 =====================================================================
 
-indie-noise passes gate 7 at every duration, but at 45 s it passes because
-the sparser build SPLIT the intro/build flux cluster, not because the plateau
-boundary produces a peak: the flux there is 72300 against a threshold of
-100353. At 90 s the peaks do track the section boundaries. A green gate 7 in
-this lane is not proof that every section change is audible. Do not tune this
-lane against gate 7 without measuring the flux at the boundaries first.
+Gate 7 counts a rise anywhere and a fall only at a planned section boundary.
+The rectified detector could not see a fade-out, which is exactly what
+indie-noise's outro is: at 45 s, seed 1042, the flux at the outro boundary was
+28681 against a threshold of 107505. The two-sided form counts that fall and
+the cell passes.
 
-Five candidate fixes were built and measured for this lane; four turned no
-failing case into a passing one and were cut, with their numbers recorded. A
-kick was rejected because tests/test_bus.py asserts that indie-noise has no
-kick - that assertion is a contract.
+The plain absolute-difference detector was measured first and REJECTED: over
+5 lanes x {45,60,90,120,480} s x 3 seeds it turned two green cells red
+(kosmische 60/1042 6->2, dub 60/3005 5->4) because the absolute curve's higher
+median raises the threshold. The shipped form cannot turn a green cell red:
+the count is the rise count plus a non-negative boundary-fall term.
+
+It fixed 7 of the 8 pre-existing red cells in that corpus. The one left is
+motorik 60 s seed 2000 (4 peaks against 5). Those 8 red cells were pre-existing
+and are recorded in docs/handoff/c38-gate7-novelty-sign.md. A green gate 7 is
+still not proof that every section boundary is audible - only that the piece
+has sections-1 novelty events, which is what BRIEF 11 actually asks.
+
+Do not tune a lane against gate 7 without measuring the flux at the boundaries
+first. Five third-layer candidates for indie-noise were built and measured in
+c32 and all five failed; that lane's 45 s cell was fixed here by the detector,
+not by a layer.
 
 =====================================================================
 THE RADIO (state as of the 2026-10-25 evening swap)

@@ -201,9 +201,12 @@ a track through the fast gates only.
 - **Gate 7** — the piece is novel enough: the brief's own detector (the
   spectral flux on the one second frames, the peaks above the mean plus two
   sigma, the peaks closer than four seconds merged) must find at least
-  `sections − 1` of them. The spread is estimated robustly, because the
-  flux curve is heavy-tailed and the plain standard deviation puts the bar
-  above the peaks it is looking for.
+  `sections − 1` of them. The flux is two-sided: a rise counts anywhere, as
+  it always has, and a fall counts when it lands on a planned section
+  boundary. A rectified flux is an onset detector and cannot see a fade-out
+  at all (c38), which is exactly what indie-noise's outro is. The spread is
+  estimated robustly, because the flux curve is heavy-tailed and the plain
+  standard deviation puts the bar above the peaks it is looking for.
 - **Gate 8** — no leading silence (≤ 4 s for the ambient lane, ≤ 1 s
   otherwise) and no trailing silence (≤ 3 s).
 - **Gate 9** — the low band survives the mono fold-down: below 200 Hz the
