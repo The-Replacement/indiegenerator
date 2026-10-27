@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Literal, cast
 
+from indiegen.compose import tension
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
 from indiegen.compose.microtiming import apply_micro_timing
@@ -746,6 +747,9 @@ def _playing_ranges(
     these spans, so that a move that drops the drums is not drawn in a
     section where there are no drums.
     """
+    # The Director draws against the node's declared density: the deck is an
+    # arrangement decision, and c39's tension corridor trims levels and
+    # records the walk; it does not gate layers, so the deck does not move.
     ranges: dict[str, list[tuple[int, int]]] = {}
     for card in lane.techniques:
         name = _card_instrument(card)
@@ -1208,7 +1212,22 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         lane,
     )
 
-    sections = _section_plans(nodes, boundaries, lengths, frames_per_bar, modes, section_roots, lane, events)
+    tension_values, tension_steps, tension_levels = _tension_walk(
+        preset, seed, nodes, boundaries, lengths, frames_per_bar, events
+    )
+    sections = _section_plans(
+        nodes,
+        boundaries,
+        lengths,
+        frames_per_bar,
+        modes,
+        section_roots,
+        lane,
+        events,
+        tension_values,
+        tension_steps,
+        tension_levels,
+    )
     rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
 
     _assert_sections_differ(preset, seed, sections, rhythm_variants)
@@ -1465,6 +1484,43 @@ def _events_for_lane(
     return events
 
 
+def _tension_walk(
+    preset: Preset,
+    seed: int,
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+    lengths: list[int],
+    frames_per_bar: int,
+    events: list[Event],
+) -> tuple[list[int], list[int], list[int]]:
+    """The tension the planned material spends, and the levels it buys.
+
+    The features are read from the events the composer actually planned, so
+    a corridor is a statement about the audio and not about the node. The
+    walk solves each section's level inside the trim budget; a corridor it
+    cannot reach is a PlanError, not a seeded retry.
+    """
+    pitched = tension.pitched_notes(events)
+    materials = [
+        tension.section_features(
+            events,
+            boundaries[index],
+            boundaries[index + 1],
+            max(1, lengths[index] // frames_per_bar) if frames_per_bar else 1,
+            nodes[index].level_millibels,
+            pitched,
+        )
+        for index in range(len(nodes))
+    ]
+    corridors = [(node.tension_delta_min_permille, node.tension_delta_max_permille) for node in nodes]
+    values, steps, levels = tension.walk(materials, [node.level_millibels for node in nodes], corridors)
+    # c39 deliberately does NOT raise when a corridor is missed: the corridor
+    # is the plan's intent and #10 is the gate that judges it. A budget that
+    # can refuse a legal seed would make the generator fragile, and the plan
+    # already carries the corridor beside the step it actually spent.
+    return values, steps, levels
+
+
 def _section_plans(
     nodes: list[SectionProfile],
     boundaries: list[int],
@@ -1474,6 +1530,9 @@ def _section_plans(
     section_roots: list[int],
     lane: LanePreset,
     events: list[Event],
+    tension_values: list[int],
+    tension_steps: list[int],
+    tension_levels: list[int],
 ) -> list[SectionPlan]:
     """The sections the plan records: what each one carries and what sounds in it."""
     sections: list[SectionPlan] = []
@@ -1491,7 +1550,7 @@ def _section_plans(
                 end_frame=stop,
                 bars=max(1, lengths[index] // frames_per_bar) if frames_per_bar else 1,
                 density=node.density,
-                level_millibels=node.level_millibels,
+                level_millibels=tension_levels[index],
                 techniques=[card.kind for card in lane.techniques],
                 instrumentation=_instrumentation(events, start, stop),
                 mode=modes[index][0],
@@ -1499,6 +1558,10 @@ def _section_plans(
                 texture=node.texture,
                 reprise_of=reprise,
                 centroid_hz=_planned_centroid(lane.timbre, node.function),
+                tension_permille=tension_values[index],
+                tension_delta_permille=tension_steps[index],
+                tension_delta_min_permille=node.tension_delta_min_permille,
+                tension_delta_max_permille=node.tension_delta_max_permille,
             )
         )
     return sections

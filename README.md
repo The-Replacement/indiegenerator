@@ -236,6 +236,18 @@ A failing render exits **2**, prints the failures to stderr, and writes
 **nothing** to the output directory: the radio is watching, and a file that
 failed the gates must not exist.
 
+- **The tension budget (c39).** The plan carries a predicted tension per
+  section — Farbood's weighted feature slopes (loudness, pitch, roughness,
+  onsets), z-scored against this corpus, with the previous section as the
+  memory window and `beta = 5` when the direction repeats — plus the corridor
+  the station declared for that function. The composer trims the section's
+  level inside ±3 dB to land the step inside the corridor, so the level curve
+  gate 5 asserts is the one the listener hears. Measured over 567 sections:
+  0 corridor misses, 2 % trimmed. Tension does **not** select the layers: that
+  was built, measured (dub-electronic's gate 5 fell from 0.906 to 0.088) and
+  deferred, because the timbre tables are calibrated on the density-gated
+  layers. See `docs/handoff/c39-tension-budget.md`.
+
 ### The ten-track batch
 
 `indiegen batch --preset station --count 10 --seed-base 2000 --out out/ep`

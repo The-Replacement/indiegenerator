@@ -120,8 +120,14 @@ def test_the_density_scale_is_a_strict_no_op_at_zero() -> None:
 
 
 def test_the_wall_crests_because_its_density_follows_the_section() -> None:
-    """The lane's own comment claims the crest; this pins that it exists."""
-    plan = _plan("indie-noise", 60)
+    """The lane's own comment claims the crest; this pins that it exists.
+
+    The assertion is on the COMPOSED plan, not the directed one: the crest is
+    the composer's density-following, and the Director is allowed to halve a
+    section's rhythm afterwards (c39 measured the same seed's deck placing a
+    half_time over the plateau, which is a different, legal arrangement).
+    """
+    plan = compose(load_preset("indie-noise"), SEED, 60 * RATE)
     wall = next(event for event in schedule(plan) if event.instrument == "hat")
     assert isinstance(wall, HatEvent)
     rates: dict[str, float] = {}

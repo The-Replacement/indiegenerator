@@ -107,6 +107,23 @@ class SectionProfile(FrozenModel):
     reprise_of: str
     transform: str
     texture: str
+    # c39: the tension budget. The section must CHANGE the running tension
+    # (permille, 0..1000) by a step inside [min, max]; the default corridor is
+    # the whole scale, so a node that declares nothing is the node it always
+    # was. A step corridor is path-independent, which a level corridor is not;
+    # the composer trims the section's level to land inside it. See
+    # compose/tension.py.
+    tension_delta_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
+    tension_delta_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+
+    @model_validator(mode="after")
+    def _corridor_is_ordered(self) -> Self:
+        if self.tension_delta_min_permille > self.tension_delta_max_permille:
+            raise PlanError(
+                f"section {self.function!r} declares tension_delta_min_permille "
+                f"{self.tension_delta_min_permille} above its max {self.tension_delta_max_permille}"
+            )
+        return self
 
 
 class BusGain(FrozenModel):
@@ -452,6 +469,14 @@ class SectionPlan(FrozenModel):
     texture: str
     reprise_of: int
     centroid_hz: int = Field(gt=0)
+    # c39: the tension the composer predicted from this section's planned
+    # material and the trimmed level, the step it took, and the corridor it
+    # was asked to land in. The renderer reads only level_millibels; the rest
+    # is the plan's statement of what it spent.
+    tension_permille: int = Field(default=500, ge=0, le=1000)
+    tension_delta_permille: int = Field(default=0, ge=-1000, le=1000)
+    tension_delta_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
+    tension_delta_max_permille: int = Field(default=1000, ge=-1000, le=1000)
 
 
 class MotifNote(FrozenModel):

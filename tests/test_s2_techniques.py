@@ -119,7 +119,10 @@ def test_the_layers_follow_the_sections(motorik_plan: Plan) -> None:
     assert hats
     event = hats[0]
     boundaries = [section.start_frame for section in motorik_plan.sections]
-    first = min(hit.frame for hit in event.hits)
+    # c33: the drift is in the plan, so the arrangement's position is the
+    # grid frame; a hit may play a few frames before the line it was written
+    # on without being a hit in the previous section.
+    first = min(hit.grid_frame() for hit in event.hits)
     assert first >= boundaries[1]
     densities = {section.density for section in motorik_plan.sections}
     assert len(densities) > 1
