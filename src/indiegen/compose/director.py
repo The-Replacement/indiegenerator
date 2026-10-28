@@ -32,6 +32,7 @@ from indiegen.plan import (
     SectionPlan,
     SnareEvent,
 )
+from indiegen.spectrum import declared_centroid_millihz
 from indiegen.theory.scales import mode_scale, relative_of
 
 TRANSPOSE_UP_FOURTH: str = "transpose_up_fourth"
@@ -398,6 +399,20 @@ def director(plan: Plan) -> Plan:
         sections = result.sections
         delay_sends = result.delay_sends
         log.append(move)
+    # c41: the declared centroid is a statement about the material that
+    # sounds, so it is re-derived from the FINAL events. The deck contains
+    # transpose_up_fourth, which rewrites pad, drone and lead midi: a field
+    # computed before the moves would be stale in exactly the way gate 6's
+    # timbre table is stale, inside the field that exists to name the
+    # staleness. No RNG here - the leaf is a pure function of the events.
+    sections = [
+        section.model_copy(
+            update={
+                "declared_centroid_millihz": declared_centroid_millihz(events, section.start_frame, section.end_frame),
+            }
+        )
+        for section in sections
+    ]
     updated = plan.model_copy(
         update={
             "events": events,

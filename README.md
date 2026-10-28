@@ -33,23 +33,25 @@ python3.15 -m venv .venv          # Python 3.15.0 (mise: python@3.15)
 The render prints fourteen lines and leaves two files in `out/`: the tagged
 FLAC and a JSON sidecar holding the plan and the measurements. The numbers
 below are this command's real output on the development machine; the hash is
-the audio and the hash is the point.
+the audio and the hash is the point. **Re-measured at c41 (this commit):** the
+block that stood here was from before c27 widened ambient's section graph — it
+recorded three sections and a `pcm_sha256` that no longer matched the committed
+artifact.
 
 ```
-path: out/ambient_signal_signal_s1042.flac
-sidecar: out/ambient_signal_signal_s1042.json
+path: out/ambient_glass_low_s1042.flac
+sidecar: out/ambient_glass_low_s1042.json
 duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
 form: interlude
-peak: -4.305 dBFS
-true_peak: -4.300 dBTP
-loudness: -16.054 LUFS
-loudness_range: 12.646 LU
-sections: 3
+peak: -4.306 dBFS
+true_peak: -4.301 dBTP
+loudness: -16.002 LUFS
+loudness_range: 12.808 LU
+sections: 4
 techniques: poly_period,drone,pluck
-plan_sha256: b55edf8edee3c026b8562f66f177884b9d7de4ad981ba5e454af5402c86712fb
-pcm_sha256: 77510545114637df31a8220743ced598629e6fa4fca17e5c56566853f0a2563b
-render_seconds: 29.313
+plan_sha256: 44e87268fd1398df2beea8d5375ca1108c7115522525521944b3fa7167d1a3aa
+pcm_sha256: 18aa71cd33393bfd4d246bffcde4a2be7f134dfc0745942145a1f77b0ad00fa3
 ```
 
 Other commands:
@@ -105,8 +107,14 @@ process each:
 | True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.297 dBTP | −4.293 dBTP | −4.299 dBTP |
 | Loudness range | 10.37 LU | 10.06 LU | 11.75 LU | 10.16 LU | 11.44 LU |
 | Sections | 5 | 6 | 4 | 4 | 3 |
-| `plan_sha256` | `b39afded…` | `49f62699…` | `edbfee38…` | `4111ac0f…` | `28c299f7…` |
-| `pcm_sha256` | `3a902b7a…` | `2423db5b…` | `b5b63e10…` | `00b1513b…` | `4a586f55…` |
+| `plan_sha256` | `8457b370…` | `33bbe32c…` | `4f27d08b…` | `6d62480c…` | `dca339aa…` |
+| `pcm_sha256` | `7a5b7afb…` | `d76b61b0…` | `bac6ed95…` | `d7c75aa8…` | `1ca0885d…` |
+
+These rows were re-measured at c41 (issue #37), which added
+`declared_centroid_millihz` to every section: every `plan_sha256` moved, because
+the leaf is plan bytes. The row before this one was itself stale — it predated
+c39, which had added the tension fields and moved the plan without moving the
+row. Measure the row you publish.
 
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
@@ -242,8 +250,12 @@ failed the gates must not exist.
   memory window and `beta = 5` when the direction repeats — plus the corridor
   the station declared for that function. The composer trims the section's
   level inside ±3 dB to land the step inside the corridor, so the level curve
-  gate 5 asserts is the one the listener hears. Measured over 567 sections:
-  0 corridor misses, 2 % trimmed. Tension does **not** select the layers: that
+  gate 5 asserts is the one the listener hears. Measured over 564 sections
+  (424 lane sections plus 140 station sections): 1 corridor miss, 10 trimmed.
+  The earlier figure here (567 sections, 0 misses, 2 % trimmed) was miscounted
+  and never reproduced; the miss is station seed 5001's `break`, which the
+  actuator cannot reach even at +2.9 dB. Tension does **not** select the layers:
+  that
   was built, measured (dub-electronic's gate 5 fell from 0.906 to 0.088) and
   deferred, because the timbre tables are calibrated on the density-gated
   layers. See `docs/handoff/c39-tension-budget.md`.

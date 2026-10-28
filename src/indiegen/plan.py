@@ -469,6 +469,12 @@ class SectionPlan(FrozenModel):
     texture: str
     reprise_of: int
     centroid_hz: int = Field(gt=0)
+    # c41: the amplitude- and duration-weighted centroid of the partials this
+    # section actually declares, in millihz. 0 means the section declares no
+    # additive spectrum (no pad, lead, poly_period or drone event overlaps it).
+    # NOT gate 6's target and read by nothing at runtime: it is the plan naming
+    # its own material, so a later change can say how far the material moved.
+    declared_centroid_millihz: int = Field(default=0, ge=0)
     # c39: the tension the composer predicted from this section's planned
     # material and the trimmed level, the step it took, and the corridor it
     # was asked to land in. The renderer reads only level_millibels; the rest

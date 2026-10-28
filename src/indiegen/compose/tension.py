@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 from indiegen.errors import PlanError
-from indiegen.plan import BassEvent, Event, LeadEvent, PadEvent, PluckEvent, PolyPeriodEvent, RhythmEvent
+from indiegen.plan import BassEvent, DroneEvent, Event, LeadEvent, PadEvent, PluckEvent, PolyPeriodEvent, RhythmEvent
 
 # The four features and their weights, permille of 1000.
 TENSION_WEIGHTS: Mapping[str, int] = MappingProxyType({"loudness": 400, "pitch": 200, "roughness": 200, "onset": 200})
@@ -84,10 +84,18 @@ class FeatureSet:
 
 
 def pitched_notes(events: Sequence[Event]) -> list[tuple[int, int, int]]:
-    """(start, stop, midi) for every pitched event, bass hits included."""
+    """(start, stop, midi) for every pitched event, bass hits included.
+
+    A drone enters as ONE note at its segment root, not one per partial. Its
+    partials are near-unison members of a JI stack, and the roughness table
+    below is an interval-class model: reading 16 near-unison partials as 16
+    notes would turn it into a beating model it is not. The root is the modal
+    root, so a modal shift reaches the model through the same field the pad
+    uses.
+    """
     out: list[tuple[int, int, int]] = []
     for event in events:
-        if isinstance(event, (PluckEvent, PadEvent, LeadEvent)):
+        if isinstance(event, (PluckEvent, PadEvent, LeadEvent, DroneEvent)):
             out.append((event.start_frame, event.start_frame + event.duration_frames, event.midi))
         elif isinstance(event, PolyPeriodEvent):
             out.extend(

@@ -74,6 +74,7 @@ from indiegen.plan import (
     SectionPlan,
     SectionProfile,
 )
+from indiegen.spectrum import declared_centroid_millihz
 from indiegen.theory.scales import mode_scale, relative_of
 
 # The three forms of a release: a full track, a longform and an interlude.
@@ -1558,6 +1559,7 @@ def _section_plans(
                 texture=node.texture,
                 reprise_of=reprise,
                 centroid_hz=_planned_centroid(lane.timbre, node.function),
+                declared_centroid_millihz=declared_centroid_millihz(events, start, stop),
                 tension_permille=tension_values[index],
                 tension_delta_permille=tension_steps[index],
                 tension_delta_min_permille=node.tension_delta_min_permille,

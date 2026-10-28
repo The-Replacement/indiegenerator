@@ -45,9 +45,30 @@ Weights 400/200/200/200 (loudness highest, then pitch, roughness, onset),
 windows are one section / one section instead of 3 s / 3–4 s — declared
 deviations.
 
-Calibration result over **567 sections** (the 424 above plus 30 station draws,
-seeds 5000–5029): **0 corridor misses, 11 trims (2 %)**, each within
-±2.4 dB.
+Calibration result, **re-measured 2026-10-27 at `eb648c8`** (this paragraph
+previously said "567 sections … 0 corridor misses, 11 trims", which does not
+reproduce — see the correction below):
+
+| corpus | sections | trims | corridor misses |
+|---|---|---|---|
+| 5 lanes × seeds {1042, 2000, 3005} × 6 durations | 424 | 8 | 0 |
+| 30 station draws (seeds 5000–5029, 60 s) | 140 | 2 | 1 |
+| **total** | **564** | **10** | **1** |
+
+The one miss is station seed 5001, `break`: −166 permille against a −160 floor.
+The actuator saturates at +2900 mb and still cannot reach the corridor. Trims at
+this commit are within 1.7 dB (largest: motorik, −1700 mb); the 2.9 dB station
+trim above is what the c41 drone branch adds, not something c39 shipped.
+
+> **Correction (2026-10-27).** The shipped figures were wrong in all three
+> places: the total was miscounted (424 + 140 = 564, not 567), the trim count
+> was 10 rather than 11, and **there is one corridor miss, not zero**. A second
+> unreachable corridor appears as soon as seed 4002 joins the lane set
+> (motorik 4002 `outro`, −372 and −365 against a −340 floor); the 424 figure
+> was clean only because that set omits 4002. "Reachable envelopes" is true for
+> the corridors exercised by the 424 set and false at the edges of `break` and
+> `outro`. The re-measurement is `/tmp/opencode/c41_corpus.py`, which wraps
+> `tension.walk` and compares the declared level with the solved one.
 
 Corridors as shipped (permille of the running 0–1000 curve):
 
