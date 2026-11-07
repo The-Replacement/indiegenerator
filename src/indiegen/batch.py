@@ -41,6 +41,7 @@ from indiegen.validate import (
     energy_correlation,
     run_gates,
     stereo_correlation,
+    tension_correlation,
     timbre_measurement,
 )
 from indiegen.writer import TEMP_DIR_NAME, pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
@@ -229,6 +230,7 @@ def render_track(plan: Plan, out_dir: Path) -> RenderResult:
                 "energy_correlation": energy,
                 "timbre_correlation": timbre,
                 "timbre_static": bool(static),
+                "tension_shadow_correlation": float(tension_correlation(plan, decoded)),
             },
         },
         preset=plan.preset,

@@ -76,12 +76,12 @@ def test_a_declared_corridor_is_met_and_a_default_one_is_a_no_op() -> None:
                 assert section.tension_delta_max_permille == node.tension_delta_max_permille
 
 
-def test_the_trim_moves_the_level_into_the_corridor() -> None:
-    """An unreachable corridor spends the whole trim budget and records the miss.
+def test_an_unreachable_corridor_spends_nothing() -> None:
+    """No candidate inside spends nothing: the declared level stands and the miss is recorded.
 
     The corridor is the plan's intent and #10 is its judge, so an unreachable
-    one does not raise: the level moves as far as the budget allows and the
-    plan states the step it actually spent.
+    one does not raise and does not trim to the nearest miss: the plan states
+    the step it actually spent at the declared level.
     """
     preset = load_preset("motorik")
     graph = [
@@ -94,9 +94,54 @@ def test_the_trim_moves_the_level_into_the_corridor() -> None:
     declared = next(node for node in preset.station.section_graph if node.function == "build")
     plan = compose(tight, SEED, 60 * SAMPLE_RATE)
     section = next(section for section in plan.sections if section.function == "build")
-    assert section.level_millibels != declared.level_millibels
-    assert abs(section.level_millibels - declared.level_millibels) <= tension.TENSION_TRIM_MILLIBELS
+    assert section.level_millibels == declared.level_millibels
     assert not 200 <= section.tension_delta_permille <= 220
+
+
+def test_solve_at_an_unreachable_corridor_returns_the_material_step_at_declared() -> None:
+    """AC-1.1: the step is the material step at the declared level, not a trim."""
+    previous = _features()
+    material = _features()
+    expected_delta, _ = tension.step(_features(loudness=-6000), previous, {})
+    level, current, delta, _ = tension.solve(previous, 500, {}, material, -6000, 200, 220)
+    assert level == -6000
+    assert delta == expected_delta
+    assert current == 500 + expected_delta
+    assert not 200 <= delta <= 220
+
+
+def test_solve_inside_trims_to_the_nearest_declared() -> None:
+    """When a candidate lands inside, the trim still fires: nearest wins."""
+    previous = _features()
+    material = _features()
+    # Declared -6000 spends 16, outside [17, 17]; -5900 spends 17 inside.
+    level, _, delta, _ = tension.solve(previous, 500, {}, material, -6000, 17, 17)
+    assert level == -5900
+    assert delta == 17
+
+
+def test_solve_tie_first_scan_wins() -> None:
+    """Equidistant inside candidates: the lower, first-scanned one wins.
+
+    Declared -28050 is not on the -30000 + 100k scan grid, so -28100 and
+    -28000 are both 50 away and both inside [-1, 0]; the scan is ascending.
+    """
+    previous = _features(loudness=-28050)
+    material = _features(loudness=-28050)
+    level, _, delta, _ = tension.solve(previous, 500, {}, material, -28050, -1, 0)
+    assert level == -28100
+    assert delta == -1
+
+
+def test_solve_empty_scan_returns_declared() -> None:
+    """An inverted scan (declared above the ceiling) returns declared, not an error."""
+    previous = _features()
+    material = _features()
+    expected_delta, _ = tension.step(_features(loudness=3000), previous, {})
+    level, current, delta, _ = tension.solve(previous, 500, {}, material, 3000, -1000, 1000)
+    assert level == 3000
+    assert delta == expected_delta
+    assert current == 500 + expected_delta
 
 
 def test_a_corridor_orders_its_bounds() -> None:

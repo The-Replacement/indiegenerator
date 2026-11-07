@@ -1499,7 +1499,8 @@ def _tension_walk(
     The features are read from the events the composer actually planned, so
     a corridor is a statement about the audio and not about the node. The
     walk solves each section's level inside the trim budget; a corridor it
-    cannot reach is a PlanError, not a seeded retry.
+    cannot reach spends nothing, the declared level stands, and the miss
+    is recorded in the step it actually spent.
     """
     pitched = tension.pitched_notes(events)
     materials = [

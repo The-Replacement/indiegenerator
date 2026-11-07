@@ -19,7 +19,8 @@ paths span up to 300, so a corridor could not be both meaningful and
 reachable. The section gain is the loudness term - Farbood's strongest - and
 trimming it inside a declared budget is what lets a corridor bind. The trim
 is bounded by TENSION_TRIM_MILLIBELS, so a corridor can still be out of
-reach: that is a PlanError, not a widened band.
+reach: then the section spends nothing, the declared level stands, and the
+miss is recorded in the step it actually spent.
 
 The declared deviation: Farbood's windows are 3 s / 3-4 s and his integration
 is continuous; this is a section walk, and the weights are this corpus's
@@ -32,27 +33,28 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from types import MappingProxyType
 
 from indiegen.errors import PlanError
-from indiegen.plan import BassEvent, DroneEvent, Event, LeadEvent, PadEvent, PluckEvent, PolyPeriodEvent, RhythmEvent
-
-# The four features and their weights, permille of 1000.
-TENSION_WEIGHTS: Mapping[str, int] = MappingProxyType({"loudness": 400, "pitch": 200, "roughness": 200, "onset": 200})
-
-# The corpus moments the features are z-scored against, in the model's
-# integer units (millibels, milli-onsets per bar, centi-MIDI, milli-roughness).
-# Measured 2026-10-27 over 424 sections; re-derive with the harness in the
-# handoff if the material changes.
-TENSION_FEATURE_STD: Mapping[str, int] = MappingProxyType(
-    {"loudness": 3637, "onset": 6660, "pitch": 905, "roughness": 2295}
+from indiegen.plan import (
+    BASS_HIT_FRAMES,
+    ROUGHNESS_SAMPLES,
+    ROUGHNESS_WEIGHTS,
+    TENSION_BETA,
+    TENSION_FEATURE_STD,
+    TENSION_START,
+    TENSION_STEP_DIVISOR,
+    TENSION_STEP_SCALE,
+    TENSION_WEIGHTS,
+    BassEvent,
+    DroneEvent,
+    Event,
+    LeadEvent,
+    PadEvent,
+    PluckEvent,
+    PolyPeriodEvent,
+    RhythmEvent,
+    SectionPlan,
 )
-
-# Where a walk starts and how far one section may move it.
-TENSION_START: int = 500
-TENSION_BETA: int = 5
-TENSION_STEP_DIVISOR: int = 2
-TENSION_STEP_SCALE: int = 1000
 
 # The actuator's bounds. A section's level may move by at most three
 # decibels from the graph's declaration, in tenths of a decibel.
@@ -60,17 +62,6 @@ TENSION_TRIM_MILLIBELS: int = 3000
 TENSION_TRIM_STEP_MILLIBELS: int = 100
 TENSION_LEVEL_FLOOR: int = -30000
 TENSION_LEVEL_CEILING: int = -1000
-
-# Interval-class sensory-dissonance weights (minor 2nd and major 7th worst).
-ROUGHNESS_WEIGHTS: tuple[int, ...] = (0, 10, 6, 3, 2, 1, 6, 1, 2, 3, 6, 10)
-
-# The roughness is sampled at this many instants inside a section and meaned;
-# one instant can miss the material a section is built around.
-ROUGHNESS_SAMPLES: int = 7
-
-# The BassHit carries no length; the bass card's decay is the horizon a
-# sustained pitch is heard over, and it is the value the calibration used.
-BASS_HIT_FRAMES: int = 7000
 
 
 @dataclass(frozen=True)
@@ -195,33 +186,41 @@ def solve(
 
     With no previous section there is no slope to take, so the tension is
     the walk's start and the level stays as declared. Otherwise the level is
-    scanned inside the trim budget and the candidate that lands in the
-    corridor and is nearest the declared level wins; when none lands, the
-    candidate nearest the corridor wins, so the caller's assertion can say
-    what it missed by.
+    scanned inside the trim budget and the candidate that lands inside the
+    corridor and is nearest the declared level wins, first in the ascending
+    scan on ties; when no candidate lands inside, nothing is spent: the
+    declared level stands and the step is the material step at that level,
+    recorded as a miss outside the corridor.
     """
     if previous is None:
         return declared_level, TENSION_START, 0, dict(signs)
 
     low_level = max(TENSION_LEVEL_FLOOR, declared_level - TENSION_TRIM_MILLIBELS)
     high_level = min(TENSION_LEVEL_CEILING, declared_level + TENSION_TRIM_MILLIBELS)
-    best: tuple[tuple[int, int, int], int, int, dict[str, int]] | None = None
+    best_level: int | None = None
+    best_delta: int = 0
+    best_signs: dict[str, int] = dict(signs)
+    best_distance: int | None = None
     for level in range(low_level, high_level + 1, TENSION_TRIM_STEP_MILLIBELS):
         candidate = FeatureSet(loudness=level, onset=material.onset, pitch=material.pitch, roughness=material.roughness)
         delta, candidate_signs = step(candidate, previous, signs)
-        inside = low <= delta <= high
-        # Inside the corridor first, then nearest the declared level: a
-        # deterministic order with no taste in it.
-        miss = 0 if inside else min(abs(delta - low), abs(delta - high))
-        key = (0 if inside else 1, miss, abs(level - declared_level))
-        if best is None or key < best[0]:
-            best = (key, level, delta, candidate_signs)
-    if best is None:
-        raise PlanError(
-            f"no level candidate in [{low_level}, {high_level}] for the section's tension corridor",
+        if not low <= delta <= high:
+            continue
+        # Nearest the declared level wins, first in the ascending scan on
+        # ties: a deterministic order with no taste in it.
+        distance = abs(level - declared_level)
+        if best_level is None or best_distance is None or distance < best_distance:
+            best_level = level
+            best_delta = delta
+            best_signs = candidate_signs
+            best_distance = distance
+    if best_level is None:
+        declared_candidate = FeatureSet(
+            loudness=declared_level, onset=material.onset, pitch=material.pitch, roughness=material.roughness
         )
-    _, level, delta, chosen_signs = best
-    return level, _clamped(previous_tension + delta), delta, chosen_signs
+        delta, candidate_signs = step(declared_candidate, previous, signs)
+        return declared_level, _clamped(previous_tension + delta), delta, candidate_signs
+    return best_level, _clamped(previous_tension + best_delta), best_delta, best_signs
 
 
 def walk(
@@ -243,6 +242,48 @@ def walk(
         levels.append(level)
         previous = FeatureSet(loudness=level, onset=material.onset, pitch=material.pitch, roughness=material.roughness)
     return values, steps, levels
+
+
+def rederive_section_tension(
+    events: Sequence[Event],
+    sections: Sequence[SectionPlan],
+) -> list[tuple[int, int]]:
+    """The tension the final events spend at the final levels, without solving.
+
+    The walk is the same one :func:`walk` spends: ``TENSION_START`` at the
+    first section, the same :func:`step` and :func:`_clamped` after it, the
+    sections in frame order. Levels and corridors are untouched - this is a
+    statement about the material that sounds, not a new trim.
+    """
+    if not sections:
+        return []
+    order = sorted(
+        range(len(sections)), key=lambda position: (sections[position].start_frame, sections[position].index)
+    )
+    pitched = pitched_notes(events)
+    previous: FeatureSet | None = None
+    signs: dict[str, int] = {}
+    current = TENSION_START
+    result: list[tuple[int, int]] = [(TENSION_START, 0)] * len(sections)
+    for position in order:
+        section = sections[position]
+        features = section_features(
+            events,
+            section.start_frame,
+            section.end_frame,
+            section.bars,
+            section.level_millibels,
+            pitched,
+        )
+        if previous is None:
+            current = TENSION_START
+            delta = 0
+        else:
+            delta, signs = step(features, previous, signs)
+            current = _clamped(current + delta)
+        result[position] = (current, delta)
+        previous = features
+    return result
 
 
 def band_is_declared(min_permille: int, max_permille: int) -> bool:

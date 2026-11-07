@@ -11,7 +11,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from indiegen.compose import director
+from indiegen.compose import director, tension
 from indiegen.plan import HatEvent, KickEvent, Plan, SnareEvent, canonical_json
 
 
@@ -272,3 +272,52 @@ def test_director_module_constructs_no_rng() -> None:
             assert (node.module or "") != "random"
         if isinstance(node, ast.Name):
             assert node.id not in {"default_rng", "RandomState", "Generator"}
+
+
+def test_the_director_rederives_tension_from_the_final_events(composed_plan: Plan) -> None:
+    """AC-4: the spent walk is recomputed from the final events, not copied.
+
+    The deck rewrites pitched material, so the pre-Director walk is stale:
+    the post-Director tension is the oracle walk over the final events at
+    the final levels, starting at 500 with a zero first step.
+    """
+    directed = director(composed_plan)
+    assert directed.sections[0].tension_permille == 500
+    assert directed.sections[0].tension_delta_permille == 0
+    # Oracle: the same section features and step, computed here rather than
+    # by calling the re-derivation under test.
+    pitched = tension.pitched_notes(directed.events)
+    previous = None
+    signs: dict[str, int] = {}
+    current = tension.TENSION_START
+    for section in directed.sections:
+        features = tension.section_features(
+            directed.events,
+            section.start_frame,
+            section.end_frame,
+            section.bars,
+            section.level_millibels,
+            pitched,
+        )
+        if previous is None:
+            expected_tension, expected_delta = tension.TENSION_START, 0
+        else:
+            expected_delta, signs = tension.step(features, previous, signs)
+            current = max(0, min(1000, current + expected_delta))
+            expected_tension = current
+        assert (section.tension_permille, section.tension_delta_permille) == (expected_tension, expected_delta)
+        previous = features
+    # The pre-Director walk was stale: the dropped bass and the transposed
+    # outro move material, so at least one section's walk differs.
+    assert [s.tension_delta_permille for s in directed.sections] != [
+        s.tension_delta_permille for s in composed_plan.sections
+    ]
+
+
+def test_rederivation_never_moves_levels_or_corridors(composed_plan: Plan) -> None:
+    """AC-4.2: re-derivation is a statement, not a new trim."""
+    directed = director(composed_plan)
+    assert [s.level_millibels for s in directed.sections] == [s.level_millibels for s in composed_plan.sections]
+    assert [(s.tension_delta_min_permille, s.tension_delta_max_permille) for s in directed.sections] == [
+        (s.tension_delta_min_permille, s.tension_delta_max_permille) for s in composed_plan.sections
+    ]

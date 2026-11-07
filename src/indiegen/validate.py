@@ -14,13 +14,35 @@ decided once and not in thirty-five call sites.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 from indiegen.master.loudness import MEASURE_BLOCK, LoudnessMeter, to_float
-from indiegen.plan import INT16_MAX, INT16_MIN, Plan
+from indiegen.plan import (
+    BASS_HIT_FRAMES,
+    INT16_MAX,
+    INT16_MIN,
+    ROUGHNESS_SAMPLES,
+    ROUGHNESS_WEIGHTS,
+    TENSION_BETA,
+    TENSION_FEATURE_STD,
+    TENSION_START,
+    TENSION_STEP_DIVISOR,
+    TENSION_STEP_SCALE,
+    TENSION_WEIGHTS,
+    BassEvent,
+    DroneEvent,
+    Event,
+    LeadEvent,
+    PadEvent,
+    Plan,
+    PluckEvent,
+    PolyPeriodEvent,
+    RhythmEvent,
+    SectionPlan,
+)
 
 GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 SILENCE_FLOOR_LSB: int = 33
@@ -77,6 +99,11 @@ EBUR128_TOLERANCE_LU: float = 0.2
 # Gate 12: the codec roundtrip.
 CODEC_LUFS_TOLERANCE_LU: float = 0.5
 CODEC_CORRELATION_LIMIT: float = 0.2
+
+# Gate 14: the delivered tension trajectory has to follow the planned one.
+# Phase 1 is shadow only: the limit sits below the Pearson range, so no
+# correlation can fail. The failing predicate is armed only by Phase 3.
+TENSION_CORRELATION_LIMIT: float = -1.1
 
 
 class GateResult(BaseModel):
@@ -488,6 +515,213 @@ def pearson(left: np.ndarray, right: np.ndarray) -> float:
     if left_spread <= 1e-9 * abs(left_mean) or right_spread <= 1e-9 * abs(right_mean):
         return 0.0
     return float(np.sum(left_delta * right_delta) / (left_spread * right_spread))
+
+
+def _pcm_section_millibels(pcm: np.ndarray, start: int, end: int) -> float:
+    """The RMS loudness of one section window, in millibels.
+
+    The window is ``pcm[start:end]`` in int16, converted with :func:`to_float`
+    and averaged to mono exactly as :func:`per_second_rms` does, so the
+    number is RMS in millibels: ``20000 * log10(max(rms, 1e-9))``. A global
+    gain cancels in the walk's differences and in the Pearson.
+    """
+    if pcm.size == 0:
+        rms = 0.0
+    else:
+        frames = int(pcm.shape[0])
+        window = pcm[max(0, min(frames, start)) : max(0, min(frames, end))]
+        if window.size == 0:
+            rms = 0.0
+        else:
+            mono = to_float(window).mean(axis=1) if window.ndim > 1 else to_float(window)
+            rms = float(np.sqrt(np.mean(mono**2))) if mono.size else 0.0
+    return float(20000.0 * np.log10(max(rms, 1e-9)))
+
+
+def _pcm_section_onsets(pcm: np.ndarray, sample_rate: int, sections: list[SectionPlan]) -> list[int]:
+    """The RMS-onset count of each section, in milli-onsets per bar.
+
+    Reuses the gate-7 detector: :func:`spectral_flux_pair` on the whole PCM
+    and :func:`_peak_indices` over its rises. A peak at flux index ``k`` is
+    timed at ``(k + 1)`` seconds, as :func:`boundary_falls` times it, and a
+    section counts the peaks inside ``[start_frame, end_frame)``.
+    """
+    if pcm.size == 0 or not sections:
+        return [0 for _ in sections]
+    work = pcm.reshape(-1, 1) if pcm.ndim == 1 else pcm
+    rises, _ = spectral_flux_pair(work, sample_rate)
+    peak_frames = [(index + 1) * sample_rate for index in _peak_indices(rises)]
+    out: list[int] = []
+    for section in sections:
+        bars = section.bars if section.bars > 0 else 1
+        count = sum(1 for frame in peak_frames if section.start_frame <= frame < section.end_frame)
+        out.append(1000 * count // bars)
+    return out
+
+
+def _measured_step_float(
+    current: dict[str, float],
+    previous: dict[str, float],
+    signs: dict[str, int],
+) -> tuple[float, dict[str, int]]:
+    """The measured analogue of the planned step: the same weights, in float."""
+    total = 0.0
+    out: dict[str, int] = {}
+    for name, weight in TENSION_WEIGHTS.items():
+        delta = 100.0 * (current[name] - previous[name]) / TENSION_FEATURE_STD[name]
+        sign = (delta > 0) - (delta < 0)
+        beta = TENSION_BETA if sign and signs.get(name) == sign else 1
+        out[name] = sign
+        total += weight * beta * delta
+    return total / (TENSION_STEP_SCALE * TENSION_STEP_DIVISOR), out
+
+
+def _measured_walk(features: list[dict[str, float]]) -> list[float]:
+    """The measured tension curve: the planned walk, in float64 from 500."""
+    values: list[float] = []
+    signs: dict[str, int] = {}
+    previous: dict[str, float] | None = None
+    current = float(TENSION_START)
+    for item in features:
+        if previous is None:
+            current = float(TENSION_START)
+        else:
+            delta, signs = _measured_step_float(item, previous, signs)
+            current = max(0.0, min(1000.0, current + delta))
+        values.append(current)
+        previous = item
+    return values
+
+
+def _tension_pitched_notes(events: Sequence[Event]) -> list[tuple[int, int, int]]:
+    """The planned pitch material: :func:`tension.pitched_notes`, copied local.
+
+    Validate may not import the composer, so the four arms are copied here
+    over ``Plan.events`` with the same ``BASS_HIT_FRAMES`` horizon.
+    """
+    out: list[tuple[int, int, int]] = []
+    for event in events:
+        if isinstance(event, (PluckEvent, PadEvent, LeadEvent, DroneEvent)):
+            out.append((event.start_frame, event.start_frame + event.duration_frames, event.midi))
+        elif isinstance(event, PolyPeriodEvent):
+            out.extend(
+                (event.start_frame, event.start_frame + event.duration_frames, voice.midi) for voice in event.voices
+            )
+        elif isinstance(event, RhythmEvent):
+            out.extend(
+                (hit.frame, hit.frame + BASS_HIT_FRAMES, hit.midi) for hit in event.hits if isinstance(hit, BassEvent)
+            )
+    return out
+
+
+def _tension_roughness_at(pitched: Sequence[tuple[int, int, int]], frame: int) -> float | None:
+    """The interval-class roughness at one instant: ``tension._roughness_at``."""
+    sounding = [midi for start, stop, midi in pitched if start <= frame < stop]
+    if len(sounding) < 2:
+        return None
+    weights = [
+        ROUGHNESS_WEIGHTS[abs(first - second) % 12]
+        for index, first in enumerate(sounding)
+        for second in sounding[index + 1 :]
+    ]
+    return sum(weights) / len(weights)
+
+
+def _carried_pitch_roughness(
+    events: Sequence[Event],
+    start: int,
+    stop: int,
+    pitched: Sequence[tuple[int, int, int]],
+) -> tuple[float, float]:
+    """The carried pitch and roughness of one section, in the model's units.
+
+    The pitch and roughness limbs of ``tension.section_features``, computed
+    over the planned events rather than the PCM: pitch is the
+    duration-weighted mean in centi-MIDI, roughness the mean over the same
+    sampled instants in milli-roughness, both as float64.
+    """
+    duration = 0
+    weighted = 0
+    for note_start, note_stop, midi in pitched:
+        overlap = min(note_stop, stop) - max(note_start, start)
+        if overlap > 0:
+            duration += overlap
+            weighted += midi * overlap
+    pitch = 100.0 * weighted / duration if duration else 6000.0
+    rough: list[float] = []
+    span = stop - start
+    for index in range(1, ROUGHNESS_SAMPLES + 1):
+        value = _tension_roughness_at(pitched, start + span * index // (ROUGHNESS_SAMPLES + 1))
+        if value is not None:
+            rough.append(value)
+    roughness = 1000.0 * sum(rough) / len(rough) if rough else 0.0
+    return pitch, roughness
+
+
+def tension_correlation(plan: Plan, pcm: np.ndarray) -> float:
+    """The correlation of the delivered tension with the planned tension.
+
+    Loudness and onset are measured from the PCM per section; pitch and
+    roughness are carried from the planned events. The walk is the float64
+    twin of the planned one, from 500 with the plan's weights and scales.
+    A plan with fewer than three sections, a flat planned tension, or an
+    empty PCM is exempt and reads 1.0.
+    """
+    sections = list(plan.sections)
+    if len(sections) < 3 or pcm.size == 0:
+        return 1.0
+    planned_values = [section.tension_permille for section in sections]
+    planned_mean = float(np.mean(np.array(planned_values, dtype=np.float64))) if planned_values else 0.0
+    if planned_mean <= 0.0:
+        return 1.0
+    if planned_values and max(planned_values) - min(planned_values) <= STATIC_CENTROID_TOLERANCE * planned_mean:
+        return 1.0
+    pitched = _tension_pitched_notes(plan.events)
+    loudness = [_pcm_section_millibels(pcm, section.start_frame, section.end_frame) for section in sections]
+    onsets = _pcm_section_onsets(pcm, plan.sample_rate, sections)
+    carried = [
+        _carried_pitch_roughness(plan.events, section.start_frame, section.end_frame, pitched) for section in sections
+    ]
+    features: list[dict[str, float]] = [
+        {
+            "loudness": loudness[index],
+            "onset": float(onsets[index]),
+            "pitch": carried[index][0],
+            "roughness": carried[index][1],
+        }
+        for index in range(len(sections))
+    ]
+    measured = np.array(_measured_walk(features), dtype=np.float64)
+    planned = np.array([float(section.tension_permille) for section in sections], dtype=np.float64)
+    value = pearson(measured, planned)
+    if not np.isfinite(value):
+        return 0.0
+    return float(value)
+
+
+def tension_ok(correlation: float) -> bool:
+    """The one predicate for gate 14, shared by the live and recorded checks."""
+    return correlation >= TENSION_CORRELATION_LIMIT
+
+
+def check_gate_14(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
+    """Gate 14: the delivered tension trajectory follows the planned one.
+
+    Shadow in Phase 1: the limit sits below the Pearson range, so this
+    returns nothing for any correlation. A corridor miss alone never fails
+    here; only the Pearson speaks.
+    """
+    correlation = tension_correlation(plan, pcm)
+    if tension_ok(correlation):
+        return []
+    return [
+        failure(
+            gate=14,
+            measured=correlation,
+            limit=TENSION_CORRELATION_LIMIT,
+            check="tension trajectory correlation",
+        )
+    ]
 
 
 def _planned_per_second(plan: Plan, count: int, values: list[int], start_frame: int) -> np.ndarray:

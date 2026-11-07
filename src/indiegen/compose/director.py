@@ -19,6 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from indiegen.compose.tension import rederive_section_tension
 from indiegen.errors import PlanError
 from indiegen.plan import (
     BassEvent,
@@ -405,13 +406,19 @@ def director(plan: Plan) -> Plan:
     # computed before the moves would be stale in exactly the way gate 6's
     # timbre table is stale, inside the field that exists to name the
     # staleness. No RNG here - the leaf is a pure function of the events.
+    # The tension is the same statement: it is re-derived from the final
+    # events at the final levels, without re-running the solver, so levels
+    # and corridors stand and only the spent walk moves.
+    rederived = rederive_section_tension(events, sections)
     sections = [
         section.model_copy(
             update={
                 "declared_centroid_millihz": declared_centroid_millihz(events, section.start_frame, section.end_frame),
+                "tension_permille": rederived[index][0],
+                "tension_delta_permille": rederived[index][1],
             }
         )
-        for section in sections
+        for index, section in enumerate(sections)
     ]
     updated = plan.model_copy(
         update={

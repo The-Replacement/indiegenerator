@@ -9,15 +9,19 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
+import pytest
 
 from indiegen.plan import MotifAppearance, MotifCell, MotifNote, Plan
 from indiegen.validate import (
     DC_OFFSET_LIMIT,
     GATES_IN_FORCE,
     SILENCE_FLOOR_LSB,
+    TENSION_CORRELATION_LIMIT,
     TRAILING_SILENCE_LIMIT_S,
     GateFailure,
     GateResult,
+    _pcm_section_millibels,
+    _pcm_section_onsets,
     check_gate_1,
     check_gate_2,
     check_gate_3,
@@ -31,9 +35,11 @@ from indiegen.validate import (
     check_gate_11,
     check_gate_12,
     check_gate_13,
+    check_gate_14,
     leading_silence_limit,
     minimum_sections,
     run_gates,
+    tension_correlation,
 )
 
 RATE: int = 44100
@@ -506,3 +512,193 @@ def test_run_gates_collects_the_failures() -> None:
     failure = run_gates(plan, mix, pcm)
     assert failure is not None
     assert failure.failures
+
+
+def test_the_shadow_limit_sits_below_the_pearson_range() -> None:
+    """Phase 1: gate 14 is shadow, and the limit cannot be failed."""
+    assert TENSION_CORRELATION_LIMIT == -1.1
+    assert TENSION_CORRELATION_LIMIT < -1.0
+
+
+def test_the_pcm_loudness_tracks_section_rms() -> None:
+    """Gate 14 Slice 1: a louder section reads louder, in millibels."""
+    plan = _plan(sections=4, frames=20 * RATE)
+    time = np.arange(plan.duration_frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = np.zeros((plan.duration_frames, 2))
+    amplitudes = [2000.0, 8000.0, 4000.0, 12000.0]
+    for index, amplitude in enumerate(amplitudes):
+        start = index * 5 * RATE
+        stop = start + 5 * RATE
+        pcm[start:stop, :] = (amplitude * tone[start:stop])[:, np.newaxis]
+    read = [_pcm_section_millibels(_pcm(pcm), section.start_frame, section.end_frame) for section in plan.sections]
+    assert read[0] < read[2] < read[1] < read[3]
+    # Silence reads the 1e-9 floor, as a constant RMS gain offset would.
+    silent = _pcm_section_millibels(_pcm(np.zeros((RATE, 2))), 0, RATE)
+    assert silent == 20000.0 * np.log10(1e-9)
+
+
+def test_the_pcm_onset_counts_the_novelty_peaks() -> None:
+    """Gate 14 Slice 1: the gate-7 rises, counted per bar."""
+    plan = _plan(sections=4, frames=20 * RATE)
+    time = np.arange(plan.duration_frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = _pcm(np.stack([tone, tone], axis=1) * 8000)
+    for index in range(4):
+        start = index * 5 * RATE
+        half = RATE // 2
+        pcm[start : start + half, :] = 12000
+        pcm[start + half : start + RATE, :] = -12000
+    onsets = _pcm_section_onsets(pcm, RATE, list(plan.sections))
+    assert all(value >= 0 for value in onsets)
+    assert sum(onsets) > 0
+
+
+def test_gate_14_is_shadow_and_passes_any_correlation() -> None:
+    """Phase 1: the shipped limit never fails, whatever the correlation."""
+    plan = _plan(sections=4, frames=20 * RATE)
+    time = np.arange(plan.duration_frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = _pcm(np.stack([tone, tone], axis=1) * 8000)
+    correlation = tension_correlation(plan, pcm)
+    assert -1.0 <= correlation <= 1.0
+    assert check_gate_14(plan, pcm) == []
+
+
+def _tension_plan(
+    tensions: list[int],
+    deltas: list[int] | None = None,
+    corridors: list[tuple[int, int]] | None = None,
+) -> Plan:
+    """A flat-section plan whose sections carry the given tension walk."""
+    plan = _plan(sections=len(tensions), frames=20 * RATE)
+    sections = []
+    for index, section in enumerate(plan.sections):
+        update: dict[str, int] = {"tension_permille": tensions[index]}
+        if deltas is not None:
+            update["tension_delta_permille"] = deltas[index]
+        if corridors is not None:
+            update["tension_delta_min_permille"], update["tension_delta_max_permille"] = corridors[index]
+        sections.append(section.model_copy(update=update))
+    return plan.model_copy(update={"sections": sections})
+
+
+def _ramp_pcm(amplitudes: list[float]) -> np.ndarray:
+    """One tone per section at the given amplitudes, as int16 stereo PCM."""
+    frames = 5 * RATE * len(amplitudes)
+    time = np.arange(frames) / RATE
+    tone = np.sin(2.0 * np.pi * 220.0 * time)
+    pcm = np.zeros((frames, 2))
+    for index, amplitude in enumerate(amplitudes):
+        start = index * 5 * RATE
+        pcm[start : start + 5 * RATE, :] = (amplitude * tone[start : start + 5 * RATE])[:, np.newaxis]
+    return _pcm(pcm)
+
+
+def test_fewer_than_three_sections_is_exempt() -> None:
+    """AC-2.1: N < 3 reads 1.0 and does not fail."""
+    for sections in (1, 2):
+        plan = _plan(sections=sections, frames=20 * RATE)
+        pcm = _pcm(np.zeros((plan.duration_frames, 2)))
+        assert tension_correlation(plan, pcm) == 1.0
+        assert check_gate_14(plan, pcm) == []
+
+
+def test_a_flat_planned_tension_is_exempt() -> None:
+    """AC-2.2: flat is judged on the planned permille, not the measured one."""
+    # Mean 500, spread 25: exactly 0.05 * mean, so flat by the gate-6 rule.
+    plan = _tension_plan([488, 513, 500, 499])
+    pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
+    assert tension_correlation(plan, pcm) == 1.0
+    assert check_gate_14(plan, pcm) == []
+    # One permille wider is no longer flat: a flat measured curve reads 0.0.
+    wider = _tension_plan([487, 513, 500, 499])
+    assert tension_correlation(wider, pcm) == 0.0
+
+
+def test_a_flat_measured_curve_is_not_exempt() -> None:
+    """The parent correction: flat measured does not buy the exemption."""
+    plan = _tension_plan([500, 600, 700, 800])
+    pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
+    assert tension_correlation(plan, pcm) == 0.0
+
+
+def test_a_corridor_miss_alone_never_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-2.3: a miss with a passing Pearson does not fail, even armed."""
+    plan = _tension_plan(
+        [500, 550, 600, 650], deltas=[0, 500, 500, 500], corridors=[(-1000, 1000), (0, 10), (0, 10), (0, 10)]
+    )
+    pcm = _ramp_pcm([2000.0, 4000.0, 8000.0, 12000.0])
+    assert tension_correlation(plan, pcm) > 0.9
+    import indiegen.validate as validate
+
+    monkeypatch.setattr(validate, "TENSION_CORRELATION_LIMIT", 0.5)
+    assert check_gate_14(plan, pcm) == []
+
+
+def test_a_low_correlation_fails_exactly_once_when_armed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-2.3: contained but uncorrelated fails with exactly one gate-14 result."""
+    plan = _tension_plan([500, 600, 700, 800], deltas=[0, 100, 100, 100], corridors=[(-1000, 1000)] * 4)
+    pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
+    assert tension_correlation(plan, pcm) == 0.0
+    import indiegen.validate as validate
+
+    monkeypatch.setattr(validate, "TENSION_CORRELATION_LIMIT", 0.5)
+    failures = check_gate_14(plan, pcm)
+    assert len(failures) == 1
+    assert failures[0].gate == 14
+    assert failures[0].measured == 0.0
+    assert failures[0].limit == 0.5
+    assert failures[0].check == "tension trajectory correlation"
+
+
+def test_mutating_the_planned_events_moves_the_measured_curve() -> None:
+    """AC-5.2: pitch and roughness are carried from the plan, not the PCM."""
+    from indiegen.plan import PluckEvent, Rational
+
+    def _pluck(midi: int, start: int) -> PluckEvent:
+        return PluckEvent(
+            instrument="pluck",
+            kind="pluck",
+            start_frame=start,
+            duration_frames=5 * RATE,
+            midi=midi,
+            pan_permille=0,
+            amplitude_millibels=-6000,
+            attack_frames=0,
+            release_frames=0,
+            feedback=Rational(numerator=9, denominator=10),
+            brightness=Rational(numerator=1, denominator=2),
+            pluck_position_permille=300,
+            detune_cents=0,
+            excitation_seed=11,
+        )
+
+    plan = _tension_plan([500, 550, 600, 650])
+    pcm = _ramp_pcm([2000.0, 4000.0, 8000.0, 12000.0])
+    base = tension_correlation(plan, pcm)
+    upward = plan.model_copy(
+        update={"events": [_pluck(40, 0), _pluck(50, 5 * RATE), _pluck(60, 10 * RATE), _pluck(70, 15 * RATE)]}
+    )
+    downward = plan.model_copy(
+        update={"events": [_pluck(70, 0), _pluck(60, 5 * RATE), _pluck(50, 10 * RATE), _pluck(40, 15 * RATE)]}
+    )
+    assert tension_correlation(upward, pcm) != base
+    assert tension_correlation(downward, pcm) != base
+    assert tension_correlation(upward, pcm) != tension_correlation(downward, pcm)
+
+
+def test_gate_14_is_not_in_the_active_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-5.4: Phase 1 is shadow only, even when the shadow would fail."""
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+    assert 14 not in GATES_IN_FORCE
+    plan = _tension_plan([500, 600, 700, 800])
+    pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
+    mix = pcm.astype(np.float64) / 32768.0
+    # The shadow fails when armed, yet the active gates never mention gate 14.
+    import indiegen.validate as validate
+
+    monkeypatch.setattr(validate, "TENSION_CORRELATION_LIMIT", 0.5)
+    assert len(check_gate_14(plan, pcm)) == 1
+    failure = run_gates(plan, mix, pcm)
+    assert failure is None or not [result for result in failure.failures if result.gate == 14]

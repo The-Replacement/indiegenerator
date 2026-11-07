@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from decimal import Decimal
+from types import MappingProxyType
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -31,6 +33,36 @@ INT16_MAX: int = 32767
 MAX_DURATION_FRAMES: int = 15 * 60 * SAMPLE_RATE
 MAX_EVENTS: int = 50_000
 MAX_HITS: int = 500_000
+
+# The tension model's calibration, in the model's integer units. These live
+# here so the validate predictor can read the same numbers without importing
+# the composer. The four features and their weights, permille of 1000.
+TENSION_WEIGHTS: Mapping[str, int] = MappingProxyType({"loudness": 400, "pitch": 200, "roughness": 200, "onset": 200})
+
+# The corpus moments the features are z-scored against, in the model's
+# integer units (millibels, milli-onsets per bar, centi-MIDI, milli-roughness).
+# Measured 2026-10-27 over 424 sections; re-derive with the harness in the
+# handoff if the material changes.
+TENSION_FEATURE_STD: Mapping[str, int] = MappingProxyType(
+    {"loudness": 3637, "onset": 6660, "pitch": 905, "roughness": 2295}
+)
+
+# Where a walk starts and how far one section may move it.
+TENSION_START: int = 500
+TENSION_BETA: int = 5
+TENSION_STEP_DIVISOR: int = 2
+TENSION_STEP_SCALE: int = 1000
+
+# Interval-class sensory-dissonance weights (minor 2nd and major 7th worst).
+ROUGHNESS_WEIGHTS: tuple[int, ...] = (0, 10, 6, 3, 2, 1, 6, 1, 2, 3, 6, 10)
+
+# The roughness is sampled at this many instants inside a section and meaned;
+# one instant can miss the material a section is built around.
+ROUGHNESS_SAMPLES: int = 7
+
+# The BassHit carries no length; the bass card's decay is the horizon a
+# sustained pitch is heard over, and it is the value the calibration used.
+BASS_HIT_FRAMES: int = 7000
 
 _NON_INTEGER_LEAVES: tuple[type, ...] = (bool, float, Decimal)
 
