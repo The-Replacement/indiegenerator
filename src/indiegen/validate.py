@@ -2,7 +2,7 @@
 
 BRIEF §15: "A gate not yet in force is not implemented, and it does not fail
 the render." ``GATES_IN_FORCE`` is that registry, and today it is the whole of
-§11: every gate from one to thirteen is implemented here - loudness, duration,
+§11: every gate from one to fourteen is implemented here - loudness, duration,
 codec, and the rest. The tuple is also a test seam: the suite runs a track
 through a subset so the slow gates stay out of the fast tests.
 
@@ -44,7 +44,7 @@ from indiegen.plan import (
     SectionPlan,
 )
 
-GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
 SILENCE_FLOOR_LSB: int = 33
 DC_OFFSET_LIMIT: float = 0.001
 TRAILING_SILENCE_LIMIT_S: float = 3.0
@@ -101,9 +101,12 @@ CODEC_LUFS_TOLERANCE_LU: float = 0.5
 CODEC_CORRELATION_LIMIT: float = 0.2
 
 # Gate 14: the delivered tension trajectory has to follow the planned one.
-# Phase 1 is shadow only: the limit sits below the Pearson range, so no
-# correlation can fail. The failing predicate is armed only by Phase 3.
-TENSION_CORRELATION_LIMIT: float = -1.1
+# Promoted 2026-11-08: this is the earned pooled threshold T from the null
+# harness (docs/handoff/c10-tension-gate.json, pooled.T), measured over 637
+# sections (135 tracks). The Phase 1 shadow value -1.1 sat below the Pearson
+# range so nothing could fail; gate 14 is now live and a correlation below
+# this limit fails.
+TENSION_CORRELATION_LIMIT: float = 0.1499084456057718
 
 
 class GateResult(BaseModel):
@@ -707,9 +710,7 @@ def tension_ok(correlation: float) -> bool:
 def check_gate_14(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
     """Gate 14: the delivered tension trajectory follows the planned one.
 
-    Shadow in Phase 1: the limit sits below the Pearson range, so this
-    returns nothing for any correlation. A corridor miss alone never fails
-    here; only the Pearson speaks.
+    A corridor miss alone never fails here; only the Pearson speaks.
     """
     correlation = tension_correlation(plan, pcm)
     if tension_ok(correlation):
@@ -1151,6 +1152,7 @@ def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | Non
         (8, check_gate_8, (pcm, plan.lane, plan.sample_rate)),
         (9, check_gate_9, (pcm, plan.sample_rate)),
         (13, check_gate_13, (plan,)),
+        (14, check_gate_14, (plan, pcm)),
     )
     results = [result for gate, check, args in checks if gate in GATES_IN_FORCE for result in check(*args)]
     if not results:

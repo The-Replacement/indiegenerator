@@ -175,7 +175,7 @@ minutes).
 ### The gates in force
 
 `src/indiegen/validate.py` implements **every gate of BRIEF §11**, and declares
-that with `GATES_IN_FORCE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)`. A gate
+that with `GATES_IN_FORCE = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)`. A gate
 that is not in force is not implemented and does not fail the render; there
 is no such gate today. The tuple is also the seam the test suite uses to run
 a track through the fast gates only.
@@ -239,6 +239,19 @@ a track through the fast gates only.
   the motif has to come back in at least three transformed forms, the
   Director has to fire at least once every 32 bars in a pulsed lane, and the
   deja-vu's replay probability has to move across the sections.
+- **Gate 14** — the delivered tension trajectory follows the planned one:
+  the Pearson correlation between the measured tension walk (per-section
+  loudness and onsets from the PCM, pitch and roughness carried from the
+  plan) and the plan's `tension_permille` has to be at least
+  0.1499084456057718. The threshold is the earned pooled T from the null
+  harness in `docs/handoff/c10-tension-gate.json` (pooled.T over 637
+  sections, PROMOTE-ELIGIBLE): gate 14 ran as a shadow at the no-fail limit
+  -1.1 while the harness pooled within-track permutations, and was promoted
+  on 2026-11-08 to this measured value, so tracks whose tension does not
+  follow the plan now fail. Plans with fewer than three sections or a flat
+  planned tension are exempt, the sidecar still records the number under
+  the retained `tension_shadow_correlation` key, and `filecheck` replays
+  the recorded correlation against the same limit.
 
 A failing render exits **2**, prints the failures to stderr, and writes
 **nothing** to the output directory: the radio is watching, and a file that

@@ -28,6 +28,7 @@ from indiegen.plan import Plan
 from indiegen.validate import (
     ENERGY_CORRELATION_LIMIT,
     STATIC_CENTROID_LIMIT,
+    TENSION_CORRELATION_LIMIT,
     TIMBRE_CORRELATION_LIMIT,
     GateResult,
     check_gate_1,
@@ -43,6 +44,7 @@ from indiegen.validate import (
     check_gate_13,
     energy_correlation_ok,
     failure,
+    tension_ok,
     timbre_ok,
 )
 from indiegen.writer import pcm_sha256, read_pcm
@@ -98,6 +100,7 @@ def check_file(path: Path, *, with_codec: bool = True) -> FileCheck:
     check.failures.extend(check_gate_4(plan, pcm))
     check.failures.extend(_check_gate_5_recorded(payload))
     check.failures.extend(_check_gate_6_recorded(payload))
+    check.failures.extend(_check_gate_14_recorded(payload))
     check.failures.extend(check_gate_7(plan, pcm, plan.sample_rate))
     check.failures.extend(check_gate_8(pcm, plan.lane, plan.sample_rate))
     check.failures.extend(check_gate_9(pcm, plan.sample_rate))
@@ -154,6 +157,27 @@ def _check_gate_5_recorded(payload: dict[str, Any]) -> list[GateResult]:
             measured=float(value),
             limit=ENERGY_CORRELATION_LIMIT,
             check="energy trajectory correlation",
+        )
+    ]
+
+
+def _check_gate_14_recorded(payload: dict[str, Any]) -> list[GateResult]:
+    """Gate 14, answered by the number the render recorded.
+
+    The sidecar field is still called ``tension_shadow_correlation``: the
+    shadow name is retained for sidecar compatibility, and old sidecars
+    carry the same key with the same meaning (the measured Pearson). Like
+    gate 5, a sidecar that carries no such number is exempt, not failed.
+    """
+    value = _recorded(payload).get("tension_shadow_correlation")
+    if value is None or tension_ok(float(value)):
+        return []
+    return [
+        failure(
+            gate=14,
+            measured=float(value),
+            limit=TENSION_CORRELATION_LIMIT,
+            check="tension trajectory correlation",
         )
     ]
 

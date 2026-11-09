@@ -50,7 +50,7 @@ def _pcm(samples: np.ndarray) -> np.ndarray:
 
 
 def test_only_the_gates_in_force_are_implemented() -> None:
-    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
 
 
 def _tone(seconds: float = 6.0, amplitude: float = 5800.0) -> np.ndarray:
@@ -514,10 +514,10 @@ def test_run_gates_collects_the_failures() -> None:
     assert failure.failures
 
 
-def test_the_shadow_limit_sits_below_the_pearson_range() -> None:
-    """Phase 1: gate 14 is shadow, and the limit cannot be failed."""
-    assert TENSION_CORRELATION_LIMIT == -1.1
-    assert TENSION_CORRELATION_LIMIT < -1.0
+def test_the_promoted_limit_is_the_earned_threshold() -> None:
+    """Gate 14 is promoted: the limit is the harness's pooled T, verbatim."""
+    # docs/handoff/c10-tension-gate.json, pooled.T over 637 sections.
+    assert TENSION_CORRELATION_LIMIT == 0.1499084456057718
 
 
 def test_the_pcm_loudness_tracks_section_rms() -> None:
@@ -554,8 +554,8 @@ def test_the_pcm_onset_counts_the_novelty_peaks() -> None:
     assert sum(onsets) > 0
 
 
-def test_gate_14_is_shadow_and_passes_any_correlation() -> None:
-    """Phase 1: the shipped limit never fails, whatever the correlation."""
+def test_exempt_plan_passes_gate_14() -> None:
+    """Gate 14: an exempt flat plan passes whatever the PCM."""
     plan = _plan(sections=4, frames=20 * RATE)
     time = np.arange(plan.duration_frames) / RATE
     tone = np.sin(2.0 * np.pi * 220.0 * time)
@@ -688,17 +688,21 @@ def test_mutating_the_planned_events_moves_the_measured_curve() -> None:
     assert tension_correlation(upward, pcm) != tension_correlation(downward, pcm)
 
 
-def test_gate_14_is_not_in_the_active_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    """AC-5.4: Phase 1 is shadow only, even when the shadow would fail."""
-    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
-    assert 14 not in GATES_IN_FORCE
+def test_gate_14_is_in_the_active_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-5.5: gate 14 is promoted, live in run_gates, and fails when low."""
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+    assert 14 in GATES_IN_FORCE
+    import indiegen.validate as validate
+
+    flat_plan = _tension_plan([500, 500, 500, 500])
+    flat_pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
+    flat_mix = flat_pcm.astype(np.float64) / 32768.0
+    flat_failure = run_gates(flat_plan, flat_mix, flat_pcm)
+    assert flat_failure is None or not [result for result in flat_failure.failures if result.gate == 14]
     plan = _tension_plan([500, 600, 700, 800])
     pcm = _ramp_pcm([8000.0, 8000.0, 8000.0, 8000.0])
     mix = pcm.astype(np.float64) / 32768.0
-    # The shadow fails when armed, yet the active gates never mention gate 14.
-    import indiegen.validate as validate
-
-    monkeypatch.setattr(validate, "TENSION_CORRELATION_LIMIT", 0.5)
-    assert len(check_gate_14(plan, pcm)) == 1
+    monkeypatch.setattr(validate, "TENSION_CORRELATION_LIMIT", 0.99)
     failure = run_gates(plan, mix, pcm)
-    assert failure is None or not [result for result in failure.failures if result.gate == 14]
+    assert failure is not None
+    assert [result for result in failure.failures if result.gate == 14]

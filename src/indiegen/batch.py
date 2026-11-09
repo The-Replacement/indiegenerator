@@ -230,6 +230,8 @@ def render_track(plan: Plan, out_dir: Path) -> RenderResult:
                 "energy_correlation": energy,
                 "timbre_correlation": timbre,
                 "timbre_static": bool(static),
+                # Shadow name retained after promotion for sidecar compatibility;
+                # filecheck reads this key as the live gate 14 measurement.
                 "tension_shadow_correlation": float(tension_correlation(plan, decoded)),
             },
         },

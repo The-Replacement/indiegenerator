@@ -189,7 +189,10 @@ def test_a_file_checks_against_its_sidecar(real_track: TrackOutcome) -> None:
 
 
 def test_the_sidecar_records_the_shadow_tension_correlation(real_track: TrackOutcome) -> None:
-    """AC-5.3: the sidecar shadows the predictor, beside energy and timbre."""
+    """AC-5.5: the sidecar records the tension correlation beside energy and timbre.
+
+    The key keeps its shadow name for sidecar compatibility.
+    """
     from indiegen.validate import tension_correlation
     from indiegen.writer import read_pcm
 
@@ -204,8 +207,8 @@ def test_the_sidecar_records_the_shadow_tension_correlation(real_track: TrackOut
     assert recorded == tension_correlation(plan, read_pcm(real_track.path))
 
 
-def test_the_file_check_ignores_the_shadow_tension_correlation(real_track: TrackOutcome, tmp_path: Path) -> None:
-    """AC-5.3: Phase 1 has no recorded gate-14 check, even at -1.0."""
+def test_the_file_check_fails_on_a_low_recorded_tension(real_track: TrackOutcome, tmp_path: Path) -> None:
+    """AC-5.5: the recorded gate-14 check fails a correlation below the limit."""
     directory = tmp_path / "out"
     directory.mkdir()
     (directory / real_track.path.name).write_bytes(real_track.path.read_bytes())
@@ -213,8 +216,8 @@ def test_the_file_check_ignores_the_shadow_tension_correlation(real_track: Track
     payload["measurements"]["tension_shadow_correlation"] = -1.0
     (directory / real_track.sidecar.name).write_text(json.dumps(payload), encoding="utf-8")
     check = check_file(directory / real_track.path.name, with_codec=False)
-    assert check.ok
-    assert not [failure for failure in check.failures if failure.gate == 14]
+    assert not check.ok
+    assert [failure for failure in check.failures if failure.gate == 14]
 
 
 def test_a_file_whose_sidecar_is_missing_is_unverifiable(real_track: TrackOutcome, tmp_path: Path) -> None:
