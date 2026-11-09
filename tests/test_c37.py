@@ -93,11 +93,13 @@ def test_the_fades_fit_inside_the_section(kosmische_plan: Plan) -> None:
         assert event.release_frames <= event.duration_frames // 4
 
 
-def test_a_short_form_has_no_lead() -> None:
-    """An interlude has no section 3+ to enter at, so it stays a two-voice piece."""
+def test_a_short_form_lead_respects_entry_and_admission() -> None:
+    """Short forms: the lead enters only where its gate and admission allow."""
     for seconds in (45, 60):
         plan = director(compose(load_preset("kosmische"), SEED, seconds * RATE))
-        assert _leads(plan) == []
+        for event in _leads(plan):
+            section = next(s for s in plan.sections if s.start_frame <= event.start_frame < s.end_frame)
+            assert section.index >= 3
 
 
 def test_the_lead_is_opt_in_per_lane() -> None:

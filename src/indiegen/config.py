@@ -328,6 +328,7 @@ class LanePreset(FrozenModel):
     mode_pool: list[str]
     pulse: Literal["bars", "seconds"]
     timbre: dict[str, int]
+    tension_admission_enabled: bool = False
     fx_sends: list[FxSend]
     techniques: list[TechniqueCard]
     section_count_range: list[int]

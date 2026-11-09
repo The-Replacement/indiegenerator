@@ -740,6 +740,7 @@ def _playing_ranges(
     lane: LanePreset,
     nodes: list[SectionProfile],
     boundaries: list[int],
+    ctx: TechniqueContext | None = None,
 ) -> dict[str, list[tuple[int, int]]]:
     """The spans of the track in which each instrument plays.
 
@@ -748,19 +749,27 @@ def _playing_ranges(
     these spans, so that a move that drops the drums is not drawn in a
     section where there are no drums.
     """
-    # The Director draws against the node's declared density: the deck is an
-    # arrangement decision, and c39's tension corridor trims levels and
-    # records the walk; it does not gate layers, so the deck does not move.
+    # The Director draws against the node's declared density when admission is
+    # off, and against the admitted layer sets when it is on: the deck is an
+    # arrangement decision over the material that actually sounds.
     ranges: dict[str, list[tuple[int, int]]] = {}
     for card in lane.techniques:
         name = _card_instrument(card)
         if name is None:
             continue
-        spans = [
-            (boundaries[index], boundaries[index + 1])
-            for index in range(len(nodes))
-            if nodes[index].density >= _card_min_density(card)
-        ]
+        minimum = _card_min_density(card)
+        if ctx is not None:
+            spans = [
+                (boundaries[index], boundaries[index + 1])
+                for index in range(len(nodes))
+                if ctx.admits(index, name, nodes[index].density, minimum)
+            ]
+        else:
+            spans = [
+                (boundaries[index], boundaries[index + 1])
+                for index in range(len(nodes))
+                if nodes[index].density >= minimum
+            ]
         if spans:
             ranges.setdefault(name, []).extend(spans)
     for name in ranges:
@@ -922,6 +931,18 @@ def _form_for(station: StationPreset, duration_frames: int | None) -> Form:
     return station.forms[0].form
 
 
+def _admission_mode(tension: int) -> str:
+    """The layer mode a planned tension level selects.
+
+    Tension tracks arrangement fullness (#38): sparse sections have low
+    tension, so ``all`` fires at T <= 450 to fill them. Full sections defer
+    to the density gate.
+    """
+    if tension <= 450:
+        return "all"
+    return "density"
+
+
 @dataclass(frozen=True)
 class _PlanInputs:
     """The values compose() has computed, handed to the assembler."""
@@ -1029,6 +1050,7 @@ def _build_fx_deck_and_replay(
     nodes: list[SectionProfile],
     boundaries: list[int],
     rng: SplitMix64,
+    ctx: TechniqueContext | None = None,
 ) -> tuple[DelaySend, ReverbSpec | None, FrippertronicsSpec | None, DubChainSpec | None, list[DirectorMove], list[int]]:
     """Build the delay send, reverb, Frippertronics, dub chain, Director deck and deja-vu replay.
 
@@ -1070,12 +1092,67 @@ def _build_fx_deck_and_replay(
         frames_per_bar,
         pulsed,
         {event.instrument for event in events},
-        _playing_ranges(lane, nodes, boundaries),
+        _playing_ranges(lane, nodes, boundaries, ctx),
         rng,
     )
     deja_vu = next((card for card in lane.techniques if isinstance(card, DejaVuCard)), None)
     replay = [replay_permille(deja_vu, index, len(nodes)) for index in range(len(nodes))] if deja_vu else []
     return delay_send, reverb, frippertronics, dub_chain, deck, replay
+
+
+def _motif_and_postproc(
+    events: list[Event],
+    station: StationPreset,
+    lane: LanePreset,
+    root_midi: int,
+    frames_per_beat: int,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    boundaries: list[int],
+    seed: int,
+    frames: int,
+    section_roots: list[int],
+    harmonic_modes: list[tuple[str, int]],
+    section_scales: list[list[int]],
+) -> tuple[list[Event], list[tuple[int, int]], list[MotifAppearance]]:
+    """Motif, planar and production steps between the lane events and the walk.
+
+    The motif is the station signature; the rest is planar motion, groove,
+    timbre, ornament, doubling and voice leading, in the order compose()
+    always applied them. Only the motif consumes the compose RNG.
+    """
+    cell = build_cell(station.motif_bank, station.motif_rhythm, root_midi, frames_per_beat, rng)
+    string = _string_voice(lane.techniques)
+    appearances: list[MotifAppearance] = []
+    out = list(events)
+    if string is not None:
+        appearances, motif_events = plan_motif(cell, string, ctx, rng)
+        out.extend(motif_events)
+    out = _planar_offset(out, station.planar_offset_semitones)
+    out, appearances = _apply_groove(
+        out,
+        appearances,
+        boundaries,
+        frames_per_beat,
+        lane.pulse,
+        lane.swing_permille,
+        lane.melodic_jitter_frames,
+        seed,
+        frames,
+    )
+    out = _apply_timbre(out, lane.drive_permille, lane.snap_permille)
+    out = _ornament_events(out, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
+    out = _double_events(out, station.double_copies, station.double_offset_frames, frames)
+    out, appearances = _apply_voice_leading(
+        out,
+        appearances,
+        boundaries,
+        section_roots,
+        [mode for mode, _ in harmonic_modes],
+        section_scales,
+        lane,
+    )
+    return out, list(cell), appearances
 
 
 def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:
@@ -1150,91 +1227,165 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
     dither_seed = rng.next_u64()
 
-    ctx = TechniqueContext(
-        preset=preset.name,
-        seed=seed,
-        lane=lane.lane,
-        scale_midi=list(lane.scale_midi),
-        root_midi=root_midi,
-        sample_rate=SAMPLE_RATE,
-        duration_frames=frames,
-        frames_per_beat=frames_per_beat,
-        frames_per_bar=frames_per_bar,
-        attack_frames=lane.attack_frames or 0,
-        release_frames=lane.release_frames or 0,
-        section_boundaries=list(boundaries),
-        section_densities=densities,
-        section_scales=section_scales,
-        section_roots=section_roots,
-        section_functions=[node.function for node in nodes],
-        tuning_system=station.tuning_system,
-        chord_segments_per_section=station.chord_segments_per_section,
-        chromatic_budget_permille=station.chromatic_budget_permille,
-        chord_tone_intervals=list(station.chord_tone_intervals),
-    )
-
     # T7 resolves once: the lane's 1/f control signals are declared by the
     # pink card and stamped onto the drum events.
     pink = next((card for card in lane.techniques if isinstance(card, PinkCard)), None)
 
-    events = _events_for_lane(lane, nodes, boundaries, lengths, section_roots, section_segment_roots, rng, ctx, pink)
+    # The lane's bed: pad and drone only, via CARD_SPECS.bed. A lane with no
+    # bed card (dub, indie) carries an empty bed and falls back to density.
+    bed_instruments = sorted(
+        {
+            spec.instrument
+            for card in lane.techniques
+            if (spec := CARD_SPECS.get(card.kind)) is not None and spec.bed and spec.instrument is not None
+        }
+    )
 
-    # The motif: the station's signature, played by the Karplus-Strong.
-    cell = build_cell(station.motif_bank, station.motif_rhythm, root_midi, frames_per_beat, rng)
-    string = _string_voice(lane.techniques)
-    appearances: list[MotifAppearance] = []
-    motif_events: list[PluckEvent] = []
-    if string is not None:
-        appearances, motif_events = plan_motif(cell, string, ctx, rng)
-        events.extend(motif_events)
+    def _make_ctx(admission_modes: list[str], enabled: bool) -> TechniqueContext:
+        return TechniqueContext(
+            preset=preset.name,
+            seed=seed,
+            lane=lane.lane,
+            scale_midi=list(lane.scale_midi),
+            root_midi=root_midi,
+            sample_rate=SAMPLE_RATE,
+            duration_frames=frames,
+            frames_per_beat=frames_per_beat,
+            frames_per_bar=frames_per_bar,
+            attack_frames=lane.attack_frames or 0,
+            release_frames=lane.release_frames or 0,
+            section_boundaries=list(boundaries),
+            section_densities=densities,
+            section_scales=section_scales,
+            section_roots=section_roots,
+            section_functions=[node.function for node in nodes],
+            tuning_system=station.tuning_system,
+            chord_segments_per_section=station.chord_segments_per_section,
+            chromatic_budget_permille=station.chromatic_budget_permille,
+            chord_tone_intervals=list(station.chord_tone_intervals),
+            tension_admission_enabled=enabled,
+            section_admission_modes=list(admission_modes),
+            bed_instruments=list(bed_instruments),
+        )
 
-    events = _planar_offset(events, station.planar_offset_semitones)
-    events, appearances = _apply_groove(
+    if not lane.tension_admission_enabled:
+        ctx = _make_ctx([], False)
+        events = _events_for_lane(
+            lane, nodes, boundaries, lengths, section_roots, section_segment_roots, rng, ctx, pink
+        )
+        tension_values_pass1: list[int] | None = None
+        tension_steps_pass1: list[int] | None = None
+        tension_levels_pass1: list[int] | None = None
+        deck_snap: int | None = None
+    else:
+        ctx_density = _make_ctx(["density"] * len(nodes), True)
+        snap = rng.snapshot()
+        events_pass1 = _events_for_lane(
+            lane, nodes, boundaries, lengths, section_roots, section_segment_roots, rng, ctx_density, pink
+        )
+        # The first-pass walk must see the same material the committed walk
+        # sees: lane events plus the motif and post-production. Sparse
+        # sections carry no pitched lane material at all, so their pitch and
+        # roughness are the motif's; walking the raw lane events alone moved
+        # dub45's outro by 40 permille and flipped it to all.
+        events_pass1, _, _ = _motif_and_postproc(
+            events_pass1,
+            station,
+            lane,
+            root_midi,
+            frames_per_beat,
+            rng,
+            ctx_density,
+            boundaries,
+            seed,
+            frames,
+            section_roots,
+            modes,
+            section_scales,
+        )
+        # The fx and deck draws must not drift with the admitted events: the
+        # first pass replicates the committed draw order, so its post-motif
+        # state is the state the deck would have drawn from without
+        # admission. Restoring it before the fx/deck build keeps the
+        # admitted plan's deck to admitted-range filtering alone.
+        deck_snap = rng.snapshot()
+        tension_values_pass1, tension_steps_pass1, tension_levels_pass1 = _tension_walk(
+            preset, seed, nodes, boundaries, lengths, frames_per_bar, events_pass1
+        )
+        admission_modes = [_admission_mode(value) for value in tension_values_pass1]
+        rng.restore(snap)
+        ctx = _make_ctx(admission_modes, True)
+        events = _events_for_lane(
+            lane, nodes, boundaries, lengths, section_roots, section_segment_roots, rng, ctx, pink
+        )
+
+    events, cell, appearances = _motif_and_postproc(
         events,
-        appearances,
-        boundaries,
+        station,
+        lane,
+        root_midi,
         frames_per_beat,
-        lane.pulse,
-        lane.swing_permille,
-        lane.melodic_jitter_frames,
+        rng,
+        ctx,
+        boundaries,
         seed,
         frames,
-    )
-    events = _apply_timbre(events, lane.drive_permille, lane.snap_permille)
-    events = _ornament_events(events, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
-    events = _double_events(events, station.double_copies, station.double_offset_frames, frames)
-    events, appearances = _apply_voice_leading(
-        events,
-        appearances,
-        boundaries,
         section_roots,
-        [mode for mode, _ in modes],
+        modes,
         section_scales,
-        lane,
     )
 
-    tension_values, tension_steps, tension_levels = _tension_walk(
-        preset, seed, nodes, boundaries, lengths, frames_per_bar, events
-    )
-    sections = _section_plans(
-        nodes,
-        boundaries,
-        lengths,
-        frames_per_bar,
-        modes,
-        section_roots,
-        lane,
-        events,
-        tension_values,
-        tension_steps,
-        tension_levels,
-    )
+    if not lane.tension_admission_enabled:
+        tension_values, tension_steps, tension_levels = _tension_walk(
+            preset, seed, nodes, boundaries, lengths, frames_per_bar, events
+        )
+        sections = _section_plans(
+            nodes,
+            boundaries,
+            lengths,
+            frames_per_bar,
+            modes,
+            section_roots,
+            lane,
+            events,
+            tension_values,
+            tension_steps,
+            tension_levels,
+        )
+    else:
+        if tension_values_pass1 is None or tension_steps_pass1 is None or tension_levels_pass1 is None:
+            raise PlanError("tension admission pass missing", preset=preset.name, seed=seed)
+        placeholder = _section_plans(
+            nodes,
+            boundaries,
+            lengths,
+            frames_per_bar,
+            modes,
+            section_roots,
+            lane,
+            events,
+            tension_values_pass1,
+            tension_steps_pass1,
+            tension_levels_pass1,
+        )
+        rederived = tension.rederive_section_tension(events, placeholder)
+        sections = [
+            section.model_copy(
+                update={
+                    "tension_permille": rederived[index][0],
+                    "tension_delta_permille": rederived[index][1],
+                }
+            )
+            for index, section in enumerate(placeholder)
+        ]
     rhythm_variants = _rhythm_variants(lane.techniques, len(nodes))
 
     _assert_sections_differ(preset, seed, sections, rhythm_variants)
 
+    if deck_snap is not None:
+        rng.restore(deck_snap)
     delay_send, reverb, frippertronics, dub_chain, deck, replay = _build_fx_deck_and_replay(
-        station, lane, frames, frames_per_beat, frames_per_bar, pulsed, events, nodes, boundaries, rng
+        station, lane, frames, frames_per_beat, frames_per_bar, pulsed, events, nodes, boundaries, rng, ctx
     )
 
     # The performance jitter is the last thing compose() does, and every
@@ -1296,6 +1447,7 @@ class CardSpec:
     events: CardEvents
     instrument: str | None
     min_density: Callable[[TechniqueCard], int]
+    bed: bool = False
 
 
 def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
@@ -1303,7 +1455,7 @@ def _pad_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, fra
     pad = cast(PadCard, card)
     out: list[Event] = []
     for index in range(len(frames.nodes)):
-        if frames.nodes[index].density < pad.min_density:
+        if not ctx.admits(index, "pad", frames.nodes[index].density, pad.min_density):
             continue
         boundary = frames.boundaries[index]
         length = frames.lengths[index]
@@ -1332,7 +1484,9 @@ def _lead_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, fr
     lead = cast(LeadCard, card)
     out: list[Event] = []
     for index in range(len(frames.nodes)):
-        if index < lead.entry_section or frames.nodes[index].density < lead.min_density:
+        if index < lead.entry_section:
+            continue
+        if not ctx.admits(index, "lead", frames.nodes[index].density, lead.min_density):
             continue
         length = frames.lengths[index]
         count = min(rng.between(lead.partials.min, lead.partials.max), len(LEAD_RATIOS))
@@ -1379,6 +1533,8 @@ def _drone_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, f
     drone = cast(DroneCard, card)
     out: list[Event] = []
     for index in range(len(frames.nodes)):
+        if not ctx.admits(index, "drone", frames.nodes[index].density, drone.min_density):
+            continue
         boundary = frames.boundaries[index]
         length = frames.lengths[index]
         seg_roots = frames.section_segment_roots[index]
@@ -1394,7 +1550,15 @@ def _drone_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, f
 def _poly_period_events(
     card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
 ) -> Sequence[Event]:
-    return plan_poly_period(cast(PolyPeriodCard, card), rng, ctx)
+    poly = cast(PolyPeriodCard, card)
+    if frames.nodes:
+        admitted = any(
+            ctx.admits(index, "poly_period", frames.nodes[index].density, poly.min_density)
+            for index in range(len(frames.nodes))
+        )
+        if not admitted:
+            return []
+    return plan_poly_period(poly, rng, ctx)
 
 
 def _pluck_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
@@ -1439,7 +1603,7 @@ def _min_density_card(card: TechniqueCard) -> int:
 
 CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
     {
-        "pad": CardSpec(_pad_events, "pad", _min_density_card),
+        "pad": CardSpec(_pad_events, "pad", _min_density_card, True),
         "lead": CardSpec(_lead_events, "lead", _min_density_card),
         "poly_period": CardSpec(_poly_period_events, "poly_period", _min_density_card),
         "pluck": CardSpec(_pluck_events, "ks", _min_density_card),
@@ -1448,7 +1612,7 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "hat": CardSpec(_hat_events, "hat", _pattern_min_density),
         "bass": CardSpec(_bass_events, "bass", _pattern_min_density),
         "deja_vu": CardSpec(_deja_vu_events, "pluck", _min_density_card),
-        "drone": CardSpec(_drone_events, "drone", _min_density_card),
+        "drone": CardSpec(_drone_events, "drone", _min_density_card, True),
         "pink": CardSpec(_no_events, None, lambda _: 0),
         "frippertronics": CardSpec(_no_events, None, lambda _: 0),
         "dub_chain": CardSpec(_no_events, None, lambda _: 0),

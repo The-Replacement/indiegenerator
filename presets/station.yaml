@@ -63,11 +63,12 @@ title_words:
 # planned, with the loudness slope as Farbood's strongest term, and trims the
 # section's level by up to three decibels to land inside the corridor. The
 # corridor is the form's intent; the trimmed level is what the listener
-# hears, and gate 5 asserts the delivered energy follows it. The running
-# target the corridor aims at also decides the layers: at or above 550 a
-# section takes the whole lane, at or below 450 it takes only the bed and no
-# drive, between them the node's density is in charge. The default corridor
-# is the whole range.
+# hears, and gate 5 asserts the delivered energy follows it. The planned
+# tension level T also decides the layers where a lane opts in: at or above
+# 550 a section takes the whole lane, at or below 450 it takes only the
+# bed and no drive, between them the node's density is in charge. Admission
+# is per-lane and off by default (tension_admission_enabled: false unless a
+# lane declares true). The default corridor is the whole range.
 section_graph:
   - {function: intro, next: [build, outro], density: 20, level_millibels: -12000, bars: 8, reprise_of: "", transform: identity, texture: sparse, tension_delta_min_permille: 0, tension_delta_max_permille: 0}
   - {function: build, next: [plateau, break, outro], density: 55, level_millibels: -6000, bars: 16, reprise_of: "", transform: identity, texture: open, tension_delta_min_permille: 10, tension_delta_max_permille: 90}

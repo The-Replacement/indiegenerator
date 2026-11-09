@@ -56,7 +56,8 @@ def plan_deja_vu(card: DejaVuCard, rng: SplitMix64, ctx: TechniqueContext) -> li
         frame = step * step_frames
         section = ctx.section_at(frame)
         # The layer only plays in the sections the arrangement has reached.
-        if densities and densities[min(section, len(densities) - 1)] < card.min_density:
+        step_density = densities[min(section, len(densities) - 1)] if densities else 100
+        if not ctx.admits(section, "pluck", step_density, card.min_density):
             continue
         probability = replay_permille(card, section, section_count)
         scale = ctx.section_scales[section] if ctx.section_scales else ctx.scale_midi

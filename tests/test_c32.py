@@ -24,7 +24,7 @@ from __future__ import annotations
 import pytest
 
 from indiegen.compose import compose, director
-from indiegen.compose.planner import MINIMUM_SECTION_BARS
+from indiegen.compose.planner import MINIMUM_SECTION_BARS, _admission_mode
 from indiegen.compose.techniques.t6_drums import _pulses
 from indiegen.config import BassCard, HatCard, KickCard, SnareCard, load_preset
 from indiegen.plan import SAMPLE_RATE, HatEvent, Plan, RhythmEvent
@@ -35,8 +35,22 @@ RATE = SAMPLE_RATE
 PULSED_LANES = ("motorik", "kosmische", "dub-electronic", "indie-noise")
 
 
-def _plan(lane: str, seconds: int) -> Plan:
-    return director(compose(load_preset(lane), SEED, seconds * RATE))
+def _plan(lane: str, seconds: int, *, admission: bool | None = None) -> Plan:
+    preset = load_preset(lane)
+    if admission is not None:
+        entry = preset.lanes[0]
+        preset = preset.model_copy(
+            update={
+                "lanes": [
+                    type(entry)(
+                        lane=entry.lane,
+                        weight=entry.weight,
+                        parameters=entry.parameters.model_copy(update={"tension_admission_enabled": admission}),
+                    )
+                ]
+            }
+        )
+    return director(compose(preset, SEED, seconds * RATE))
 
 
 @pytest.mark.parametrize("lane", PULSED_LANES)
@@ -68,9 +82,13 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
     c33 the plan hid it, because the renderer added the offset after the gate
     had looked. Asking the grid frame keeps the assertion strict instead of
     widening it into a tolerance.
+
+    Tension admission (c9b, when enabled) may override the density gate in
+    ``all`` mode; the gate is asserted only where admission defers to density.
     """
     plan = _plan(lane, seconds)
     presets = load_preset(lane).lanes[0].parameters
+    admission_on = presets.tension_admission_enabled
     minimums = {
         card.kind: card.pattern.min_density
         for card in presets.techniques
@@ -78,6 +96,8 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
     }
     events = schedule(plan)
     for section in plan.sections:
+        if admission_on and _admission_mode(section.tension_permille) == "all":
+            continue
         for voice, minimum in minimums.items():
             if section.density >= minimum:
                 continue

@@ -28,6 +28,7 @@ drive_permille: 200
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
 timbre: {break: 995, build: 1824, drift: 1878, intro: 994, outro: 862, peak: 2036, plateau: 1621, return: 1674}
+tension_admission_enabled: false
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 6000, q_num: 1, q_den: 1}

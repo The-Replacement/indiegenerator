@@ -34,7 +34,8 @@ def plan_plucks(card: PluckCard, rng: SplitMix64, ctx: TechniqueContext) -> list
         # The layer only plays in the sections the arrangement has reached.
         section = ctx.section_at(start)
         densities = ctx.section_densities
-        if densities and densities[min(section, len(densities) - 1)] < card.min_density:
+        pluck_density = densities[min(section, len(densities) - 1)] if densities else 100
+        if not ctx.admits(section, "ks", pluck_density, card.min_density):
             start += spacing
             continue
         for voice, detune in ((0, 0), (1, card.detune_cents)):

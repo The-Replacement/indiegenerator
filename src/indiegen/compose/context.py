@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from indiegen.errors import PlanError
+
 
 class TechniqueContext(BaseModel):
     """The facts a technique draws against."""
@@ -34,6 +36,9 @@ class TechniqueContext(BaseModel):
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = []
+    tension_admission_enabled: bool = False
+    section_admission_modes: list[str] = []
+    bed_instruments: list[str] = []
 
     def section_at(self, frame: int) -> int:
         """The section a frame falls in, from the boundaries alone."""
@@ -46,3 +51,32 @@ class TechniqueContext(BaseModel):
     def section_index(self, frame: int) -> int:
         """The section a frame falls in, clamped to the declared sections."""
         return min(self.section_at(frame), max(0, len(self.section_densities) - 1))
+
+    def admits(self, section: int, instrument: str, density: int, min_density: int) -> bool:
+        """Whether a layer plays in a section under tension admission.
+
+        Off (or no modes declared) falls back to density: the layer plays
+        where the node's density reaches its threshold. ``all`` admits
+        every instrument, ``density`` is the threshold, ``bed`` admits only
+        the bed instruments and falls back to density when the lane declares
+        no bed. An unknown mode is a preset bug and raises ``PlanError``.
+        """
+        density_ok = density >= min_density
+        if not self.tension_admission_enabled or not self.section_admission_modes:
+            return density_ok
+        if not (0 <= section < len(self.section_admission_modes)):
+            return density_ok
+        mode = self.section_admission_modes[section]
+        if mode == "density":
+            return density_ok
+        if mode == "all":
+            return True
+        if mode == "bed":
+            if not self.bed_instruments:
+                return density_ok
+            return instrument in self.bed_instruments
+        raise PlanError(
+            f"unknown tension admission mode {mode!r}",
+            preset=self.preset,
+            seed=self.seed,
+        )

@@ -30,6 +30,7 @@ snap_permille: 700
 # and asserted by gate 6. The numbers are the medians of twenty renders
 # of the lane, one per seed.
 timbre: {break: 6334, build: 7061, drift: 7229, intro: 6301, outro: 6317, peak: 7506, plateau: 6989, return: 7461}
+tension_admission_enabled: false
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}

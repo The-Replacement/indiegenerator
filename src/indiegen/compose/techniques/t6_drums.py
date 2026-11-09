@@ -89,7 +89,7 @@ def _pulses(card: PatternCard, density: int) -> int:
     return max(1, card.euclid_k - fall)
 
 
-def _audible(ctx: TechniqueContext, frame: int, card: PatternCard) -> bool:
+def _audible(ctx: TechniqueContext, frame: int, card: PatternCard, instrument: str) -> bool:
     """Whether the voice's layer has reached the section this FRAME is in.
 
     The gate belongs to the frame and not to the bar. A bar that straddles
@@ -105,7 +105,8 @@ def _audible(ctx: TechniqueContext, frame: int, card: PatternCard) -> bool:
     if not densities:
         return True
     section = ctx.section_at(frame)
-    return densities[min(section, len(densities) - 1)] >= card.min_density
+    density = densities[min(section, len(densities) - 1)]
+    return ctx.admits(section, instrument, density, card.min_density)
 
 
 def _hit_frames(
@@ -114,6 +115,7 @@ def _hit_frames(
     ctx: TechniqueContext,
     section_start: int,
     section_end: int,
+    instrument: str,
 ) -> list[tuple[int, int]]:
     """The hits of one voice: (frame, velocity millibels) in section order."""
     frames_per_bar = ctx.frames_per_bar
@@ -129,7 +131,8 @@ def _hit_frames(
         section = ctx.section_at(bar_start)
         # The layers come and go with the sections: a voice that the
         # arrangement has not reached yet does not play.
-        if densities and densities[min(section, len(densities) - 1)] < card.min_density:
+        bar_density = densities[min(section, len(densities) - 1)] if densities else 100
+        if not ctx.admits(section, instrument, bar_density, card.min_density):
             continue
         pattern = patterns.get(section)
         if pattern is None:
@@ -148,7 +151,7 @@ def _hit_frames(
             if not active:
                 if card.ghost_permille and rng.below(1000) < card.ghost_permille:
                     frame = bar_start + step * step_frames
-                    if section_start <= frame < section_end and _audible(ctx, frame, card):
+                    if section_start <= frame < section_end and _audible(ctx, frame, card, instrument):
                         hits.append((frame, card.velocity_millibels - 12000))
                 continue
             if not _condition_holds(
@@ -163,7 +166,7 @@ def _hit_frames(
                 continue
             occurrence += 1
             frame = bar_start + step * step_frames
-            if section_start <= frame < section_end and _audible(ctx, frame, card):
+            if section_start <= frame < section_end and _audible(ctx, frame, card, instrument):
                 hits.append((frame, card.velocity_millibels))
     return hits
 
@@ -177,7 +180,7 @@ def _pink(card: PinkCard | None) -> PinkCard:
 
 def plan_kick(card: KickCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> KickEvent:
     """The kick drum's hits."""
-    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames, "kick")
     return KickEvent(
         kind="kick",
         instrument="kick",
@@ -202,7 +205,7 @@ def plan_kick(card: KickCard, rng: SplitMix64, ctx: TechniqueContext, pink: Pink
 
 def plan_snare(card: SnareCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> SnareEvent:
     """The snare drum's hits."""
-    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames, "snare")
     return SnareEvent(
         kind="snare",
         instrument="snare",
@@ -226,7 +229,7 @@ def plan_snare(card: SnareCard, rng: SplitMix64, ctx: TechniqueContext, pink: Pi
 
 def plan_hat(card: HatCard, rng: SplitMix64, ctx: TechniqueContext, pink: PinkCard | None) -> HatEvent:
     """The hat's hits."""
-    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames, "hat")
     return HatEvent(
         kind="hat",
         instrument="hat",
@@ -255,7 +258,7 @@ def plan_bass(card: BassCard, rng: SplitMix64, ctx: TechniqueContext, pink: Pink
     is heard in the bass and not only in the notes on top of it. The jumps
     are the only surprise, and they are rare.
     """
-    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames)
+    hits = _hit_frames(card.pattern, rng, ctx, 0, ctx.duration_frames, "bass")
     bass: list[BassHit] = []
     for index, (frame, velocity) in enumerate(hits):
         root = ctx.section_roots[ctx.section_at(frame)] if ctx.section_roots else ctx.root_midi

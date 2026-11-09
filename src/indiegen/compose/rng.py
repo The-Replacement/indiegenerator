@@ -61,6 +61,14 @@ class SplitMix64:
             raise ValueError("cannot choose from an empty sequence")
         return items[self.below(len(items))]
 
+    def snapshot(self) -> int:
+        """The current state, to be restored with :meth:`restore`."""
+        return self._state
+
+    def restore(self, state: int) -> None:
+        """Restore a state taken by :meth:`snapshot`."""
+        self._state = state & MASK64
+
 
 def seed_from_bytes(payload: bytes) -> int:
     """Derive a 64-bit seed from bytes, so the seed material is never guessed."""
