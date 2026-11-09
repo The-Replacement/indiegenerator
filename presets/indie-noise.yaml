@@ -29,7 +29,7 @@ snap_permille: 700
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6. The numbers are the medians of twenty renders
 # of the lane, one per seed.
-timbre: {break: 7318, build: 7905, drift: 7229, intro: 7378, outro: 7376, peak: 7506, plateau: 7736, return: 7983}
+timbre: {break: 6334, build: 7061, drift: 7229, intro: 6301, outro: 6317, peak: 7506, plateau: 6989, return: 7461}
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 16000, q_num: 1, q_den: 1}

@@ -36,7 +36,7 @@ duck: {depth_millibels: -6000, release_frames: 8820}
 # The timbre this lane expects for each kind of section, in hertz.
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
-timbre: {break: 2150, build: 4593, drift: 4486, intro: 1473, outro: 1401, plateau: 4875, return: 4708}
+timbre: {break: 2018, build: 5372, drift: 5961, intro: 2198, outro: 2242, plateau: 4875, return: 6569}
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 12000, q_num: 1, q_den: 1}
