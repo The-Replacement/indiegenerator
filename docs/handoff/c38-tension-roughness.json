@@ -1,0 +1,4101 @@
+{
+  "pooled": {
+    "measured_mean": 0.8699896596649845,
+    "null_mean": -0.00014377431499222436,
+    "diff": 0.8701334339799768,
+    "T": 0.14985622568500778,
+    "non_exempt_tracks": 135,
+    "tracks": 135,
+    "total_sections": 637,
+    "non_exempt_sections": 637
+  },
+  "a": {
+    "measured_mean": 0.8390043031576988,
+    "null_mean": -0.0021704591204552708,
+    "diff": 0.8411747622781541,
+    "T": 0.14782954087954472,
+    "non_exempt_tracks": 15,
+    "tracks": 15,
+    "total_sections": 73,
+    "non_exempt_sections": 73
+  },
+  "b": {
+    "measured_mean": 0.878727160714651,
+    "null_mean": 0.000623168093687235,
+    "diff": 0.8781039926209637,
+    "T": 0.15062316809368723,
+    "non_exempt_tracks": 90,
+    "tracks": 90,
+    "total_sections": 424,
+    "non_exempt_sections": 424
+  },
+  "c": {
+    "measured_mean": 0.859269834769628,
+    "null_mean": -0.00143125913829908,
+    "diff": 0.8607010939079272,
+    "T": 0.1485687408617009,
+    "non_exempt_tracks": 30,
+    "tracks": 30,
+    "total_sections": 140,
+    "non_exempt_sections": 140
+  },
+  "verdict": {
+    "verdict": "PROMOTE-ELIGIBLE",
+    "corpus_met": true,
+    "total_sections": 637,
+    "corpus_target": 500,
+    "pooled_pass": true,
+    "a_pass": true,
+    "b_pass": true,
+    "c_pass": true,
+    "margin": 0.15,
+    "reasons": [],
+    "slice2_attempted": false,
+    "slice2_note": "Slice 2 DSP not attempted in T9: vacuous per spec, promotion follows AC-3.3 alone."
+  },
+  "per_track": [
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9910721095435864,
+      "planned": [
+        500,
+        547,
+        507,
+        556,
+        486
+      ],
+      "measured": [
+        500.0,
+        532.2116103657967,
+        506.1323859505989,
+        532.5188708609422,
+        487.51090497258457
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9947441903275785,
+      "planned": [
+        500,
+        546,
+        510,
+        538,
+        643,
+        562
+      ],
+      "measured": [
+        500.0,
+        536.506734870122,
+        511.08007993713386,
+        527.4245303873023,
+        588.7723132839062,
+        538.4932947981873
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 4002,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9904427930961702,
+      "planned": [
+        500,
+        549,
+        577,
+        616,
+        626,
+        328
+      ],
+      "measured": [
+        500.0,
+        530.6433578235336,
+        539.1923202076298,
+        582.2971988902761,
+        577.2962911551339,
+        311.2169064388335
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9961177221577119,
+      "planned": [
+        500,
+        540,
+        510,
+        536,
+        625,
+        563
+      ],
+      "measured": [
+        500.0,
+        538.5485380667639,
+        507.62481079645454,
+        534.9682942277357,
+        633.6906178981488,
+        575.5098650506839
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6980485360295571,
+      "planned": [
+        500,
+        542,
+        511,
+        549,
+        553,
+        289
+      ],
+      "measured": [
+        500.0,
+        537.8383481389885,
+        521.1656043931664,
+        552.6038259392457,
+        564.2939135614126,
+        499.60406599837404
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 4002,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6165855187296142,
+      "planned": [
+        500,
+        540,
+        569,
+        579,
+        521
+      ],
+      "measured": [
+        500.0,
+        536.128588107834,
+        578.6657699387282,
+        574.8460084224125,
+        321.90881230619186
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6083659277027811,
+      "planned": [
+        500,
+        556,
+        582,
+        503
+      ],
+      "measured": [
+        500.0,
+        544.534797467028,
+        539.7836034902474,
+        138.4675176209024
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8665972871494515,
+      "planned": [
+        500,
+        545,
+        587,
+        529,
+        421
+      ],
+      "measured": [
+        500.0,
+        526.134265229118,
+        605.15743659855,
+        566.7148416780386,
+        481.4708056855078
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 4002,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.657963777926232,
+      "planned": [
+        500,
+        556,
+        582,
+        528,
+        422
+      ],
+      "measured": [
+        500.0,
+        553.083364644709,
+        550.7989258066324,
+        185.13940692637374,
+        202.5209332941723
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.570218528131288,
+      "planned": [
+        500,
+        544,
+        569,
+        510
+      ],
+      "measured": [
+        500.0,
+        526.7340436270257,
+        529.9839270370312,
+        353.9420764605547
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6549437381328691,
+      "planned": [
+        500,
+        536,
+        511,
+        545,
+        565,
+        496
+      ],
+      "measured": [
+        500.0,
+        531.6240984882177,
+        512.8279424170503,
+        537.3581333625806,
+        537.6184815730085,
+        311.96152945892624
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 4002,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.992277525020062,
+      "planned": [
+        500,
+        544,
+        569,
+        508
+      ],
+      "measured": [
+        500.0,
+        530.9428894699415,
+        558.365356817139,
+        508.3285293339575
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9718081118640144,
+      "planned": [
+        500,
+        532,
+        559,
+        509
+      ],
+      "measured": [
+        500.0,
+        534.9935375377868,
+        550.9803783199393,
+        499.04747689915547
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9997913803739055,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        531.185694897687,
+        487.1668584045059
+      ]
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 4002,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9760874011806604,
+      "planned": [
+        500,
+        532,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        521.9988323437764,
+        561.0170477227333,
+        509.22309770234165
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 45,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9534194567773667,
+      "planned": [
+        500,
+        553,
+        510,
+        562,
+        487
+      ],
+      "measured": [
+        500.0,
+        536.4637281632564,
+        511.58852461431877,
+        528.7767328470826,
+        486.5842548501899
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9747937507960803,
+      "planned": [
+        500,
+        545,
+        510,
+        571,
+        490
+      ],
+      "measured": [
+        500.0,
+        535.324811706266,
+        511.9865098097013,
+        540.2798804636365,
+        492.84836880840794
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 90,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9992507197681872,
+      "planned": [
+        500,
+        549,
+        506,
+        565,
+        488
+      ],
+      "measured": [
+        500.0,
+        530.1709490293554,
+        502.284492347962,
+        540.2992712678587,
+        489.99527040633365
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 120,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9925642302982122,
+      "planned": [
+        500,
+        555,
+        511,
+        556,
+        490
+      ],
+      "measured": [
+        500.0,
+        538.6595502260952,
+        512.5040446370205,
+        536.036622167977,
+        493.3333690338167
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9910721095435864,
+      "planned": [
+        500,
+        547,
+        507,
+        556,
+        486
+      ],
+      "measured": [
+        500.0,
+        532.2116103657967,
+        506.1323859505989,
+        532.5188708609422,
+        487.51090497258457
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 480,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9849709108981118,
+      "planned": [
+        500,
+        552,
+        508,
+        568,
+        487
+      ],
+      "measured": [
+        500.0,
+        535.8222081974284,
+        507.4514261460003,
+        537.4509021828877,
+        487.5554851167578
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 45,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9621695541775185,
+      "planned": [
+        500,
+        554,
+        509,
+        518,
+        637,
+        564
+      ],
+      "measured": [
+        500.0,
+        535.392498592051,
+        506.6665718370163,
+        510.50317014101864,
+        643.5205251832857,
+        594.7134504910633
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9869484622756719,
+      "planned": [
+        500,
+        551,
+        509,
+        540,
+        649,
+        560
+      ],
+      "measured": [
+        500.0,
+        535.1934508394427,
+        511.8486994709955,
+        525.0617364885533,
+        612.8812327023214,
+        558.2720814079572
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9916771106835778,
+      "planned": [
+        500,
+        540,
+        511,
+        546,
+        656,
+        562
+      ],
+      "measured": [
+        500.0,
+        528.9481405945058,
+        512.7021802977762,
+        529.2922584947664,
+        608.342860545174,
+        554.3201689397956
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9665653472578496,
+      "planned": [
+        500,
+        544,
+        509,
+        528,
+        657,
+        563
+      ],
+      "measured": [
+        500.0,
+        531.9816328671568,
+        509.2099422239252,
+        517.9161777060283,
+        649.5495587519249,
+        591.7881958122506
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9947441903275785,
+      "planned": [
+        500,
+        546,
+        510,
+        538,
+        643,
+        562
+      ],
+      "measured": [
+        500.0,
+        536.506734870122,
+        511.08007993713386,
+        527.4245303873023,
+        588.7723132839062,
+        538.4932947981873
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9960606700298013,
+      "planned": [
+        500,
+        549,
+        511,
+        535,
+        636,
+        562
+      ],
+      "measured": [
+        500.0,
+        532.7641816171486,
+        513.0657384116117,
+        522.1876585995084,
+        591.3855839178766,
+        546.2581989385505
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6129021161638194,
+      "planned": [
+        500,
+        552,
+        573,
+        506
+      ],
+      "measured": [
+        500.0,
+        534.391591889565,
+        528.2280938112357,
+        322.42524351968575
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9831555689877962,
+      "planned": [
+        500,
+        544,
+        579,
+        506
+      ],
+      "measured": [
+        500.0,
+        526.836462264824,
+        557.7830165481874,
+        511.4849747463999
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.615233754945226,
+      "planned": [
+        500,
+        553,
+        583,
+        504
+      ],
+      "measured": [
+        500.0,
+        535.575007976891,
+        532.7528901709919,
+        283.8041129106306
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9600774696437537,
+      "planned": [
+        500,
+        551,
+        581,
+        508
+      ],
+      "measured": [
+        500.0,
+        535.6972170384837,
+        541.6937118590279,
+        495.06699610956167
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5732836026394976,
+      "planned": [
+        500,
+        551,
+        571,
+        511
+      ],
+      "measured": [
+        500.0,
+        536.6755228631071,
+        531.5022363054433,
+        327.5972676850448
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9918854299441822,
+      "planned": [
+        500,
+        555,
+        583,
+        508
+      ],
+      "measured": [
+        500.0,
+        540.1417674140516,
+        551.5732007830771,
+        502.0903061358349
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9750491680571955,
+      "planned": [
+        500,
+        541,
+        565,
+        510
+      ],
+      "measured": [
+        500.0,
+        543.717069939091,
+        573.8354190323626,
+        525.5632823017452
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9923215477765084,
+      "planned": [
+        500,
+        544,
+        568,
+        533,
+        422
+      ],
+      "measured": [
+        500.0,
+        535.9453674660592,
+        557.4533917933913,
+        529.895269712474,
+        394.2080657282045
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9937932706897542,
+      "planned": [
+        500,
+        539,
+        509,
+        532,
+        624,
+        562
+      ],
+      "measured": [
+        500.0,
+        537.9450664081807,
+        510.5120080142919,
+        522.2106826462444,
+        618.1250147101998,
+        565.9700175570965
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9966916844450593,
+      "planned": [
+        500,
+        541,
+        511,
+        534,
+        627,
+        567
+      ],
+      "measured": [
+        500.0,
+        547.4810340348566,
+        519.2731812961615,
+        536.1204168378952,
+        628.5774140497497,
+        575.6013632525802
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9961177221577119,
+      "planned": [
+        500,
+        540,
+        510,
+        536,
+        625,
+        563
+      ],
+      "measured": [
+        500.0,
+        538.5485380667639,
+        507.62481079645454,
+        534.9682942277357,
+        633.6906178981488,
+        575.5098650506839
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9959782849404805,
+      "planned": [
+        500,
+        543,
+        513,
+        532,
+        634,
+        563
+      ],
+      "measured": [
+        500.0,
+        542.3015607061924,
+        513.8870957012598,
+        530.4652807536118,
+        613.554624442338,
+        548.5414828929106
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9683573529691568,
+      "planned": [
+        500,
+        539,
+        568,
+        503
+      ],
+      "measured": [
+        500.0,
+        546.4437744201018,
+        581.2012408947924,
+        523.5602885714425
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9593872315180295,
+      "planned": [
+        500,
+        541,
+        565,
+        509
+      ],
+      "measured": [
+        500.0,
+        541.819697375286,
+        580.4299005794367,
+        527.6812352504559
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9999220516906329,
+      "planned": [
+        500,
+        542,
+        510,
+        548,
+        548,
+        289
+      ],
+      "measured": [
+        500.0,
+        541.9142364454384,
+        511.7709506421778,
+        546.9357959314493,
+        548.8988558006293,
+        282.5462704925516
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9997448616757678,
+      "planned": [
+        500,
+        540,
+        509,
+        547,
+        548,
+        286
+      ],
+      "measured": [
+        500.0,
+        539.2544362316814,
+        514.3494851994258,
+        549.9801698948602,
+        548.2956816181063,
+        295.8387051798456
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6980485360295571,
+      "planned": [
+        500,
+        542,
+        511,
+        549,
+        553,
+        289
+      ],
+      "measured": [
+        500.0,
+        537.8383481389885,
+        521.1656043931664,
+        552.6038259392457,
+        564.2939135614126,
+        499.60406599837404
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9994735018742095,
+      "planned": [
+        500,
+        542,
+        509,
+        552,
+        551,
+        288
+      ],
+      "measured": [
+        500.0,
+        542.7958599203628,
+        515.3413593168549,
+        559.4501190882023,
+        558.7513888242798,
+        291.78519851251355
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9740601456378825,
+      "planned": [
+        500,
+        537,
+        567,
+        508
+      ],
+      "measured": [
+        500.0,
+        539.7697529627914,
+        574.312214924287,
+        524.1073541283729
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9898312526609927,
+      "planned": [
+        500,
+        539,
+        565,
+        511
+      ],
+      "measured": [
+        500.0,
+        539.3784774285579,
+        564.8006580839636,
+        519.7109883218476
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9925619412107703,
+      "planned": [
+        500,
+        545,
+        571,
+        612,
+        562,
+        452
+      ],
+      "measured": [
+        500.0,
+        538.5334760985724,
+        582.2404531553166,
+        605.7850783148663,
+        565.9952079518071,
+        457.56990288648365
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.99333032773461,
+      "planned": [
+        500,
+        542,
+        568,
+        614,
+        563,
+        450
+      ],
+      "measured": [
+        500.0,
+        535.6087639788769,
+        578.5293115173467,
+        605.5754069277103,
+        562.5538836718976,
+        447.9686514171541
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9898038893866347,
+      "planned": [
+        500,
+        541,
+        566,
+        615,
+        562,
+        453
+      ],
+      "measured": [
+        500.0,
+        537.9829676911212,
+        570.0432253947287,
+        611.6875549564224,
+        571.1668188945084,
+        425.1817128218312
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9931328826082803,
+      "planned": [
+        500,
+        542,
+        570,
+        611,
+        566,
+        452
+      ],
+      "measured": [
+        500.0,
+        528.4542413196342,
+        574.1548014311701,
+        613.1271591512672,
+        572.3307151600536,
+        451.81680437555804
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9840483959621722,
+      "planned": [
+        500,
+        557,
+        588,
+        509
+      ],
+      "measured": [
+        500.0,
+        547.528394865939,
+        558.6799236255489,
+        501.08939370078247
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9525708665162635,
+      "planned": [
+        500,
+        561,
+        590,
+        502
+      ],
+      "measured": [
+        500.0,
+        552.6181288984307,
+        563.3453460017015,
+        474.7542389671828
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9848932696874743,
+      "planned": [
+        500,
+        550,
+        587,
+        513
+      ],
+      "measured": [
+        500.0,
+        542.3144668004957,
+        559.0860946567932,
+        504.5007890084096
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5943212426665864,
+      "planned": [
+        500,
+        560,
+        582,
+        512
+      ],
+      "measured": [
+        500.0,
+        549.2006270590185,
+        532.5691385417625,
+        330.7798111260166
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6083659277027811,
+      "planned": [
+        500,
+        556,
+        582,
+        503
+      ],
+      "measured": [
+        500.0,
+        544.534797467028,
+        539.7836034902474,
+        138.4675176209024
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6018121959701165,
+      "planned": [
+        500,
+        552,
+        582,
+        507
+      ],
+      "measured": [
+        500.0,
+        543.8095394699964,
+        542.1896500319093,
+        263.2395270436885
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 45,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8511302431103044,
+      "planned": [
+        500,
+        557,
+        591,
+        527,
+        414
+      ],
+      "measured": [
+        500.0,
+        543.1283090511063,
+        558.9510907692991,
+        488.90058910049447,
+        480.2288789309146
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5982590190216321,
+      "planned": [
+        500,
+        551,
+        576,
+        524,
+        418
+      ],
+      "measured": [
+        500.0,
+        535.4827087742557,
+        530.9179960059953,
+        0.0,
+        76.22094627870048
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 90,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.980195493805386,
+      "planned": [
+        500,
+        551,
+        580,
+        532,
+        416
+      ],
+      "measured": [
+        500.0,
+        541.4277788561374,
+        557.7484383789141,
+        499.15392323605886,
+        406.6482526118506
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 120,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9794081792550281,
+      "planned": [
+        500,
+        548,
+        583,
+        530,
+        416
+      ],
+      "measured": [
+        500.0,
+        530.2995378931721,
+        566.3891965185962,
+        529.7246112058566,
+        464.58391402549364
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8665972871494515,
+      "planned": [
+        500,
+        545,
+        587,
+        529,
+        421
+      ],
+      "measured": [
+        500.0,
+        526.134265229118,
+        605.15743659855,
+        566.7148416780386,
+        481.4708056855078
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 480,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9736836745607486,
+      "planned": [
+        500,
+        552,
+        584,
+        533,
+        422
+      ],
+      "measured": [
+        500.0,
+        540.6898390948252,
+        553.1336295721455,
+        516.6787593711455,
+        378.00712694906906
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9848073860564983,
+      "planned": [
+        500,
+        554,
+        590,
+        506
+      ],
+      "measured": [
+        500.0,
+        540.0986829453484,
+        561.3425911198369,
+        492.3721546898539
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.39447953640040084,
+      "planned": [
+        500,
+        559,
+        592,
+        528,
+        539,
+        507
+      ],
+      "measured": [
+        500.0,
+        545.7986865929317,
+        560.1925625901933,
+        509.496460576461,
+        108.4432374847596,
+        164.6105856398576
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5223649456897309,
+      "planned": [
+        500,
+        556,
+        566,
+        529,
+        563,
+        507
+      ],
+      "measured": [
+        500.0,
+        545.9291149487713,
+        512.4634086142818,
+        448.92607634471915,
+        476.9059971918533,
+        418.77959109414826
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8580378194927386,
+      "planned": [
+        500,
+        554,
+        581,
+        531,
+        558,
+        512
+      ],
+      "measured": [
+        500.0,
+        543.1232536874586,
+        551.570499735829,
+        491.7283984956381,
+        522.2302728692343,
+        499.4198201353661
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8625595991811952,
+      "planned": [
+        500,
+        544,
+        579,
+        524,
+        562,
+        502
+      ],
+      "measured": [
+        500.0,
+        520.3188282438158,
+        583.1447025407742,
+        544.7724890872579,
+        581.3486989767497,
+        522.8816697342661
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.954174301551762,
+      "planned": [
+        500,
+        548,
+        580,
+        533,
+        558,
+        507
+      ],
+      "measured": [
+        500.0,
+        525.2713402112456,
+        556.489282969341,
+        533.2499872937116,
+        548.1073190225643,
+        509.38243957662417
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5792055272140308,
+      "planned": [
+        500,
+        557,
+        588,
+        510
+      ],
+      "measured": [
+        500.0,
+        523.2577758494367,
+        524.9306827310645,
+        354.74026376742916
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.7129298391946672,
+      "planned": [
+        500,
+        555,
+        580,
+        509
+      ],
+      "measured": [
+        500.0,
+        520.5945596322128,
+        598.5857479810995,
+        547.0169100723331
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9357680478723673,
+      "planned": [
+        500,
+        542,
+        575,
+        511
+      ],
+      "measured": [
+        500.0,
+        527.372594458671,
+        569.9550205645364,
+        525.5462295378892
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9626420711059586,
+      "planned": [
+        500,
+        554,
+        585,
+        509
+      ],
+      "measured": [
+        500.0,
+        526.0767882980738,
+        552.8737231609583,
+        514.8468271101932
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.570218528131288,
+      "planned": [
+        500,
+        544,
+        569,
+        510
+      ],
+      "measured": [
+        500.0,
+        526.7340436270257,
+        529.9839270370312,
+        353.9420764605547
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5624526484728188,
+      "planned": [
+        500,
+        543,
+        576,
+        508
+      ],
+      "measured": [
+        500.0,
+        527.024728812473,
+        529.1735701875599,
+        326.58310627211773
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 45,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9902473295866709,
+      "planned": [
+        500,
+        555,
+        512,
+        561,
+        492
+      ],
+      "measured": [
+        500.0,
+        538.7740100110406,
+        513.0771193704118,
+        552.245492920765,
+        495.17801894139524
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6240234988663161,
+      "planned": [
+        500,
+        554,
+        514,
+        550,
+        573,
+        500
+      ],
+      "measured": [
+        500.0,
+        529.1588025080308,
+        497.62107062146407,
+        535.6283701851756,
+        533.2088280825029,
+        270.3237329336205
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 90,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9792616147845208,
+      "planned": [
+        500,
+        551,
+        510,
+        556,
+        567,
+        492
+      ],
+      "measured": [
+        500.0,
+        531.7488750664922,
+        515.1529885461401,
+        537.2564682332439,
+        550.4126933666802,
+        501.41507061439006
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 120,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6286824770765859,
+      "planned": [
+        500,
+        541,
+        509,
+        560,
+        558,
+        500
+      ],
+      "measured": [
+        500.0,
+        532.3254905681822,
+        515.411519585508,
+        537.0082003868833,
+        532.1244368702057,
+        344.01784196248275
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6549437381328691,
+      "planned": [
+        500,
+        536,
+        511,
+        545,
+        565,
+        496
+      ],
+      "measured": [
+        500.0,
+        531.6240984882177,
+        512.8279424170503,
+        537.3581333625806,
+        537.6184815730085,
+        311.96152945892624
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 480,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9970555754290554,
+      "planned": [
+        500,
+        544,
+        510,
+        545,
+        564,
+        498
+      ],
+      "measured": [
+        500.0,
+        531.6640813308788,
+        509.95480630959196,
+        535.567808688428,
+        551.4055861851356,
+        499.17130510858266
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9851798898108528,
+      "planned": [
+        500,
+        552,
+        560,
+        510
+      ],
+      "measured": [
+        500.0,
+        533.6347483017375,
+        549.223744977732,
+        504.76134389031836
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9641251556458157,
+      "planned": [
+        500,
+        554,
+        568,
+        513
+      ],
+      "measured": [
+        500.0,
+        531.9881323969364,
+        541.9684511933057,
+        493.99750511263204
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9915313313782935,
+      "planned": [
+        500,
+        547,
+        567,
+        512
+      ],
+      "measured": [
+        500.0,
+        533.7491306502844,
+        558.2856616673561,
+        510.4841500106916
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6237243534602741,
+      "planned": [
+        500,
+        547,
+        573,
+        506
+      ],
+      "measured": [
+        500.0,
+        532.4567078070727,
+        535.5774911972633,
+        333.23016889699466
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9986367951996334,
+      "planned": [
+        500,
+        546,
+        571,
+        509
+      ],
+      "measured": [
+        500.0,
+        531.7003375393577,
+        552.6418083735964,
+        504.64305831915266
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9948511332958664,
+      "planned": [
+        500,
+        542,
+        567,
+        506
+      ],
+      "measured": [
+        500.0,
+        532.43845816624,
+        555.5141096181028,
+        509.5224860032036
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5331052278593428,
+      "planned": [
+        500,
+        530,
+        556,
+        505
+      ],
+      "measured": [
+        500.0,
+        529.5560391469801,
+        527.9672437719855,
+        246.8086767248779
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8236580981817155,
+      "planned": [
+        500,
+        532,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        530.7573382739472,
+        616.4159926359716,
+        556.8624163511291
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5192341981039862,
+      "planned": [
+        500,
+        532,
+        558,
+        509
+      ],
+      "measured": [
+        500.0,
+        545.3324613125752,
+        541.008080301368,
+        264.88145989565214
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5577703749018185,
+      "planned": [
+        500,
+        531,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        545.2459098361725,
+        541.030815430495,
+        324.26331593214286
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9718081118640144,
+      "planned": [
+        500,
+        532,
+        559,
+        509
+      ],
+      "measured": [
+        500.0,
+        534.9935375377868,
+        550.9803783199393,
+        499.04747689915547
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9814501407064575,
+      "planned": [
+        500,
+        532,
+        559,
+        509
+      ],
+      "measured": [
+        500.0,
+        531.0266616712837,
+        548.8113755603365,
+        499.87264211239
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 45,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9928074489779675,
+      "planned": [
+        500,
+        532,
+        489
+      ],
+      "measured": [
+        500.0,
+        536.0992438879616,
+        494.1667924387237
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9985433154371941,
+      "planned": [
+        500,
+        533,
+        489
+      ],
+      "measured": [
+        500.0,
+        531.9424858508015,
+        492.0890202666816
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 90,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9999520811831745,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        528.6962855514016,
+        488.74231470250436
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 120,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9939591560921185,
+      "planned": [
+        500,
+        532,
+        487
+      ],
+      "measured": [
+        500.0,
+        529.1716606442498,
+        481.54131968042395
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 240,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9997913803739055,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        531.185694897687,
+        487.1668584045059
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 480,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.999926302682358,
+      "planned": [
+        500,
+        533,
+        488
+      ],
+      "measured": [
+        500.0,
+        537.0811645115143,
+        487.28428118188697
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 45,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9984873633197049,
+      "planned": [
+        500,
+        531,
+        557,
+        506
+      ],
+      "measured": [
+        500.0,
+        534.2718830450146,
+        557.4255663933599,
+        507.42186472157607
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9572839137991155,
+      "planned": [
+        500,
+        531,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        537.0180107050904,
+        556.3643320963507,
+        491.9092140519158
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 90,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.4784203152484878,
+      "planned": [
+        500,
+        532,
+        558,
+        509
+      ],
+      "measured": [
+        500.0,
+        522.5822866522161,
+        520.6798645982624,
+        303.0219976251759
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 120,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9615778329204684,
+      "planned": [
+        500,
+        531,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        526.8531162531746,
+        577.2162778755351,
+        519.2133517424481
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 240,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9888446356434792,
+      "planned": [
+        500,
+        533,
+        559,
+        509
+      ],
+      "measured": [
+        500.0,
+        535.4572960765759,
+        557.8157196672323,
+        501.1709335176886
+      ]
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 480,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9832555203640846,
+      "planned": [
+        500,
+        532,
+        559,
+        509
+      ],
+      "measured": [
+        500.0,
+        535.4094505413213,
+        574.8305481930208,
+        521.1780250527684
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5000,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9859735037145191,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        521.5461324711669,
+        484.2202491610941
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5001,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.864391162744674,
+      "planned": [
+        500,
+        547,
+        565,
+        631,
+        568,
+        452
+      ],
+      "measured": [
+        500.0,
+        533.4949392061758,
+        531.9620558731419,
+        546.7784269233272,
+        514.7316529457639,
+        392.5477555809499
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5002,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8944051159912201,
+      "planned": [
+        500,
+        553,
+        571,
+        526,
+        416
+      ],
+      "measured": [
+        500.0,
+        536.5415484344869,
+        529.8384330050773,
+        415.945194903971,
+        291.2357824589697
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5003,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9805815686700223,
+      "planned": [
+        500,
+        552,
+        510,
+        560,
+        480
+      ],
+      "measured": [
+        500.0,
+        535.3584988682642,
+        512.1607219983177,
+        535.0864136356709,
+        480.8852205348178
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5004,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9519620786449003,
+      "planned": [
+        500,
+        532,
+        487
+      ],
+      "measured": [
+        500.0,
+        522.1201491950717,
+        471.55327977331444
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5005,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9954593691557662,
+      "planned": [
+        500,
+        560,
+        510,
+        568,
+        569,
+        291
+      ],
+      "measured": [
+        500.0,
+        546.5771657267296,
+        513.1081264227555,
+        551.2588844179575,
+        548.2468840529625,
+        269.53479906958086
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5006,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.959211833431584,
+      "planned": [
+        500,
+        548,
+        568,
+        508
+      ],
+      "measured": [
+        500.0,
+        534.1083934766424,
+        538.5864107552445,
+        492.9014441845035
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5007,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5964669294569678,
+      "planned": [
+        500,
+        544,
+        569,
+        511
+      ],
+      "measured": [
+        500.0,
+        554.1697954810044,
+        550.5996815264366,
+        318.08829042058096
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5008,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8455076209121937,
+      "planned": [
+        500,
+        531,
+        557,
+        508
+      ],
+      "measured": [
+        500.0,
+        533.5066007263397,
+        534.988464419031,
+        483.6256343193099
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5009,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8907025995113198,
+      "planned": [
+        500,
+        551,
+        574,
+        530,
+        422
+      ],
+      "measured": [
+        500.0,
+        534.1265219656623,
+        531.2502350230361,
+        435.416492731915,
+        326.5253070465428
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5010,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9945194913699447,
+      "planned": [
+        500,
+        542,
+        567,
+        514
+      ],
+      "measured": [
+        500.0,
+        546.7247937426965,
+        564.1252457475349,
+        515.4368199853095
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5011,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9999213032233677,
+      "planned": [
+        500,
+        532,
+        487
+      ],
+      "measured": [
+        500.0,
+        529.4961157813632,
+        487.33682683663625
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5012,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.987030265723925,
+      "planned": [
+        500,
+        532,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        536.6251857395515,
+        570.1905610713078,
+        519.3527426759823
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5013,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.5701273165194004,
+      "planned": [
+        500,
+        547,
+        564,
+        508
+      ],
+      "measured": [
+        500.0,
+        526.116845554453,
+        519.4815857019505,
+        349.2546184517515
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5014,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9421311922354111,
+      "planned": [
+        500,
+        547,
+        567,
+        504
+      ],
+      "measured": [
+        500.0,
+        533.8033183504012,
+        569.321375753402,
+        517.8681134331028
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5015,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.1335203370092189,
+      "planned": [
+        500,
+        562,
+        508,
+        534,
+        636,
+        551
+      ],
+      "measured": [
+        500.0,
+        545.3438850074062,
+        500.8613695173042,
+        454.908512180762,
+        500.5345513602307,
+        450.11359610220165
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5016,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8801286997958728,
+      "planned": [
+        500,
+        551,
+        510,
+        563,
+        563,
+        294
+      ],
+      "measured": [
+        500.0,
+        532.7376452794535,
+        506.9350696794699,
+        532.0585360921974,
+        534.3651650799939,
+        483.0094409532397
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5017,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.995226313754625,
+      "planned": [
+        500,
+        548,
+        586,
+        507
+      ],
+      "measured": [
+        500.0,
+        536.9862937356294,
+        556.8305542869272,
+        504.03731501500386
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5018,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9327762138942358,
+      "planned": [
+        500,
+        550,
+        507,
+        529,
+        624,
+        554
+      ],
+      "measured": [
+        500.0,
+        535.116758442397,
+        509.2975764934007,
+        510.5494125429179,
+        637.9841145073324,
+        594.1889360803181
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5019,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9823011801373728,
+      "planned": [
+        500,
+        553,
+        593,
+        531,
+        596,
+        507
+      ],
+      "measured": [
+        500.0,
+        535.2365404085294,
+        560.1926283482048,
+        533.317616588698,
+        565.0268151294313,
+        508.3317539705868
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5020,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.8804647251887622,
+      "planned": [
+        500,
+        552,
+        568,
+        608,
+        518
+      ],
+      "measured": [
+        500.0,
+        537.6053084664277,
+        531.52602500486,
+        545.2558713306647,
+        488.46575087671135
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5021,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9604898098926049,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        522.0393412833673,
+        475.9321916242079
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5022,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.44922203704858465,
+      "planned": [
+        500,
+        556,
+        566,
+        525,
+        562,
+        503
+      ],
+      "measured": [
+        500.0,
+        537.2600889313003,
+        531.7901477785643,
+        404.94803080368797,
+        425.0540072611069,
+        381.11611358916764
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5023,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6166827436801454,
+      "planned": [
+        500,
+        561,
+        572,
+        528,
+        579,
+        509
+      ],
+      "measured": [
+        500.0,
+        548.6200831502362,
+        513.3880210821336,
+        458.5224134127471,
+        506.93261925119845,
+        448.3941939318636
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5024,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.920768243426212,
+      "planned": [
+        500,
+        531,
+        558,
+        508
+      ],
+      "measured": [
+        500.0,
+        535.3737301268001,
+        579.2196907268046,
+        535.5916103642521
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5025,
+      "seconds": 60,
+      "section_count": 4,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9996451295180099,
+      "planned": [
+        500,
+        531,
+        557,
+        508
+      ],
+      "measured": [
+        500.0,
+        530.5186528907849,
+        558.6177815576694,
+        508.4110796456021
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5026,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9359518502407103,
+      "planned": [
+        500,
+        550,
+        502,
+        518,
+        637,
+        553
+      ],
+      "measured": [
+        500.0,
+        535.9951598119151,
+        497.73987074779075,
+        510.72701587633236,
+        663.0601858139918,
+        610.7025206775444
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5027,
+      "seconds": 60,
+      "section_count": 6,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.6501851298810777,
+      "planned": [
+        500,
+        552,
+        510,
+        570,
+        547,
+        496
+      ],
+      "measured": [
+        500.0,
+        535.3407745478231,
+        511.3946295800256,
+        539.6445535156997,
+        529.6120353722757,
+        294.4487991010269
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5028,
+      "seconds": 60,
+      "section_count": 3,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9993347070200462,
+      "planned": [
+        500,
+        532,
+        488
+      ],
+      "measured": [
+        500.0,
+        540.5256029939061,
+        487.2992349052401
+      ]
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5029,
+      "seconds": 60,
+      "section_count": 5,
+      "exempt": false,
+      "exempt_reason": null,
+      "pearson": 0.9830065712961392,
+      "planned": [
+        500,
+        551,
+        510,
+        570,
+        485
+      ],
+      "measured": [
+        500.0,
+        537.526121386979,
+        513.1764304042731,
+        541.5534459605807,
+        489.19137085931527
+      ]
+    }
+  ],
+  "n_perms": 1000,
+  "null_seed": 0,
+  "margin": 0.15,
+  "corpus_target": 500,
+  "corpus_cells": [
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "motorik",
+      "seed": 4002,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "kosmische",
+      "seed": 4002,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "dub-electronic",
+      "seed": 4002,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "indie-noise",
+      "seed": 4002,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "a",
+      "lane": "ambient",
+      "seed": 4002,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 1042,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 2000,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "motorik",
+      "seed": 3005,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 1042,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 2000,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "kosmische",
+      "seed": 3005,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 1042,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 2000,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "dub-electronic",
+      "seed": 3005,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 1042,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 2000,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "indie-noise",
+      "seed": 3005,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 1042,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 2000,
+      "seconds": 480
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 45
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 60
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 90
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 120
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 240
+    },
+    {
+      "corpus": "b",
+      "lane": "ambient",
+      "seed": 3005,
+      "seconds": 480
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5000,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5001,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5002,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5003,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5004,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5005,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5006,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5007,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5008,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5009,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5010,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5011,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5012,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5013,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5014,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5015,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5016,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5017,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5018,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5019,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5020,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5021,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5022,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5023,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5024,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5025,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5026,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5027,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5028,
+      "seconds": 60
+    },
+    {
+      "corpus": "c",
+      "lane": "station",
+      "seed": 5029,
+      "seconds": 60
+    }
+  ],
+  "lanes": [
+    "motorik",
+    "kosmische",
+    "dub-electronic",
+    "indie-noise",
+    "ambient"
+  ],
+  "seeds_a": [
+    1042,
+    2000,
+    4002
+  ],
+  "seeds_b": [
+    1042,
+    2000,
+    3005
+  ],
+  "seeds_c": [
+    5000,
+    5001,
+    5002,
+    5003,
+    5004,
+    5005,
+    5006,
+    5007,
+    5008,
+    5009,
+    5010,
+    5011,
+    5012,
+    5013,
+    5014,
+    5015,
+    5016,
+    5017,
+    5018,
+    5019,
+    5020,
+    5021,
+    5022,
+    5023,
+    5024,
+    5025,
+    5026,
+    5027,
+    5028,
+    5029
+  ],
+  "durations_b": [
+    45,
+    60,
+    90,
+    120,
+    240,
+    480
+  ],
+  "seconds_a": 240,
+  "seconds_c": 60,
+  "station_preset": "station",
+  "wall_seconds": 4559.395700407999,
+  "render_wall_seconds": 4550.0691085749995,
+  "harness": "tools/c10_tension_gate.py"
+}

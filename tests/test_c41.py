@@ -369,8 +369,8 @@ def test_ac4_transposing_the_drone_raises_every_section(kosmische_240: Plan) -> 
     assert before == [85_868, 87_093, 87_110, 129_494, 80_939, 86_243]
     assert after == [128_656, 130_492, 130_517, 177_936, 109_165, 129_219]
     assert all(high > low for low, high in zip(before, after, strict=True))
-    assert [section.centroid_hz for section in kosmische_240.sections] == [1658, 1776, 1569, 2373, 2056, 1050]
-    assert [section.centroid_hz for section in shifted.sections] == [1658, 1776, 1569, 2373, 2056, 1050]
+    assert [section.centroid_hz for section in kosmische_240.sections] == [994, 1824, 995, 1878, 1674, 862]
+    assert [section.centroid_hz for section in shifted.sections] == [994, 1824, 995, 1878, 1674, 862]
 
 
 def test_ac5_transposing_the_poly_period_raises_every_section(ambient_240: Plan) -> None:

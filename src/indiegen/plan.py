@@ -37,7 +37,7 @@ MAX_HITS: int = 500_000
 # The tension model's calibration, in the model's integer units. These live
 # here so the validate predictor can read the same numbers without importing
 # the composer. The four features and their weights, permille of 1000.
-TENSION_WEIGHTS: Mapping[str, int] = MappingProxyType({"loudness": 400, "pitch": 200, "roughness": 200, "onset": 200})
+TENSION_WEIGHTS: Mapping[str, int] = MappingProxyType({"loudness": 400, "pitch": 200, "roughness": 0, "onset": 200})
 
 # The corpus moments the features are z-scored against, in the model's
 # integer units (millibels, milli-onsets per bar, centi-MIDI, milli-roughness).

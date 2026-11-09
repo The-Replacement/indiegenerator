@@ -49,6 +49,31 @@ def test_a_repeated_direction_is_amplified_by_beta() -> None:
     assert twice == once * tension.TENSION_BETA
 
 
+def test_a_repeated_material_direction_is_not_amplified() -> None:
+    """beta=5 is confined to loudness: a pitch slope agreement is not amplified.
+
+    A noisy material feature (pitch, onset, roughness) moving the same way as
+    its memory window must not get the memory amplification. That amplification
+    is what turned a single dissonant interval's roughness spike into a
+    +193-permille step and made a quiet break the piece's tension peak (#38).
+    """
+    previous = _features()
+    current = _features(pitch=previous.pitch + tension.TENSION_FEATURE_STD["pitch"])
+    once, signs = tension.step(current, previous, {})
+    twice, _ = tension.step(current, previous, signs)
+    assert twice == once
+
+
+def test_roughness_carries_no_weight() -> None:
+    """Roughness is a saturating, bimodal noise feature and carries no weight.
+
+    Its interval-class estimate jumps from 0 to its 10000 ceiling on a single
+    dissonant interval, so it is dropped from the tension model rather than
+    let a 3.88-sigma spike dominate the step (#38).
+    """
+    assert tension.TENSION_WEIGHTS["roughness"] == 0
+
+
 def test_the_walk_clips_and_starts_at_the_neutral_midpoint() -> None:
     """A walk cannot leave 0..1000 and the first section has no step."""
     rows = [_features() for _ in range(3)]

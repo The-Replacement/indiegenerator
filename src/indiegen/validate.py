@@ -106,7 +106,7 @@ CODEC_CORRELATION_LIMIT: float = 0.2
 # sections (135 tracks). The Phase 1 shadow value -1.1 sat below the Pearson
 # range so nothing could fail; gate 14 is now live and a correlation below
 # this limit fails.
-TENSION_CORRELATION_LIMIT: float = 0.1499084456057718
+TENSION_CORRELATION_LIMIT: float = 0.14985622568500778
 
 
 class GateResult(BaseModel):
@@ -573,7 +573,7 @@ def _measured_step_float(
     for name, weight in TENSION_WEIGHTS.items():
         delta = 100.0 * (current[name] - previous[name]) / TENSION_FEATURE_STD[name]
         sign = (delta > 0) - (delta < 0)
-        beta = TENSION_BETA if sign and signs.get(name) == sign else 1
+        beta = TENSION_BETA if name == "loudness" and sign and signs.get(name) == sign else 1
         out[name] = sign
         total += weight * beta * delta
     return total / (TENSION_STEP_SCALE * TENSION_STEP_DIVISOR), out

@@ -163,7 +163,7 @@ def step(current: FeatureSet, previous: FeatureSet, signs: Mapping[str, int]) ->
     for name, weight in TENSION_WEIGHTS.items():
         delta = 100 * (getattr(current, name) - getattr(previous, name)) // TENSION_FEATURE_STD[name]
         sign = (delta > 0) - (delta < 0)
-        beta = TENSION_BETA if sign and signs.get(name) == sign else 1
+        beta = TENSION_BETA if name == "loudness" and sign and signs.get(name) == sign else 1
         out[name] = sign
         total += weight * beta * delta
     return total // (TENSION_STEP_SCALE * TENSION_STEP_DIVISOR), out

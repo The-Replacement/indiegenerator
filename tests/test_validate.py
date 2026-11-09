@@ -20,6 +20,7 @@ from indiegen.validate import (
     TRAILING_SILENCE_LIMIT_S,
     GateFailure,
     GateResult,
+    _measured_step_float,
     _pcm_section_millibels,
     _pcm_section_onsets,
     check_gate_1,
@@ -517,7 +518,7 @@ def test_run_gates_collects_the_failures() -> None:
 def test_the_promoted_limit_is_the_earned_threshold() -> None:
     """Gate 14 is promoted: the limit is the harness's pooled T, verbatim."""
     # docs/handoff/c10-tension-gate.json, pooled.T over 637 sections.
-    assert TENSION_CORRELATION_LIMIT == 0.1499084456057718
+    assert TENSION_CORRELATION_LIMIT == 0.14985622568500778
 
 
 def test_the_pcm_loudness_tracks_section_rms() -> None:
@@ -552,6 +553,23 @@ def test_the_pcm_onset_counts_the_novelty_peaks() -> None:
     onsets = _pcm_section_onsets(pcm, RATE, list(plan.sections))
     assert all(value >= 0 for value in onsets)
     assert sum(onsets) > 0
+
+
+def test_measured_step_confines_beta_to_loudness() -> None:
+    """The measured walk's beta=5 is confined to loudness, matching the planned walk.
+
+    A material feature (pitch) whose slope agrees with its memory window must
+    not be amplified: the gate-14 predictor is the float twin of the composer's
+    step, and the amplification is what let a roughness spike dominate (#38).
+    """
+    from indiegen.plan import TENSION_FEATURE_STD
+
+    previous = {"loudness": -9000.0, "onset": 6000.0, "pitch": 5500.0, "roughness": 2000.0}
+    current = dict(previous)
+    current["pitch"] += TENSION_FEATURE_STD["pitch"]
+    once, signs = _measured_step_float(current, previous, {})
+    twice, _ = _measured_step_float(current, previous, signs)
+    assert twice == once
 
 
 def test_exempt_plan_passes_gate_14() -> None:

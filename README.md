@@ -243,8 +243,8 @@ a track through the fast gates only.
   the Pearson correlation between the measured tension walk (per-section
   loudness and onsets from the PCM, pitch and roughness carried from the
   plan) and the plan's `tension_permille` has to be at least
-  0.1499084456057718. The threshold is the earned pooled T from the null
-  harness in `docs/handoff/c10-tension-gate.json` (pooled.T over 637
+  0.14985622568500778. The threshold is the earned pooled T from the null
+  harness in `docs/handoff/c38-tension-roughness.json` (pooled.T over 637
   sections, PROMOTE-ELIGIBLE): gate 14 ran as a shadow at the no-fail limit
   -1.1 while the harness pooled within-track permutations, and was promoted
   on 2026-11-08 to this measured value, so tracks whose tension does not
