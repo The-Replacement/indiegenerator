@@ -5,16 +5,26 @@
 # Requiere receive.denyCurrentBranch=updateInstead (git actualiza el worktree
 # antes de este hook; NO hacer fetch/reset).
 #
-# Un push reconstruye y levanta SÓLO indiegen. NO dispara un ciclo
-# (la rotación de ./music es del operador: scripts/indiegen-cycle.sh).
-# NO toca icecast/liquidsoap: --no-deps evita recrear dependencias.
-# Sin --no-recreate: tras un build dejaría la imagen vieja corriendo.
+# Un push reconstruye y levanta SÓLO indiegen. NO toca icecast/liquidsoap:
+# --no-deps evita recrear dependencias. Sin --no-recreate: tras un build
+# dejaría la imagen vieja corriendo.
+#
+# Rotación on-push: la política NO está acá, se lee del .env de la radio
+# (INDIEGEN_AUTO_TRIGGER). 1 = cada push rota la biblioteca (render completo
+# ~6 min + reinicio de liquidsoap + corte de ~10 s). 0 o ausente = el push
+# sólo despliega código.
 set -eu
 
 RADIO_DIR="${RADIO_DIR:-$HOME/servers/radio}"
 LOG="$RADIO_DIR/data/indiegen/deploy.log"
 mkdir -p "$(dirname "$LOG")"
 log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
+
+# Política de rotación, leída del .env en cada push: cambiarla no requiere
+# tocar ni reinstalar este hook.
+AUTO_TRIGGER=$(sed -n 's/^[[:space:]]*INDIEGEN_AUTO_TRIGGER[[:space:]]*=[[:space:]]*//p' \
+  "$RADIO_DIR/.env" 2>/dev/null | tail -1 | tr -d ' \t\r\"')
+AUTO_TRIGGER="${AUTO_TRIGGER:-0}"
 
 while read -r OLD NEW REF; do
   case "$REF" in
@@ -31,6 +41,14 @@ while read -r OLD NEW REF; do
     log "FALLO: up indiegen — revisar $LOG"
     exit 1
   fi
-  log "deploy listo (sin ciclo; el operador usa scripts/indiegen-cycle.sh)"
+  if [ "$AUTO_TRIGGER" = "1" ]; then
+    if ! date -u +%Y-%m-%dT%H:%M:%SZ > "$RADIO_DIR/data/indiegen/trigger"; then
+      log "FALLO: deploy ok pero no pude escribir el trigger (permisos en data/indiegen)"
+      exit 1
+    fi
+    log "deploy listo + ciclo disparado (INDIEGEN_AUTO_TRIGGER=1)"
+  else
+    log "deploy listo (sin ciclo; INDIEGEN_AUTO_TRIGGER=${AUTO_TRIGGER})"
+  fi
 done
 exit 0
