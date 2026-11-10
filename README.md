@@ -267,11 +267,19 @@ failed the gates must not exist.
   (424 lane sections plus 140 station sections): 1 corridor miss, 10 trimmed.
   The earlier figure here (567 sections, 0 misses, 2 % trimmed) was miscounted
   and never reproduced; the miss is station seed 5001's `break`, which the
-  actuator cannot reach even at +2.9 dB. Tension does **not** select the layers:
-  that
-  was built, measured (dub-electronic's gate 5 fell from 0.906 to 0.088) and
-  deferred, because the timbre tables are calibrated on the density-gated
-  layers. See `docs/handoff/c39-tension-budget.md`.
+  actuator cannot reach even at +2.9 dB.
+
+  Tension now also **selects the layers**, but only as a fullness gate: on
+  the four pitched lanes (motorik, kosmische, dub-electronic, indie-noise)
+  a section whose predicted tension is at or below 421 (a fullness dip)
+  admits every declared card, and above 421 the node's density is in charge
+  (all-vs-density, c9b). Ambient keeps admission off. This is the shipped,
+  measured form of the rule; the original issue's stricter reading — high
+  tension -> drums + drive + dissonant spice, low -> polyperiod + drone —
+  was built and measured (dub-electronic's gate 5 fell from 0.906 to 0.088)
+  and remains deferred, because the timbre tables are calibrated on the
+  density-gated layers. See `docs/handoff/c39-tension-budget.md` and
+  `docs/handoff/c9b-tension-layers.md`.
 
 ### The ten-track batch
 

@@ -28,6 +28,12 @@ SKIPPED_KEYS: frozenset[str] = frozenset({"kind", "lane", "strategy", "density_s
 
 def _mutate_section_graph(value: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """The graph with its numbers moved and its names left alone."""
+    # tension_delta_min_permille / tension_delta_max_permille are NOT mutated
+    # here: their effect on the plan is the bounded level trim, which is
+    # discrete and covered by dedicated tests in tests/test_c39.py
+    # (test_a_declared_corridor_is_met_and_a_default_one_is_a_no_op and
+    # test_an_unreachable_corridor_spends_nothing), not by this sweep's +1
+    # mutation. Analogous to density_scale_permille's exemption (see SKIPPED_KEYS).
     mutated: list[dict[str, Any]] = []
     for node in value:
         entry = dict(node)
