@@ -187,3 +187,12 @@ c9b Commit2 admission is blocked on #38; do not land as-is.
 S0/ambient frozen verified (AC2.9): `test_migration` + ambient golden 5/5.
 Gate-14 distribution script: `tools/c9b_gate14_dist.py` (written, not run —
 blocked on #38).
+
+## Measurement harness (issue #39, 2026-11-10)
+
+`tools/rederive_timbre.py --lane <lane> --seed <seed> --seconds <n>` renders one
+lane under the current admission rule and prints per-section function, planned
+centroid (gate 6 target), declared centroid, tension and level. Use it to
+re-derive timbre tables before any admission or layer-selection change. Sanity
+check: motorik 1042 60s reproduces the committed timbre table (intro 2198,
+build 5372, break 2018, plateau 4875, outro 2242).
