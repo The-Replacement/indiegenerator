@@ -124,6 +124,24 @@ techniques:
     octave_jump_permille: 200
     fifth_permille: 0
 
+  # c42: a sustained bed so the Director's drops do not silence the mix.
+  # The dub lane is the only pulsed lane without a bed; its sparse stabs
+  # leave near-silent gaps when the drums are dropped (the LRA exception).
+  - kind: drone
+    partial_count: {min: 5, max: 7}
+    detune_cents_range: {min: -8, max: 8}
+    detune_lfo_rate: {numerator: 1, denominator: 9}
+    detune_lfo_depth_cents: 12
+    amplitude_lfo_rate: {numerator: 1, denominator: 14}
+    amplitude_lfo_depth_millibels: 4000
+    min_density: 0
+    ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 9, denominator: 8}
+      - {numerator: 5, denominator: 4}
+      - {numerator: 4, denominator: 3}
+      - {numerator: 3, denominator: 2}
+
   # T10: the dub chain. The stabs are bit-reduced, bandpassed at 450 Hz
   # with a slow 1/f drift on the cutoff, and everything but the kick is
   # ducked by the kick.
@@ -137,6 +155,9 @@ techniques:
     sidechain_depth_millibels: -9000
     sidechain_release_frames: 12000
     min_density: 40
+
+bus_gains:
+  - {kind: drone, gain_millibels: -6000}
 
 section_count_range: [4, 6]
 # The durations this lane may be rendered at: the full tracks, the
