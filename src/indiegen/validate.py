@@ -43,8 +43,9 @@ from indiegen.plan import (
     RhythmEvent,
     SectionPlan,
 )
+from indiegen.theory.entropy import band_ok, section_ic_permille
 
-GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+GATES_IN_FORCE: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 SILENCE_FLOOR_LSB: int = 33
 DC_OFFSET_LIMIT: float = 0.001
 TRAILING_SILENCE_LIMIT_S: float = 3.0
@@ -725,6 +726,34 @@ def check_gate_14(plan: Plan, pcm: np.ndarray) -> list[GateResult]:
     ]
 
 
+def check_gate_15(plan: Plan) -> list[GateResult]:
+    """Gate 15: the measured IC curve stays inside per-section bands.
+
+    Default bands (whole range) always pass. A declared band that the
+    measured section IC misses produces a failure.
+    """
+    failures: list[GateResult] = []
+    for index, section in enumerate(plan.sections):
+        measured = section_ic_permille(plan, index)
+        lo = getattr(section, "entropy_ic_min_permille", -1000)
+        hi = getattr(section, "entropy_ic_max_permille", 1000)
+        # Default whole range -> no-op.
+        if lo <= -1000 and hi >= 1000:
+            continue
+        if not band_ok(measured, lo, hi):
+            failures.append(
+                failure(
+                    gate=15,
+                    measured=float(measured),
+                    limit=float(hi),
+                    check=f"entropy IC section {index} ({measured} outside [{lo}, {hi}])",
+                )
+            )
+    if not failures:
+        return []
+    return failures
+
+
 def _planned_per_second(plan: Plan, count: int, values: list[int], start_frame: int) -> np.ndarray:
     """The plan's own curve, held across each section, one value per second."""
     curve = np.zeros(count, dtype=np.float64)
@@ -1153,6 +1182,7 @@ def run_gates(plan: Plan, mix: np.ndarray, pcm: np.ndarray) -> GateFailure | Non
         (9, check_gate_9, (pcm, plan.sample_rate)),
         (13, check_gate_13, (plan,)),
         (14, check_gate_14, (plan, pcm)),
+        (15, check_gate_15, (plan,)),
     )
     results = [result for gate, check, args in checks if gate in GATES_IN_FORCE for result in check(*args)]
     if not results:

@@ -1275,6 +1275,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             tension_admission_enabled=enabled,
             section_admission_modes=list(admission_modes),
             bed_instruments=list(bed_instruments),
+            section_ic_bands=[[node.entropy_ic_min_permille, node.entropy_ic_max_permille] for node in nodes],
         )
 
     if not lane.tension_admission_enabled:
@@ -1738,6 +1739,8 @@ def _section_plans(
                 tension_delta_permille=tension_steps[index],
                 tension_delta_min_permille=node.tension_delta_min_permille,
                 tension_delta_max_permille=node.tension_delta_max_permille,
+                entropy_ic_min_permille=node.entropy_ic_min_permille,
+                entropy_ic_max_permille=node.entropy_ic_max_permille,
             )
         )
     return sections

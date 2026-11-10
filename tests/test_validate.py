@@ -51,7 +51,7 @@ def _pcm(samples: np.ndarray) -> np.ndarray:
 
 
 def test_only_the_gates_in_force_are_implemented() -> None:
-    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 
 
 def _tone(seconds: float = 6.0, amplitude: float = 5800.0) -> np.ndarray:
@@ -708,8 +708,9 @@ def test_mutating_the_planned_events_moves_the_measured_curve() -> None:
 
 def test_gate_14_is_in_the_active_set(monkeypatch: pytest.MonkeyPatch) -> None:
     """AC-5.5: gate 14 is promoted, live in run_gates, and fails when low."""
-    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)
+    assert GATES_IN_FORCE == (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
     assert 14 in GATES_IN_FORCE
+    assert 15 in GATES_IN_FORCE
     import indiegen.validate as validate
 
     flat_plan = _tension_plan([500, 500, 500, 500])

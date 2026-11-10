@@ -147,6 +147,10 @@ class SectionProfile(FrozenModel):
     # compose/tension.py.
     tension_delta_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     tension_delta_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+    # c11: entropy IC band. The section's motif statements must land inside
+    # [min, max] permille IC; default whole range = no-op.
+    entropy_ic_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
+    entropy_ic_max_permille: int = Field(default=1000, ge=-1000, le=1000)
 
     @model_validator(mode="after")
     def _corridor_is_ordered(self) -> Self:
@@ -154,6 +158,11 @@ class SectionProfile(FrozenModel):
             raise PlanError(
                 f"section {self.function!r} declares tension_delta_min_permille "
                 f"{self.tension_delta_min_permille} above its max {self.tension_delta_max_permille}"
+            )
+        if self.entropy_ic_min_permille > self.entropy_ic_max_permille:
+            raise PlanError(
+                f"section {self.function!r} declares entropy_ic_min_permille "
+                f"{self.entropy_ic_min_permille} above its max {self.entropy_ic_max_permille}"
             )
         return self
 
@@ -519,6 +528,9 @@ class SectionPlan(FrozenModel):
     tension_delta_permille: int = Field(default=0, ge=-1000, le=1000)
     tension_delta_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     tension_delta_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+    # c11: entropy IC band carried from the section graph.
+    entropy_ic_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
+    entropy_ic_max_permille: int = Field(default=1000, ge=-1000, le=1000)
 
 
 class MotifNote(FrozenModel):

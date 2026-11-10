@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64
 from indiegen.plan import MotifAppearance, PluckEvent, Rational
+from indiegen.theory.entropy import band_ok, statement_ic_permille
 from indiegen.theory.motif import TRANSFORMS, Cell, transform
 
 # The motif's amplitude, the same as the deja-vu's stabs.
@@ -65,7 +66,7 @@ def build_cell(bank: list[list[int]], rhythm: list[int], root_midi: int, step_fr
     return notes
 
 
-def plan_motif(
+def plan_motif(  # noqa: C901
     cell: Cell,
     string: StringVoice,
     ctx: TechniqueContext,
@@ -97,16 +98,61 @@ def plan_motif(
             placements.append((frame, section))
         frame += phrase_frames
     placements.sort()
+    bands = getattr(ctx, "section_ic_bands", None) or []
+    corpus_midis = [midi for midi, _ in cell]
+
+    def _draw_param(nm: str, r: SplitMix64) -> int:
+        if nm == "transpose":
+            return r.between(-TRANSPOSE_RANGE, TRANSPOSE_RANGE)
+        if nm == "fragment":
+            return FRAGMENT_LENGTH
+        return 0
+
     for placement, section in placements:
+        saved_state = rng.snapshot()
+        band = None
+        if bands and 0 <= section < len(bands):
+            b = bands[section]
+            if isinstance(b, (list, tuple)) and len(b) == 2:
+                band = (int(b[0]), int(b[1]))
+        # default: whole range -> no re-arm needed.
+        whole_range = band is None or (band[0] <= -1000 and band[1] >= 1000)
+
         name = "identity" if statement == 0 else TRANSFORMS[(statement - 1) % len(TRANSFORMS)]
-        parameter = 0
-        if name == "transpose":
-            parameter = rng.between(-TRANSPOSE_RANGE, TRANSPOSE_RANGE)
-        elif name == "fragment":
-            parameter = FRAGMENT_LENGTH
+        parameter = _draw_param(name, rng)
         axis = ctx.section_roots[section] if ctx.section_roots else ctx.root_midi
         shaped = transform(name, cell, parameter, axis)
         total = sum(duration for _, duration in shaped)
+
+        # Re-arm if a declared band is missed.
+        if (not whole_range) and band is not None:
+            ic = statement_ic_permille([m for m, _ in shaped], corpus_midis)
+            in_band = band_ok(ic, band[0], band[1])
+            fits = placement + total <= ctx.duration_frames
+            if not (in_band and fits):
+                # Try candidates.
+                chosen = None
+                for cand_name in TRANSFORMS:
+                    rng.restore(saved_state)
+                    cand_param = _draw_param(cand_name, rng)
+                    cand_shaped = transform(cand_name, cell, cand_param, axis)
+                    cand_total = sum(duration for _, duration in cand_shaped)
+                    if placement + cand_total > ctx.duration_frames:
+                        continue
+                    cand_ic = statement_ic_permille([m for m, _ in cand_shaped], corpus_midis)
+                    if band_ok(cand_ic, band[0], band[1]):
+                        chosen = (cand_name, cand_param, cand_shaped)
+                        break
+                if chosen is not None:
+                    name, parameter, shaped = chosen
+                    total = sum(duration for _, duration in shaped)
+                else:
+                    # none landed: restore and redo original.
+                    rng.restore(saved_state)
+                    parameter = _draw_param(name, rng)
+                    shaped = transform(name, cell, parameter, axis)
+                    total = sum(duration for _, duration in shaped)
+
         if placement + total > ctx.duration_frames:
             continue
         offset = placement

@@ -39,6 +39,7 @@ class TechniqueContext(BaseModel):
     tension_admission_enabled: bool = False
     section_admission_modes: list[str] = []
     bed_instruments: list[str] = []
+    section_ic_bands: list[list[int]] = Field(default_factory=list)
 
     def section_at(self, frame: int) -> int:
         """The section a frame falls in, from the boundaries alone."""
