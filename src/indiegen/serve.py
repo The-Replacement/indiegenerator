@@ -273,6 +273,9 @@ def run_once_trigger(path: Path) -> bool:
         path.unlink()
     except FileNotFoundError:
         return False
+    except OSError:
+        log.warning("could not consume trigger %s", path)
+        return False
     return True
 
 
