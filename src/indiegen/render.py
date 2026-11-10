@@ -93,6 +93,7 @@ class BusState:
     trims: dict[str, float]
     drum_comp: DrumCompState | None
     duck: np.ndarray | None = None
+    mono_low: np.ndarray | None = None
 
 
 def schedule(plan: Plan) -> list[Event]:
@@ -181,6 +182,9 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
     duck: np.ndarray | None = None
     if plan.duck is not None:
         duck = initial_state(bandpass_sos(DUCK_LOW_HZ, DUCK_HIGH_HZ, plan.sample_rate), plan.channels)
+    # Mono fold below ~120 Hz: a lowpass on the side channel, state carried
+    # across blocks. Always on (issue #30): the low band is forced to mono.
+    mono_low = initial_state(lowpass_sos(120, 7071, 10000, plan.sample_rate), 1)
     return BusState(
         delay=delay,
         filter=filter_state,
@@ -191,6 +195,7 @@ def _bus_state(plan: Plan, events: list[Event]) -> BusState:
         trims=bus_gains(plan.bus_gains),
         drum_comp=drum_comp,
         duck=duck,
+        mono_low=mono_low,
     )
 
 
@@ -404,10 +409,28 @@ def _render_block(
     # The drum bus is summed into the main mix here.
     main += drum_bus
 
+    # Mono fold below ~120 Hz (issue #30): low side energy is folded into
+    # the mid so the low band is mono. State carried across blocks.
+    mono_low = bus.mono_low
+    if mono_low is not None:
+        side = 0.5 * (main[:, 0] - main[:, 1])
+        mid = 0.5 * (main[:, 0] + main[:, 1])
+        side_low, new_state = apply_biquad(
+            lowpass_sos(120, 7071, 10000, plan.sample_rate),
+            side,
+            mono_low,
+        )
+        side_low = np.asarray(side_low, dtype=np.float64).ravel()
+        side = side - side_low
+        mid = mid + side_low
+        main[:, 0] = mid + side
+        main[:, 1] = mid - side
+        mono_low = np.asarray(new_state, dtype=np.float64)
+
     gain = section_gain(plan, start, count) * fade_gain(plan, start, count)
     main = main * gain[:, np.newaxis]
 
-    return main, replace(bus, drum_comp=drum_comp)
+    return main, replace(bus, drum_comp=drum_comp, mono_low=mono_low)
 
 
 def render_plan(plan: Plan) -> np.ndarray:
