@@ -63,11 +63,43 @@ def _usable_intervals(card: PolyPeriodCard, ctx: TechniqueContext) -> list[int]:
     return chord_pool(ctx.scale_midi, ctx.root_midi, declared, ctx.chromatic_budget_permille)
 
 
-def _draw_periods(rng: SplitMix64, card: PolyPeriodCard, count: int, sample_rate: int) -> list[int]:
-    """``count`` distinct periods, drawn from the card's range."""
-    low = card.period_seconds_range.min * sample_rate
-    high = card.period_seconds_range.max * sample_rate
+def _draw_periods(
+    rng: SplitMix64,
+    card: PolyPeriodCard,
+    count: int,
+    sample_rate: int,
+    max_period_frames: int,
+) -> list[int]:
+    """``count`` distinct periods, drawn from the card's range.
+
+    The periods are capped at ``max_period_frames`` (the shortest section of
+    the track) so every section hears at least one full cycle of every loop:
+    that is what lifts the centroid's noise floor at short durations instead
+    of moving the gate's limit. When the cap binds below the card's declared
+    minimum the floor drops to one second, so a short track still gets distinct
+    periods instead of a single repeated one.
+    """
+    card_low = card.period_seconds_range.min * sample_rate
+    card_high = card.period_seconds_range.max * sample_rate
+    capped_high = min(card_high, max_period_frames)
+    # Only cap when the shortened range still holds enough distinct
+    # periods for every voice: otherwise the cap would collapse to a
+    # single value and break T1's distinctness rule (and its 15 s floor).
+    high = capped_high if capped_high - card_low + 1 >= count else card_high
+    if high < sample_rate:
+        high = sample_rate
+    low = min(card_low, high)
+    if low < sample_rate:
+        low = sample_rate
+    if low > high:
+        low = high
     periods: list[int] = []
+    # If the usable range is too narrow for ``count`` distinct integers,
+    # fall back to allowing repeats rather than looping forever.
+    if high - low + 1 < count:
+        for _ in range(count):
+            periods.append(rng.between(low, high))
+        return periods
     while len(periods) < count:
         candidate = rng.between(low, high)
         if candidate not in periods:
@@ -109,7 +141,18 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
             seed=ctx.seed,
         )
 
-    periods = _draw_periods(rng, card, voice_count, ctx.sample_rate)
+    # The periods must fit inside the shortest section of the track, so every
+    # section hears a whole number of cycles of every loop. That is the
+    # duration-aware mechanism (issue #7): it lifts the centroid's noise floor
+    # at short durations instead of moving the 0.25 limit.
+    shortest_section_frames = ctx.duration_frames
+    boundaries = ctx.section_boundaries or []
+    if len(boundaries) >= 2:
+        lengths = [boundaries[i + 1] - boundaries[i] for i in range(len(boundaries) - 1)]
+        positive = [length for length in lengths if length > 0]
+        if positive:
+            shortest_section_frames = min(positive)
+    periods = _draw_periods(rng, card, voice_count, ctx.sample_rate, shortest_section_frames)
 
     fractions = [rng.between(card.on_fraction_permille.min, card.on_fraction_permille.max) for _ in range(voice_count)]
     # A voice whose first window starts after the track ends never sounds,

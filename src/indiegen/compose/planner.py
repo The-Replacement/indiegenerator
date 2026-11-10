@@ -1155,6 +1155,13 @@ def _motif_and_postproc(
     return out, list(cell), appearances
 
 
+def _ambient_interlude_section_count(lane: LanePreset, frames: int, section_count: int) -> int:
+    """Two longer sections for ambient interludes lift the centroid noise floor (issue #7)."""
+    if lane.lane == "ambient" and 45 * SAMPLE_RATE <= frames < 90 * SAMPLE_RATE:
+        return 2
+    return section_count
+
+
 def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:
     """Build the frozen Plan from a preset and a seed.
 
@@ -1205,6 +1212,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             frames // (MINIMUM_SECTION_BARS * frames_per_bar),
         )
         section_count = min(section_count, room)
+
+    section_count = _ambient_interlude_section_count(lane, frames, section_count)
 
     # The arrangement: a walk over the station's section graph.
     nodes = _walk_graph(station.section_graph, section_count, rng)
