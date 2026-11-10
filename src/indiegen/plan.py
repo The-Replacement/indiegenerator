@@ -151,6 +151,11 @@ class SectionProfile(FrozenModel):
     # [min, max] permille IC; default whole range = no-op.
     entropy_ic_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     entropy_ic_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+    # c18: valence-arousal emotion tokens (permille, -1000..1000). Default 0
+    # = neutral. Metadata only in this change; channeling to knobs is a
+    # separate, evidence-gated follow-up.
+    valence_permille: int = Field(default=0, ge=-1000, le=1000)
+    arousal_permille: int = Field(default=0, ge=-1000, le=1000)
 
     @model_validator(mode="after")
     def _corridor_is_ordered(self) -> Self:
@@ -531,6 +536,9 @@ class SectionPlan(FrozenModel):
     # c11: entropy IC band carried from the section graph.
     entropy_ic_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     entropy_ic_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+    # c18: valence-arousal emotion tokens carried from the section graph.
+    valence_permille: int = Field(default=0, ge=-1000, le=1000)
+    arousal_permille: int = Field(default=0, ge=-1000, le=1000)
 
 
 class MotifNote(FrozenModel):

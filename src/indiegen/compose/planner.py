@@ -1741,6 +1741,8 @@ def _section_plans(
                 tension_delta_max_permille=node.tension_delta_max_permille,
                 entropy_ic_min_permille=node.entropy_ic_min_permille,
                 entropy_ic_max_permille=node.entropy_ic_max_permille,
+                valence_permille=node.valence_permille,
+                arousal_permille=node.arousal_permille,
             )
         )
     return sections
