@@ -189,8 +189,18 @@ def render_bass(event: BassEvent, hit: BassHit, sample_rate: int, velocity: floa
     """
     count = event.decay_frames
     frequency = midi_to_hz(hit.midi)
-    phase = np.cumsum(np.full(count, frequency, dtype=np.float64)) / np.float64(sample_rate)
-    saw = 2.0 * (phase - np.floor(phase)) - 1.0
+    if getattr(event, "oscillator", "naive") == "bandlimited":
+        # Fourier-series saw: harmonics up to Nyquist, alias-free by
+        # construction. DC-free (no k=0 term).
+        phase = np.arange(count, dtype=np.float64) * frequency / np.float64(sample_rate)
+        harmonics = int(sample_rate // (2.0 * frequency)) if frequency > 0 else 1
+        harmonics = max(1, harmonics)
+        saw = np.zeros(count, dtype=np.float64)
+        for k in range(1, harmonics + 1):
+            saw += (2.0 / (np.pi * k)) * np.sin(2.0 * np.pi * k * phase)
+    else:
+        phase = np.cumsum(np.full(count, frequency, dtype=np.float64)) / np.float64(sample_rate)
+        saw = 2.0 * (phase - np.floor(phase)) - 1.0
     shaped = _lowpass(saw, float(event.cutoff_hz), sample_rate)
     voice = shaped * _envelope(count, event.decay_frames, sample_rate)
     voice = dc_block(voice, sample_rate)

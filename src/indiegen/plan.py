@@ -424,6 +424,10 @@ class BassEvent(RhythmEvent):
     hits: list[BassHit] = Field(max_length=MAX_HITS)
     cutoff_hz: int
     decay_frames: int
+    # The oscillator family. "naive" is the original saw (S0-frozen default);
+    # "bandlimited" is a Fourier-series saw with harmonics up to Nyquist,
+    # alias-free by construction. New oscillators land behind this key.
+    oscillator: Literal["naive", "bandlimited"] = "naive"
 
 
 class LeadEvent(EventBase):
