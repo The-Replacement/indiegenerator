@@ -383,7 +383,12 @@ def serve(
         Path | None, typer.Option("--trigger-file", help="If this file appears, run a cycle immediately.")
     ] = None,
     run_on_start: Annotated[
-        bool, typer.Option("--run-on-start/--no-run-on-start", help="Run a cycle at startup.")
+        bool,
+        typer.Option(
+            "--run-on-start/--no-run-on-start",
+            help="Run a cycle at startup.",
+            envvar="INDIEGEN_RUN_ON_START",
+        ),
     ] = True,
     max_cycles: Annotated[int, typer.Option("--max-cycles", help="Stop after N cycles (0 = forever).")] = 0,
     work_dir: Annotated[Path, typer.Option("--work-dir", help="Working directory for staging.")] = Path(
