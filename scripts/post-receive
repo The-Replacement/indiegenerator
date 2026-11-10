@@ -1,0 +1,50 @@
+#!/bin/sh
+# post-receive — instalar en el remoto de despliegue de indiegenerator en el
+# mainframe (donde corre la radio). Un push a master reconstruye el servicio
+# indiegen del stack de radio y dispara un ciclo inmediato.
+#
+# Instalación (una vez, en el mainframe):
+#   git init --bare ~/repos/indiegenerator.git   # o repo existente
+#   cp scripts/post-receive ~/repos/indiegenerator.git/hooks/post-receive
+#   chmod +x ~/repos/indiegenerator.git/hooks/post-receive
+#   git -C ~/repos/indiegenerator.git config receive.denyCurrentBranch updateInstead
+#
+# Ajustá RADIO_DIR y (si usás worktree separado) el checkout que sirve de
+# contexto de build para el compose de radio (INDIEGEN_CONTEXT).
+set -u
+
+RADIO_DIR="${RADIO_DIR:-$HOME/servers/radio}"
+INDIEGEN_CHECKOUT="${INDIEGEN_CHECKOUT:-$HOME/servers/indiegenerator}"
+LOG_DIR="${LOG_DIR:-$RADIO_DIR/data/deploy.log.d}"
+mkdir -p "$LOG_DIR" "$RADIO_DIR/data/indiegen" 2>/dev/null || true
+LOG="$LOG_DIR/indiegenerator.log"
+log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$LOG"; }
+
+while read -r OLD NEW REF; do
+  [ "$REF" = "refs/heads/master" ] || [ "$REF" = "refs/heads/main" ] || continue
+  log "indiegenerator push ${OLD}..${NEW}"
+
+  # Si este repo tiene worktree (updateInstead), el contexto de build ya está
+  # actualizado. Si es bare, actualizá INDIEGEN_CHECKOUT por tu cuenta o usá
+  # un fetch/checkout acá.
+  if [ -d "$INDIEGEN_CHECKOUT/.git" ] || [ -f "$INDIEGEN_CHECKOUT/.git" ]; then
+    git -C "$INDIEGEN_CHECKOUT" fetch --all --prune >/dev/null 2>&1 || true
+    git -C "$INDIEGEN_CHECKOUT" reset --hard "$NEW" >/dev/null 2>&1 || true
+  fi
+
+  if [ -f "$RADIO_DIR/docker-compose.yml" ]; then
+    log "reconstruyendo servicio indiegen en $RADIO_DIR"
+    if docker compose -f "$RADIO_DIR/docker-compose.yml" up -d --build indiegen >>"$LOG" 2>&1; then
+      log "indiegen reconstruido; disparando ciclo"
+      date -u +%Y-%m-%dT%H:%M:%SZ > "$RADIO_DIR/data/indiegen/trigger" 2>/dev/null || \
+        docker compose -f "$RADIO_DIR/docker-compose.yml" exec -T indiegen touch /var/lib/indiegen/trigger >>"$LOG" 2>&1 || true
+      log "ciclo disparado"
+    else
+      log "FALLO: no se pudo reconstruir/disparar indiegen (ver log)"
+      exit 1
+    fi
+  else
+    log "AVISO: no encontré $RADIO_DIR/docker-compose.yml; sólo registré el push"
+  fi
+done
+exit 0

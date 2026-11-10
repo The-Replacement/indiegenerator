@@ -30,6 +30,9 @@ from indiegen.errors import DecodeError, PlanError, RenderError
 from indiegen.filecheck import check_file
 from indiegen.install import install as run_install
 from indiegen.plan import SAMPLE_RATE, Plan, canonical_json, plan_sha256
+from indiegen.serve import RestartError
+from indiegen.serve import run_cycle as run_rotation_cycle
+from indiegen.serve import serve as run_server
 
 app = typer.Typer(add_completion=False, name="indiegen", no_args_is_help=True)
 
@@ -316,6 +319,110 @@ def explain(
     payload = canonical_json(plan)
     typer.echo(payload.decode("utf-8"), nl=False)
     typer.echo(f"plan_sha256: {plan_sha256(plan)}", err=True)
+
+
+@app.command()
+def cycle(
+    music_dir: Annotated[Path, typer.Option("--music-dir", help="Radio music directory to replace.")] = Path("/music"),
+    preset: Annotated[str, typer.Option("--preset", help="Preset name.")] = "station",
+    count: Annotated[int, typer.Option("--count", help="Tracks per cycle.")] = 10,
+    seed_base: Annotated[int, typer.Option("--seed-base", help="Base seed.")] = 1000,
+    seed_strategy: Annotated[
+        str, typer.Option("--seed-strategy", help="Seed strategy: advance, fixed, time.")
+    ] = "advance",
+    cycle_index: Annotated[int, typer.Option("--cycle-index", help="Cycle index (for advance strategy).")] = 0,
+    work_dir: Annotated[Path, typer.Option("--work-dir", help="Working directory for staging.")] = Path(
+        "/var/lib/indiegen"
+    ),
+    restart: Annotated[
+        str,
+        typer.Option(
+            "--restart",
+            help="Liquidsoap restart: none | docker:<container> | cmd:<command> | signal:<path>.",
+        ),
+    ] = "docker:radio-liquidsoap",
+    presets_dir: Annotated[Path | None, typer.Option("--presets-dir", help="Directory holding the presets.")] = None,
+) -> None:
+    """Generate a fresh batch, replace the radio library, and restart Liquidsoap."""
+    try:
+        result = run_rotation_cycle(
+            preset=preset,
+            count=count,
+            seed_base=seed_base,
+            music_dir=music_dir,
+            work_dir=work_dir,
+            presets_dir=presets_dir,
+            restart=restart,
+            cycle=cycle_index,
+            seed_strategy=seed_strategy,
+        )
+    except RestartError as exc:
+        typer.echo(f"error: library rotated but restart failed: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+    except (DecodeError, PlanError, RenderError, OSError, ValueError) as exc:
+        _fail(exc)
+    typer.echo(f"installed: {len(result.installed)}")
+    typer.echo(f"removed: {len(result.removed)}")
+    typer.echo(f"seeds: base={result.seed_base} requested={result.requested_base}")
+    typer.echo(f"restarted: {result.restarted}")
+    typer.echo(f"restart: {result.restart_detail}")
+    typer.echo(f"batch_seconds: {result.batch_seconds:.3f}")
+
+
+@app.command()
+def serve(
+    music_dir: Annotated[Path, typer.Option("--music-dir", help="Radio music directory to replace.")] = Path("/music"),
+    preset: Annotated[str, typer.Option("--preset", help="Preset name.")] = "station",
+    count: Annotated[int, typer.Option("--count", help="Tracks per cycle.")] = 10,
+    seed_base: Annotated[int, typer.Option("--seed-base", help="Base seed.")] = 1000,
+    seed_strategy: Annotated[
+        str, typer.Option("--seed-strategy", help="Seed strategy: advance, fixed, time.")
+    ] = "advance",
+    interval_seconds: Annotated[int, typer.Option("--interval-seconds", help="Seconds between cycles.")] = 21600,
+    trigger_file: Annotated[
+        Path | None, typer.Option("--trigger-file", help="If this file appears, run a cycle immediately.")
+    ] = None,
+    run_on_start: Annotated[
+        bool, typer.Option("--run-on-start/--no-run-on-start", help="Run a cycle at startup.")
+    ] = True,
+    max_cycles: Annotated[int, typer.Option("--max-cycles", help="Stop after N cycles (0 = forever).")] = 0,
+    work_dir: Annotated[Path, typer.Option("--work-dir", help="Working directory for staging.")] = Path(
+        "/var/lib/indiegen"
+    ),
+    restart: Annotated[
+        str,
+        typer.Option(
+            "--restart",
+            help="Liquidsoap restart: none | docker:<container> | cmd:<command> | signal:<path>.",
+        ),
+    ] = "docker:radio-liquidsoap",
+    presets_dir: Annotated[Path | None, typer.Option("--presets-dir", help="Directory holding the presets.")] = None,
+    log_level: Annotated[str, typer.Option("--log-level", help="Logging level.")] = "INFO",
+) -> None:
+    """Run generation cycles continuously, replacing the radio library each time."""
+    import logging
+
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+    try:
+        run_server(
+            preset=preset,
+            count=count,
+            seed_base=seed_base,
+            music_dir=music_dir,
+            work_dir=work_dir,
+            presets_dir=presets_dir,
+            restart=restart,
+            interval_seconds=interval_seconds,
+            trigger_file=trigger_file,
+            seed_strategy=seed_strategy,
+            run_on_start=run_on_start,
+            max_cycles=max_cycles,
+        )
+    except (DecodeError, PlanError, RenderError, OSError, ValueError) as exc:
+        _fail(exc)
 
 
 if __name__ == "__main__":
