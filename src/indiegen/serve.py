@@ -361,8 +361,21 @@ def serve(
             save_state(work_dir, state, extra={"restart_error": str(exc)})
             log.error("cycle=%s restart failed after rotation: %s", state.cycle, exc)
         except Exception:
+            # Advance the cycle so a deterministic failure (e.g. a poisoned seed
+            # window) cannot wedge the server on the same batch forever.
+            state.cycle += 1
             state.failures += 1
-            save_state(work_dir, state, extra={"last_error": "generation failed"})
-            log.exception("cycle=%s failed; will retry next interval", state.cycle)
+            save_state(
+                work_dir,
+                state,
+                extra={
+                    "last_error": "generation failed",
+                    "advanced_after_failure": True,
+                },
+            )
+            log.exception(
+                "cycle=%s failed; advanced window and will retry next interval",
+                state.cycle,
+            )
 
         next_at = time.monotonic() + float(interval_seconds)

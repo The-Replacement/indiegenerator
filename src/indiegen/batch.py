@@ -18,6 +18,7 @@ failed the gates must not exist.
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -45,6 +46,8 @@ from indiegen.validate import (
     timbre_measurement,
 )
 from indiegen.writer import TEMP_DIR_NAME, pcm_sha256, read_pcm, write_flac_atomic, write_sidecar_atomic
+
+log = logging.getLogger("indiegen.batch")
 
 
 @dataclass(frozen=True)
@@ -261,7 +264,12 @@ def batch(
     seed_base: int,
     out_dir: Path,
 ) -> BatchResult:
-    """Render a batch of tracks and write the catalog."""
+    """Render a batch of tracks and write the catalog.
+
+    A track that fails to plan, render, or pass the gates is skipped: one bad
+    arrangement must not cost the whole window. The failure is logged and the
+    batch continues; only if no tracks succeed does the batch fail.
+    """
     if count <= 0:
         raise PlanError("a batch needs at least one track", preset=preset.name)
     existing = build_catalog(out_dir)
@@ -278,15 +286,33 @@ def batch(
     started = time.perf_counter()
     result = BatchResult(seed_base=base, requested_base=seed_base)
     forms = batch_forms(preset.station.forms, count)
+    failures: list[str] = []
     for index, seed in enumerate(seeds):
-        plan = director(compose(preset, seed, None, forms[index]))
-        rendered = render_track(plan, out_dir)
+        try:
+            plan = director(compose(preset, seed, None, forms[index]))
+            rendered = render_track(plan, out_dir)
+        except PlanError as exc:
+            failures.append(f"seed {seed}: {exc}")
+            log.warning("skipping track: %s", exc)
+            continue
+        except Exception:
+            failures.append(f"seed {seed}: unexpected render error")
+            log.exception("skipping track seed=%s after unexpected error", seed)
+            continue
         if rendered.failure is not None or rendered.outcome is None:
             reasons = ", ".join(
                 f"gate {item.gate} {item.check}" for item in (rendered.failure.failures if rendered.failure else [])
             )
-            raise PlanError(f"the track at seed {seed} failed the gates: {reasons}", preset=preset.name, seed=seed)
+            msg = f"seed {seed} failed the gates: {reasons}"
+            failures.append(msg)
+            log.warning("skipping track: %s", msg)
+            continue
         result.tracks.append(rendered.outcome)
+    if not result.tracks:
+        detail = "; ".join(failures) if failures else "no tracks produced"
+        raise PlanError(f"batch produced no tracks: {detail}", preset=preset.name)
+    if failures:
+        log.warning("batch completed with %s skipped track(s): %s", len(failures), "; ".join(failures))
     result.seconds = time.perf_counter() - started
     result.catalog = build_catalog(out_dir)
     write_catalog(out_dir, result.catalog)
