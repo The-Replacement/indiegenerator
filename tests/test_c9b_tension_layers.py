@@ -51,8 +51,11 @@ def _ctx(
 @pytest.mark.parametrize(
     ("tension", "mode"),
     [
-        (449, "all"),
-        (450, "all"),
+        (420, "all"),
+        (421, "all"),
+        (422, "density"),
+        (449, "density"),
+        (450, "density"),
         (451, "density"),
         (549, "density"),
         (550, "density"),
@@ -124,10 +127,11 @@ def test_snapshot_restore_draw_identity() -> None:
     assert isinstance(snap, int)
 
 
-def test_parse_admission_flag_present_and_off_by_default() -> None:
-    """Infrastructure lands; musical activation deferred (sweep-validated per lane)."""
-    for lane in ("motorik", "kosmische", "dub-electronic", "indie-noise", "ambient"):
-        assert load_preset(lane).lanes[0].parameters.tension_admission_enabled is False
+def test_parse_admission_flag_enabled_on_pitched_lanes() -> None:
+    """Admission is active on the four pitched lanes; ambient stays off."""
+    for lane in ("motorik", "kosmische", "dub-electronic", "indie-noise"):
+        assert load_preset(lane).lanes[0].parameters.tension_admission_enabled is True
+    assert load_preset("ambient").lanes[0].parameters.tension_admission_enabled is False
 
 
 def test_bed_is_pad_and_drone_only() -> None:
@@ -140,10 +144,9 @@ def test_bed_is_pad_and_drone_only() -> None:
 def test_bool_flip_changes_plan_where_threshold_hits() -> None:
     """Admission consumes the bool and changes the plan where a section is sparse.
 
-    kosmische 60 s 1042 outro is T=434 (<=450, #38 fullness-shaped) so it
+    kosmische 60 s 1042 outro has pass1 T=420 (<=421, #38 fullness-shaped) so it
     admits all layers when enabled. The lane preset keeps admission off by
-    default (musical activation deferred); the mechanism is exercised by
-    forcing the flag on.
+    default; the mechanism is exercised by forcing the flag on.
     """
     base = load_preset("kosmische")
     entry = base.lanes[0]
@@ -165,8 +168,12 @@ def test_bool_flip_changes_plan_where_threshold_hits() -> None:
     plan_off = director(compose(_with_flag(False), 1042, 60 * SAMPLE_RATE))
     assert canonical_json(plan_on) != canonical_json(plan_off)
     outro_on = next(section for section in plan_on.sections if section.function == "outro")
-    assert outro_on.tension_permille <= 450
-    assert _admission_mode(outro_on.tension_permille) == "all"
+    outro_off = next(section for section in plan_off.sections if section.function == "outro")
+    assert "lead" not in outro_off.instrumentation
+    assert "lead" in outro_on.instrumentation
+    assert (
+        outro_on.tension_permille != outro_off.tension_permille or outro_on.instrumentation != outro_off.instrumentation
+    )
 
 
 def test_lead_entry_is_retained_under_all() -> None:

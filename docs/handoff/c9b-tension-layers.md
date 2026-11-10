@@ -1,11 +1,27 @@
 # c9b tension layers (issue #9b, Commit2)
 
-Commit2 admits layers by planned tension level T (550/450) where a lane opts in.
-Four pitched lanes ship `tension_admission_enabled: true`; ambient is absent
-(off). Bed is pad+drone only via `CARD_SPECS.bed` (motorik `{pad}`,
-kosmische `{drone}`, dub/indie `{}` → density fallback). Director is
-unchanged; deck consumes admitted ranges. Production `check_gate_14` is
-unchanged (enforces T=0.1499). K2 authority is reported, not gated.
+> **Re-scope & activation (2026-11-10, c38 fixed):** tension now tracks
+> arrangement fullness (issue #38), so admission is re-scoped to
+> **`T <= 421 → all` (fill sparse/fullness dips, pass1), else `density`**.
+> Threshold 421 is evidence-based: pass1 T=421 (dub-electronic 4002/240s outro)
+> admitted passes sweep gates, while pass1 T=422 (dub-electronic 2000/240s
+> outro) admitted broke gate 6; kosmische 1042/60s outro pass1 T=420 remains
+> admitted. The prior three-way `≥550 all / ≤450 bed / else density` rule and
+> its gate/sweep results below reflect the pre-#38 walk and are retained as
+> historical record; they do **not** describe the landed semantics.
+> Activation (this change, `c9b-admission-activation`): four pitched lanes
+> ship `tension_admission_enabled: true`, ambient remains off. Bed is
+> pad+drone only via `CARD_SPECS.bed` (motorik `{pad}`, kosmische `{drone}`,
+> dub/indie `{}` → density fallback). Director is unchanged; deck consumes
+> admitted ranges. Production `check_gate_14` is unchanged (enforces
+> `T=0.14985622568500778`).
+
+Commit2 admits layers by planned tension level T where a lane opts in.
+Under the landed (c38) semantics, sections at or below 421 (pass1) admit all
+layers; above 421 the node's density is in charge. Thresholding emits only
+`all` or `density` (`_admission_mode`); `admits()` still supports a `bed`
+branch but it is not emitted by the current rule. K2 authority is reported,
+not gated.
 
 ## Implementation (T6-T8)
 

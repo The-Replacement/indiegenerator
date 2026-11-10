@@ -935,10 +935,10 @@ def _admission_mode(tension: int) -> str:
     """The layer mode a planned tension level selects.
 
     Tension tracks arrangement fullness (#38): sparse sections have low
-    tension, so ``all`` fires at T <= 450 to fill them. Full sections defer
+    tension, so ``all`` fires at T <= 421 to fill them. Full sections defer
     to the density gate.
     """
-    if tension <= 450:
+    if tension <= 421:
         return "all"
     return "density"
 

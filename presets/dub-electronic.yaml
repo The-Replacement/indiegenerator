@@ -33,7 +33,7 @@ duck: {depth_millibels: -6000, release_frames: 8820}
 # Measured on real renders of this lane (BRIEF 5: measured, then tuned),
 # and asserted by gate 6.
 timbre: {break: 1509, build: 5014, drift: 1855, intro: 2391, outro: 2080, peak: 3298, plateau: 5106, return: 3224}
-tension_admission_enabled: false
+tension_admission_enabled: true
 
 fx_sends:
   - {name: biquad_lowpass, send_millibels: 0, cutoff_hz: 9000, q_num: 1, q_den: 1}
