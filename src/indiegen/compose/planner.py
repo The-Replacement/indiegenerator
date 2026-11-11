@@ -1164,7 +1164,7 @@ def _ambient_interlude_section_count(lane: LanePreset, frames: int, section_coun
     return section_count
 
 
-def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:
+def compose(preset: Preset, seed: int, duration_frames: int | None = None, form: Form | None = None) -> Plan:  # noqa: C901
     """Build the frozen Plan from a preset and a seed.
 
     The PRNG is seeded from the preset's *identity* and the seed, not from
@@ -1253,12 +1253,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         cp_solution = select_solution(sols, seed)
         if cp_solution is not None and len(cp_solution) == len(nodes):
             section_roots = list(cp_solution)
-            section_scales = [
-                mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots)
-            ]
-            section_segment_roots = _segment_roots(
-                section_roots, roots, station.chord_segments_per_section
-            )
+            section_scales = [mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)]
+            section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
 
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
     dither_seed = rng.next_u64()
