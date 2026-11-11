@@ -347,19 +347,19 @@ def test_the_director_re_derives_the_field(kosmische_240: Plan, composed_plan: P
     before = compose(load_preset("motorik"), SEED, 60 * SAMPLE_RATE)
     assert [s.declared_centroid_millihz for s in before.sections] == [
         440_594,
-        440_127,
-        440_551,
-        440_594,
-        439_789,
+        349_329,
+        247_251,
+        247_275,
+        293_524,
     ]
     assert [s.declared_centroid_millihz for s in motorik.sections] == [
         440_594,
-        440_127,
-        440_551,
-        440_594,
-        533_236,
+        349_329,
+        247_251,
+        247_275,
+        355_892,
     ]
-    assert composed_plan.sections[3].declared_centroid_millihz == 440_594
+    assert composed_plan.sections[3].declared_centroid_millihz == 247_275
 
 
 def test_ac4_transposing_the_drone_raises_every_section(kosmische_240: Plan) -> None:
@@ -367,8 +367,8 @@ def test_ac4_transposing_the_drone_raises_every_section(kosmische_240: Plan) -> 
     shifted = _with_drone_shift(kosmische_240, 7)
     before = [section.declared_centroid_millihz for section in kosmische_240.sections]
     after = [declared_centroid_millihz(shifted.events, s.start_frame, s.end_frame) for s in kosmische_240.sections]
-    assert before == [85_868, 87_093, 87_110, 129_494, 80_939, 86_243]
-    assert after == [128_656, 130_492, 130_517, 177_936, 109_165, 129_219]
+    assert before == [85_868, 77_591, 103_591, 230_732, 121_271, 115_121]
+    assert after == [128_656, 116_255, 155_212, 317_046, 163_563, 172_486]
     assert all(high > low for low, high in zip(before, after, strict=True))
     assert [section.centroid_hz for section in kosmische_240.sections] == [994, 1824, 995, 1878, 1674, 862]
     assert [section.centroid_hz for section in shifted.sections] == [994, 1824, 995, 1878, 1674, 862]
@@ -379,8 +379,8 @@ def test_ac5_transposing_the_poly_period_raises_every_section(ambient_240: Plan)
     shifted = _with_poly_period_shift(ambient_240, 7)
     before = [section.declared_centroid_millihz for section in ambient_240.sections]
     after = [declared_centroid_millihz(shifted.events, s.start_frame, s.end_frame) for s in ambient_240.sections]
-    assert before == [372_041, 371_854, 368_557, 374_146]
-    assert after == [488_366, 488_179, 481_537, 499_636]
+    assert before == [372_041, 325_821, 353_083, 324_560]
+    assert after == [488_366, 442_146, 466_063, 450_050]
     assert all(high > low for low, high in zip(before, after, strict=True))
     assert [section.centroid_hz for section in ambient_240.sections] == [560, 560, 560, 560]
 

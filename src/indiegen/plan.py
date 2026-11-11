@@ -545,6 +545,15 @@ class SectionPlan(FrozenModel):
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     # c13: opt-in orbifold-geodesic voice leading. 0 = off (legacy heuristic).
     geodesic_voice_leading: int = Field(default=0, ge=0, le=1)
+    # c12 slice 3: modal mixture measurement (off-scale/borrowed pitch fraction)
+    # in permille. 0 when CP disabled (strict no-op) or no pitched events.
+    modal_mixture_permille: int = Field(default=0, ge=0, le=1000)
+    # c12 slice 3: voice-leading distance this section contributes to the CP
+    # progression. 0 when CP disabled or last section. Redefined in slice 4 to
+    # geodesic distance when a voicing progression is used.
+    harmony_voice_leading_distance: int = Field(default=0, ge=0)
+    # c12 slice 4: 1 when this section's CP progression fell back to roots-only.
+    harmony_cp_fallback: int = Field(default=0, ge=0, le=1)
 
 
 class MotifNote(FrozenModel):
@@ -649,6 +658,11 @@ class Plan(FrozenModel):
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     # c13: opt-in orbifold-geodesic voice leading (0 = legacy heuristic).
     geodesic_voice_leading: int = Field(default=0, ge=0, le=1)
+    # c12 slice 3: modal mixture aggregate (permille) and CP solution count.
+    modal_mixture_permille: int = Field(default=0, ge=0, le=1000)
+    harmony_cp_solution_count: int = Field(default=0, ge=0)
+    # c12 slice 4: number of CP fallbacks (0/1 today; reserved for counts).
+    harmony_cp_fallback_count: int = Field(default=0, ge=0)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)

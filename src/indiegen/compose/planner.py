@@ -74,8 +74,8 @@ from indiegen.plan import (
     SectionPlan,
     SectionProfile,
 )
-from indiegen.spectrum import declared_centroid_millihz
-from indiegen.theory.orbifold import lead_voicing
+from indiegen.spectrum import declared_centroid_millihz, modal_mixture_permille
+from indiegen.theory.orbifold import Voicing, lead_voicing
 from indiegen.theory.scales import mode_scale, relative_of
 
 # The three forms of a release: a full track, a longform and an interlude.
@@ -962,6 +962,8 @@ class _PlanInputs:
     appearances: list[MotifAppearance]
     sections: list[SectionPlan]
     nodes: list[SectionProfile]
+    harmony_cp_solution_count: int
+    harmony_cp_fallback_count: int
     delay_send: DelaySend
     reverb: ReverbSpec | None
     frippertronics: FrippertronicsSpec | None
@@ -1006,6 +1008,11 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         harmony_cp_enabled=1 if station.harmony_cp_enabled else 0,
         harmony_voice_leading_limit=station.harmony_voice_leading_limit,
         geodesic_voice_leading=1 if station.geodesic_voice_leading else 0,
+        modal_mixture_permille=(
+            sum(s.modal_mixture_permille for s in inputs.sections) // len(inputs.sections) if inputs.sections else 0
+        ),
+        harmony_cp_solution_count=inputs.harmony_cp_solution_count,
+        harmony_cp_fallback_count=inputs.harmony_cp_fallback_count,
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1241,22 +1248,80 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     # RNG-chosen section roots with a deterministically selected feasible
     # solution of the CP solver (voice-leading parsimony + boundary
     # resolution). Default off => byte-identical to the legacy path.
+    cp_solution_count = 0
+    cp_fallback = 0
+    geodesic_dists: list[int] = []
     if station.harmony_cp_enabled:
-        from indiegen.theory.harmony_cp import select_solution, solve_progressions
+        from indiegen.theory.harmony_cp import (
+            is_voicing_admissible,
+            select_solution,
+            solve_progressions,
+            solve_voicing_progressions,
+            voicing_distance,
+        )
 
         domain = roots if roots else list(lane.scale_midi)
         tonic = root_midi if root_midi in domain else (domain[0] if domain else None)
-        sols = solve_progressions(
-            domain,
+        offsets = sorted(set([0] + [int(x) for x in (intervals or [])]))
+
+        def base_voicing_for(r: int) -> Voicing:
+            return tuple(int(r) + off for off in offsets)
+
+        domain_voicings = [base_voicing_for(r) for r in domain]
+        domain_voicings = [v for v in domain_voicings if is_voicing_admissible(v)]
+        # dedup preserving order
+        seen: set[Voicing] = set()
+        uniq_voicings: list[Voicing] = []
+        for v in domain_voicings:
+            if v not in seen:
+                seen.add(v)
+                uniq_voicings.append(v)
+        domain_voicings = uniq_voicings
+        tonic_voicing = base_voicing_for(tonic) if tonic is not None else None
+        if tonic_voicing is not None and tonic_voicing not in domain_voicings:
+            tonic_voicing = None
+
+        voicing_sols = solve_voicing_progressions(
+            domain_voicings,
             len(nodes),
             voice_leading_limit=station.harmony_voice_leading_limit,
-            fixed_first=tonic,
+            # The quotient distance cannot see the register (an octave costs 0),
+            # so the root is bounded separately: a chord may not teleport an
+            # octave between sections. Same limit as the voice leading, so a
+            # section's harmony moves by at most that many semitones.
+            root_leading_limit=station.harmony_voice_leading_limit,
+            fixed_first=tonic_voicing,
         )
-        cp_solution = select_solution(sols, seed)
-        if cp_solution is not None and len(cp_solution) == len(nodes):
-            section_roots = list(cp_solution)
+        cp_solution_count = len(voicing_sols)
+        chosen_voicings = select_solution(voicing_sols, seed)
+        if chosen_voicings is not None and len(chosen_voicings) == len(nodes):
+            section_roots = [int(v[0]) for v in chosen_voicings]
             section_scales = [mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)]
             section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
+            geodesic_dists = [0] + [
+                voicing_distance(tuple(chosen_voicings[i - 1]), tuple(chosen_voicings[i]))
+                for i in range(1, len(chosen_voicings))
+            ]
+            cp_fallback = 0
+        else:
+            # Fallback to roots-only CP.
+            sols = solve_progressions(
+                domain,
+                len(nodes),
+                voice_leading_limit=station.harmony_voice_leading_limit,
+                fixed_first=tonic,
+            )
+            cp_solution_count = len(sols) if cp_solution_count == 0 else cp_solution_count
+            cp_solution = select_solution(sols, seed)
+            if cp_solution is not None and len(cp_solution) == len(nodes):
+                section_roots = list(cp_solution)
+                section_scales = [
+                    mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)
+                ]
+                section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
+                cp_fallback = 1
+            else:
+                cp_fallback = 1
 
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
     dither_seed = rng.next_u64()
@@ -1301,8 +1366,6 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             section_admission_modes=list(admission_modes),
             bed_instruments=list(bed_instruments),
             section_ic_bands=[[node.entropy_ic_min_permille, node.entropy_ic_max_permille] for node in nodes],
-            harmony_cp_enabled=station.harmony_cp_enabled,
-            harmony_voice_leading_limit=station.harmony_voice_leading_limit,
             geodesic_voice_leading=station.geodesic_voice_leading,
         )
 
@@ -1389,6 +1452,9 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             tension_values,
             tension_steps,
             tension_levels,
+            harmony_cp_enabled=station.harmony_cp_enabled,
+            harmony_cp_fallback=cp_fallback,
+            geodesic_dists=geodesic_dists,
         )
     else:
         if tension_values_pass1 is None or tension_steps_pass1 is None or tension_levels_pass1 is None:
@@ -1405,6 +1471,9 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             tension_values_pass1,
             tension_steps_pass1,
             tension_levels_pass1,
+            harmony_cp_enabled=station.harmony_cp_enabled,
+            harmony_cp_fallback=cp_fallback,
+            geodesic_dists=geodesic_dists,
         )
         rederived = tension.rederive_section_tension(events, placeholder)
         sections = [
@@ -1446,6 +1515,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         appearances=appearances,
         sections=sections,
         nodes=nodes,
+        harmony_cp_solution_count=cp_solution_count,
+        harmony_cp_fallback_count=cp_fallback,
         delay_send=delay_send,
         reverb=reverb,
         frippertronics=frippertronics,
@@ -1737,6 +1808,9 @@ def _section_plans(
     tension_values: list[int],
     tension_steps: list[int],
     tension_levels: list[int],
+    harmony_cp_enabled: bool = False,
+    harmony_cp_fallback: int = 0,
+    geodesic_dists: list[int] | None = None,
 ) -> list[SectionPlan]:
     """The sections the plan records: what each one carries and what sounds in it."""
     sections: list[SectionPlan] = []
@@ -1771,6 +1845,26 @@ def _section_plans(
                 entropy_ic_max_permille=node.entropy_ic_max_permille,
                 valence_permille=node.valence_permille,
                 arousal_permille=node.arousal_permille,
+                modal_mixture_permille=(
+                    modal_mixture_permille(
+                        events,
+                        mode_scale(modes[index][0], section_roots[index], 2),
+                        start,
+                        stop,
+                    )
+                    if harmony_cp_enabled
+                    else 0
+                ),
+                harmony_voice_leading_distance=(
+                    (geodesic_dists[index] if geodesic_dists and index < len(geodesic_dists) else 0)
+                    if harmony_cp_enabled and geodesic_dists
+                    else (
+                        abs(section_roots[index + 1] - section_roots[index])
+                        if harmony_cp_enabled and index + 1 < len(section_roots)
+                        else 0
+                    )
+                ),
+                harmony_cp_fallback=harmony_cp_fallback if harmony_cp_enabled else 0,
             )
         )
     return sections

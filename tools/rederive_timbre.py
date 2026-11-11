@@ -28,7 +28,12 @@ def main() -> int:
     parser.add_argument("--lane", required=True)
     parser.add_argument("--seed", type=int, default=1042)
     parser.add_argument("--seconds", type=int, default=60)
+    parser.add_argument("--rule", choices=("current", "highlow"), default="current")
     args = parser.parse_args()
+
+    from indiegen.compose import planner as _planner  # noqa: E402
+
+    _planner.ADMISSION_RULE = args.rule
 
     preset = load_preset(args.lane)
     plan = director(compose(preset, args.seed, args.seconds * SAMPLE_RATE))

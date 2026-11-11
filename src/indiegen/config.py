@@ -387,7 +387,7 @@ class StationPreset(FrozenModel):
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = []
     # c12: opt-in constraint-programming harmonic progression.
-    harmony_cp_enabled: bool = False
+    harmony_cp_enabled: bool = True
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     # c13: orbifold-geodesic voice leading (wrapped mod-12 quotient).
     # Code-only, never declared in preset YAML (c12 precedent).

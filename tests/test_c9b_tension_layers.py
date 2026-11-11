@@ -144,9 +144,14 @@ def test_bed_is_pad_and_drone_only() -> None:
 def test_bool_flip_changes_plan_where_threshold_hits() -> None:
     """Admission consumes the bool and changes the plan where a section is sparse.
 
-    kosmische 60 s 1042 outro has pass1 T=420 (<=421, #38 fullness-shaped) so it
-    admits all layers when enabled. The lane preset keeps admission off by
+    kosmische 60 s 1061 outro has pass1 T=413 (<=421, #38 fullness-shaped) so
+    it admits all layers when enabled. The lane preset keeps admission off by
     default; the mechanism is exercised by forcing the flag on.
+
+    The seed moved from 1042 when the CP progression became the default: CP
+    rewrote the section roots, so the outro's pass1 tension moved from 420 to
+    429 and the section no longer crosses the threshold. The mechanism is
+    unchanged; this is the case that still crosses it.
     """
     base = load_preset("kosmische")
     entry = base.lanes[0]
@@ -164,8 +169,8 @@ def test_bool_flip_changes_plan_where_threshold_hits() -> None:
             }
         )
 
-    plan_on = director(compose(_with_flag(True), 1042, 60 * SAMPLE_RATE))
-    plan_off = director(compose(_with_flag(False), 1042, 60 * SAMPLE_RATE))
+    plan_on = director(compose(_with_flag(True), 1061, 60 * SAMPLE_RATE))
+    plan_off = director(compose(_with_flag(False), 1061, 60 * SAMPLE_RATE))
     assert canonical_json(plan_on) != canonical_json(plan_off)
     outro_on = next(section for section in plan_on.sections if section.function == "outro")
     outro_off = next(section for section in plan_off.sections if section.function == "outro")

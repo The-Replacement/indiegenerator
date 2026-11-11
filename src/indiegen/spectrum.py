@@ -14,7 +14,7 @@ overlaps a section window. It is:
 
 Units: millihz, an ``int``. The smallest value a legal plan can produce is
 midi 0 at ratio 1/1, which is 8176 mHz, so ``0`` is unambiguously the sentinel
-for "this section declares no additive spectrum" (no pad, lead, poly-period or
+for "this section declares no additive spectrum" (no pad, lead, poly_period or
 drone event overlaps it). 166 of the 427 sections of the c41 corpus are exactly
 this.
 
@@ -52,7 +52,15 @@ from typing import Final
 
 from indiegen.errors import PlanError
 from indiegen.gain import millibels_to_gain
-from indiegen.plan import DroneEvent, Event, LeadEvent, PadEvent, PolyPeriodEvent
+from indiegen.plan import (
+    BassEvent,
+    DroneEvent,
+    Event,
+    LeadEvent,
+    PadEvent,
+    PluckEvent,
+    PolyPeriodEvent,
+)
 from indiegen.synth.osc import midi_to_hz
 
 # The voices whose spectrum is declared as partial ratios. A tuple, because a
@@ -67,7 +75,7 @@ def _partial_pairs(event: Event) -> Iterator[tuple[float, int]]:
     offset, because millibels are a level (negative is quieter) and linear
     gains multiply: the renderer applies the event level to the whole voice and
     the partial offset inside it. ``synth/drone.py`` and ``synth/poly_period.py``
-    apply only the partial value because their event level is 0, so the sum is
+    apply only the partial offset because their event level is 0, so the sum is
     the same number there.
     """
     if isinstance(event, PadEvent | LeadEvent | DroneEvent):
@@ -114,3 +122,47 @@ def declared_centroid_millihz(events: Sequence[Event], start_frame: int, stop_fr
     if total <= 0.0:
         return 0
     return int(round(1000 * weighted / total))
+
+
+def modal_mixture_permille(  # noqa: C901
+    events: Sequence[Event], scale: Sequence[int], start_frame: int, stop_frame: int
+) -> int:
+    """Fraction (permille) of pitched notes in ``[start_frame, stop_frame)`` that
+    are NOT members of ``scale`` (borrowed/off-scale, i.e. modal mixture).
+
+    Counts pitched note instances: PadEvent/LeadEvent/DroneEvent/PluckEvent each
+    contribute their ``midi``; PolyPeriodEvent contributes each voice's ``midi``;
+    BassEvent contributes each hit's ``midi``. Drum events (kick/snare/hat) carry
+    no pitch and are ignored. An event contributes only if it overlaps the window.
+    Returns 0 when there are no pitched notes or an empty scale.
+    """
+    if stop_frame <= start_frame:
+        return 0
+    scale_set = set(int(x) for x in scale)
+    if not scale_set:
+        return 0
+    total = 0
+    off = 0
+    for event in events:
+        overlap = min(event.start_frame + event.duration_frames, stop_frame) - max(event.start_frame, start_frame)
+        if overlap <= 0:
+            continue
+        midis: list[int] = []
+        if isinstance(event, (PadEvent, LeadEvent, DroneEvent, PluckEvent)):
+            midis.append(int(event.midi))
+        elif isinstance(event, PolyPeriodEvent):
+            for voice in event.voices:
+                midis.append(int(voice.midi))
+        elif isinstance(event, BassEvent):
+            for hit in event.hits:
+                if start_frame <= hit.frame < stop_frame:
+                    midis.append(int(hit.midi))
+        else:
+            continue
+        for midi in midis:
+            total += 1
+            if midi not in scale_set:
+                off += 1
+    if total == 0:
+        return 0
+    return int(round(1000 * off / total))
