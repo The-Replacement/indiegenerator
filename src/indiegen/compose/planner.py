@@ -1002,6 +1002,8 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         chord_segments_per_section=station.chord_segments_per_section,
         chromatic_budget_permille=station.chromatic_budget_permille,
         chord_tone_intervals=list(station.chord_tone_intervals),
+        harmony_cp_enabled=1 if station.harmony_cp_enabled else 0,
+        harmony_voice_leading_limit=station.harmony_voice_leading_limit,
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1233,6 +1235,31 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
     section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
 
+    # c12: opt-in CP harmonic progression. When enabled, replace the
+    # RNG-chosen section roots with a deterministically selected feasible
+    # solution of the CP solver (voice-leading parsimony + boundary
+    # resolution). Default off => byte-identical to the legacy path.
+    if station.harmony_cp_enabled:
+        from indiegen.theory.harmony_cp import select_solution, solve_progressions
+
+        domain = roots if roots else list(lane.scale_midi)
+        tonic = root_midi if root_midi in domain else (domain[0] if domain else None)
+        sols = solve_progressions(
+            domain,
+            len(nodes),
+            voice_leading_limit=station.harmony_voice_leading_limit,
+            fixed_first=tonic,
+        )
+        cp_solution = select_solution(sols, seed)
+        if cp_solution is not None and len(cp_solution) == len(nodes):
+            section_roots = list(cp_solution)
+            section_scales = [
+                mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots)
+            ]
+            section_segment_roots = _segment_roots(
+                section_roots, roots, station.chord_segments_per_section
+            )
+
     title_words = rng.choice(station.title_words), rng.choice(station.title_words)
     dither_seed = rng.next_u64()
 
@@ -1276,6 +1303,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             section_admission_modes=list(admission_modes),
             bed_instruments=list(bed_instruments),
             section_ic_bands=[[node.entropy_ic_min_permille, node.entropy_ic_max_permille] for node in nodes],
+            harmony_cp_enabled=station.harmony_cp_enabled,
+            harmony_voice_leading_limit=station.harmony_voice_leading_limit,
         )
 
     if not lane.tension_admission_enabled:

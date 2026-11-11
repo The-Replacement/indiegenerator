@@ -386,6 +386,9 @@ class StationPreset(FrozenModel):
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = []
+    # c12: opt-in constraint-programming harmonic progression.
+    harmony_cp_enabled: bool = False
+    harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)

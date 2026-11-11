@@ -539,6 +539,10 @@ class SectionPlan(FrozenModel):
     # c18: valence-arousal emotion tokens carried from the section graph.
     valence_permille: int = Field(default=0, ge=-1000, le=1000)
     arousal_permille: int = Field(default=0, ge=-1000, le=1000)
+    # c12: opt-in constraint-programming harmonic progression. 0 = off
+    # (legacy RNG path, byte-identical to pre-c12 output). 1 = solver.
+    harmony_cp_enabled: int = Field(default=0, ge=0, le=1)
+    harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
 
 
 class MotifNote(FrozenModel):
@@ -638,6 +642,9 @@ class Plan(FrozenModel):
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = Field(default_factory=list, max_length=5)
+    # c12: opt-in CP harmonic progression (0 = legacy RNG path).
+    harmony_cp_enabled: int = Field(default=0, ge=0, le=1)
+    harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)

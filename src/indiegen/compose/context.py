@@ -36,6 +36,8 @@ class TechniqueContext(BaseModel):
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = []
+    harmony_cp_enabled: bool = False
+    harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     tension_admission_enabled: bool = False
     section_admission_modes: list[str] = []
     bed_instruments: list[str] = []
