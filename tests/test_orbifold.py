@@ -152,8 +152,8 @@ def test_geodesic_distance_never_exceeds_per_voice_absolute(a: tuple[int, ...], 
 # --- flag defaults ----------------------------------------------------------
 
 
-def test_geodesic_flag_defaults_off(reference_plan: Plan) -> None:
-    assert reference_plan.geodesic_voice_leading == 0
+def test_geodesic_flag_defaults_on(reference_plan: Plan) -> None:
+    assert reference_plan.geodesic_voice_leading == 1
 
 
 def test_geodesic_flag_rejects_two(reference_plan: Plan) -> None:

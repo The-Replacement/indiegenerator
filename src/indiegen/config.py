@@ -389,9 +389,10 @@ class StationPreset(FrozenModel):
     # c12: opt-in constraint-programming harmonic progression.
     harmony_cp_enabled: bool = False
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
-    # c13: opt-in orbifold-geodesic voice leading (wrapped mod-12 quotient).
+    # c13: orbifold-geodesic voice leading (wrapped mod-12 quotient).
     # Code-only, never declared in preset YAML (c12 precedent).
-    geodesic_voice_leading: bool = False
+    # Activated by default as of the permanent-activation follow-up.
+    geodesic_voice_leading: bool = True
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)
