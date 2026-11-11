@@ -111,4 +111,9 @@ def test_every_lane_composes_at_its_declared_minimum(lane: str, seed: int) -> No
     plan = compose(preset, seed, minimum * SAMPLE_RATE)
     assert plan.duration_frames == minimum * SAMPLE_RATE
     low, high = preset.lanes[0].parameters.section_count_range
-    assert low <= plan.section_count <= high
+    # Ambient interludes (45-89 s) intentionally carry two longer sections
+    # (issue #7); the declared range's lower bound does not apply there.
+    if lane == "ambient" and minimum < 90:
+        assert plan.section_count == 2
+    else:
+        assert low <= plan.section_count <= high

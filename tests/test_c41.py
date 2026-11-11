@@ -323,9 +323,10 @@ def ambient_240() -> Plan:
 
 
 def test_a_lane_without_an_additive_card_declares_nothing() -> None:
-    """AC-3: the sentinel is exact, not approximate - dub and indie-noise have
-    no pad, lead, poly-period or drone card at all."""
-    for lane in ("dub-electronic", "indie-noise"):
+    """AC-3: the sentinel is exact, not approximate - indie-noise has no pad,
+    lead, poly-period or drone card at all. (dub-electronic now carries a
+    sustained drone bed, so it declares a spectrum.)"""
+    for lane in ("indie-noise",):
         plan = director(compose(load_preset(lane), SEED, 60 * SAMPLE_RATE))
         assert [section.declared_centroid_millihz for section in plan.sections] == [0] * len(plan.sections)
 
