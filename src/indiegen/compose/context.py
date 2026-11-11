@@ -38,6 +38,7 @@ class TechniqueContext(BaseModel):
     chord_tone_intervals: list[int] = []
     harmony_cp_enabled: bool = False
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
+    geodesic_voice_leading: bool = False
     tension_admission_enabled: bool = False
     section_admission_modes: list[str] = []
     bed_instruments: list[str] = []

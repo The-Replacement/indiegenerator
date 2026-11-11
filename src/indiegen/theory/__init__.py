@@ -16,6 +16,14 @@ from indiegen.theory.motif import (
     transform,
     transpose,
 )
+from indiegen.theory.orbifold import (
+    circular_semitone_dist,
+    geodesic_distance,
+    geodesic_matching,
+    is_crossing,
+    is_doubled,
+    lead_voicing,
+)
 from indiegen.theory.scales import (
     MODE_INTERVALS,
     RELATIVE_INTERVALS,
@@ -31,8 +39,14 @@ __all__ = (
     "RELATIVE_MODES",
     "Cell",
     "augment",
+    "circular_semitone_dist",
     "fragment",
+    "geodesic_distance",
+    "geodesic_matching",
     "invert",
+    "is_crossing",
+    "is_doubled",
+    "lead_voicing",
     "mode_scale",
     "nearest_scale_note",
     "relative_of",

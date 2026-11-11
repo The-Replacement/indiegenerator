@@ -543,6 +543,8 @@ class SectionPlan(FrozenModel):
     # (legacy RNG path, byte-identical to pre-c12 output). 1 = solver.
     harmony_cp_enabled: int = Field(default=0, ge=0, le=1)
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
+    # c13: opt-in orbifold-geodesic voice leading. 0 = off (legacy heuristic).
+    geodesic_voice_leading: int = Field(default=0, ge=0, le=1)
 
 
 class MotifNote(FrozenModel):
@@ -645,6 +647,8 @@ class Plan(FrozenModel):
     # c12: opt-in CP harmonic progression (0 = legacy RNG path).
     harmony_cp_enabled: int = Field(default=0, ge=0, le=1)
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
+    # c13: opt-in orbifold-geodesic voice leading (0 = legacy heuristic).
+    geodesic_voice_leading: int = Field(default=0, ge=0, le=1)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)

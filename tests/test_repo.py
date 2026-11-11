@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 CONVENTIONAL: re.Pattern[str] = re.compile(
-    r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+$"
+    r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/,-]+\))?!?: .+$"
 )
 FORBIDDEN: tuple[str, ...] = ("co-authored-by", "generated with", "claude", "gpt", "openai")
 

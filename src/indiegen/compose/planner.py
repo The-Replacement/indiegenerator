@@ -75,6 +75,7 @@ from indiegen.plan import (
     SectionProfile,
 )
 from indiegen.spectrum import declared_centroid_millihz
+from indiegen.theory.orbifold import lead_voicing
 from indiegen.theory.scales import mode_scale, relative_of
 
 # The three forms of a release: a full track, a longform and an interlude.
@@ -1004,6 +1005,7 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         chord_tone_intervals=list(station.chord_tone_intervals),
         harmony_cp_enabled=1 if station.harmony_cp_enabled else 0,
         harmony_voice_leading_limit=station.harmony_voice_leading_limit,
+        geodesic_voice_leading=1 if station.geodesic_voice_leading else 0,
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1152,7 +1154,7 @@ def _motif_and_postproc(
         section_roots,
         [mode for mode, _ in harmonic_modes],
         section_scales,
-        lane,
+        station,
     )
     return out, list(cell), appearances
 
@@ -1301,6 +1303,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             section_ic_bands=[[node.entropy_ic_min_permille, node.entropy_ic_max_permille] for node in nodes],
             harmony_cp_enabled=station.harmony_cp_enabled,
             harmony_voice_leading_limit=station.harmony_voice_leading_limit,
+            geodesic_voice_leading=station.geodesic_voice_leading,
         )
 
     if not lane.tension_admission_enabled:
@@ -2010,18 +2013,90 @@ def _apply_voice_leading(
     section_roots: list[int],
     section_modes: list[str],
     section_scales: list[list[int]],
-    lane: LanePreset,
+    station: StationPreset,
 ) -> tuple[list[Event], list[MotifAppearance]]:
-    """Conservative voice leading pass: smooth large leaps while staying in scale.
+    """Voice leading pass, heuristic by default, geodesic when opted in.
 
-    Only adjusts plucks (including motif), keeps changes minimal to avoid
-    breaking modal character or creating functional cadences.
+    The default path smooths large leaps while staying in scale (the S0 pass,
+    byte-identical). When ``station.geodesic_voice_leading`` is set, the pass
+    instead walks section chord voicings along the mod-12 geodesic (issue
+    #13) and snaps the plucks and bass to that walk.
 
     The pass is three moves in a fixed order - the plucks, the bass, and the
     appearances that record what the plucks used to say - and each one lives
     in its own function because they answer to different rules.
     """
     out = list(events)
-    moved_motif = _lead_plucks(out, boundaries, section_scales)
-    _lead_bass(out, boundaries, section_scales)
+    if station.geodesic_voice_leading:
+        moved_motif = _lead_geodesic(out, boundaries, section_roots, station.chord_tone_intervals)
+    else:
+        moved_motif = _lead_plucks(out, boundaries, section_scales)
+        _lead_bass(out, boundaries, section_scales)
     return out, _appearance_notes(appearances, out, moved_motif)
+
+
+def _section_voicing(root_midi: int, chord_tone_intervals: list[int]) -> tuple[int, ...]:
+    """The section's chord as an ordered voicing: root plus its chord-tone stack.
+
+    The pitch classes are exactly ``[root, root+i0, root+i1, ...]``; the
+    register is resolved by ``lead_voicing``, which spells them into the
+    pluck window as the most compact strictly-ordered voicing.
+    """
+    return (int(root_midi),) + tuple(int(root_midi) + int(i) for i in chord_tone_intervals)
+
+
+def _snap_to_register(midi: int, low: int, high: int) -> int:
+    """The pitch in ``[low, high]`` with ``midi``'s pitch class, nearest to ``midi``."""
+    pc = midi % 12
+    candidates = [p for p in range(low, high + 1) if p % 12 == pc]
+    if not candidates:
+        return midi
+    return min(candidates, key=lambda p: abs(p - midi))
+
+
+def _lead_geodesic(
+    out: list[Event],
+    boundaries: list[int],
+    section_roots: list[int],
+    chord_tone_intervals: list[int],
+) -> dict[tuple[int, int], int]:
+    """Walk section voicings along the geodesic and snap plucks and bass to it.
+
+    One voicing per section, walked section-to-section by ``lead_voicing``
+    into the pluck register (36..96). Pluck events snap to the nearest walked
+    pitch in their section; bass hits snap to their section root folded into
+    the bass register (24..72). Returns motif moves keyed the way
+    ``_lead_plucks`` returns them, so ``_appearance_notes`` re-syncs unchanged.
+    """
+    from indiegen.plan import BassEvent, PluckEvent
+
+    voicings: list[tuple[int, ...]] = []
+    for root in section_roots:
+        target = _section_voicing(root, chord_tone_intervals)
+        walked = (
+            lead_voicing(voicings[-1], target, low=36, high=96)
+            if voicings
+            else lead_voicing((), target, low=36, high=96)
+        )
+        voicings.append(walked)
+
+    moved_motif: dict[tuple[int, int], int] = {}
+    for idx, event in enumerate(out):
+        if isinstance(event, PluckEvent):
+            section = _section_at_frame(boundaries, event.start_frame)
+            voicing = voicings[section] if section < len(voicings) else voicings[-1]
+            if not voicing:
+                continue
+            new_midi = min(voicing, key=lambda p: abs(p - event.midi))
+            if new_midi != event.midi:
+                out[idx] = event.model_copy(update={"midi": new_midi})
+                if event.instrument == "motif":
+                    moved_motif[(event.start_frame, idx)] = new_midi
+        elif isinstance(event, BassEvent):
+            new_hits = []
+            for hit in event.hits:
+                section = _section_at_frame(boundaries, hit.frame)
+                root = section_roots[section] if section < len(section_roots) else section_roots[-1]
+                new_hits.append(hit.model_copy(update={"midi": _snap_to_register(root, 24, 72)}))
+            out[idx] = event.model_copy(update={"hits": new_hits})
+    return moved_motif
