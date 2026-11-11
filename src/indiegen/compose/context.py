@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from indiegen.errors import PlanError
 
+# Tension-selected layer families (issue #39, evidence-first slice).
+HIGH_TENSION_INSTRUMENTS: frozenset[str] = frozenset({"kick", "snare", "hat", "bass", "pluck", "lead", "ks"})
+LOW_TENSION_INSTRUMENTS: frozenset[str] = frozenset({"poly_period", "drone"})
+
 
 class TechniqueContext(BaseModel):
     """The facts a technique draws against."""
@@ -77,6 +81,10 @@ class TechniqueContext(BaseModel):
             if not self.bed_instruments:
                 return density_ok
             return instrument in self.bed_instruments
+        if mode == "high":
+            return instrument in HIGH_TENSION_INSTRUMENTS
+        if mode == "low":
+            return instrument in LOW_TENSION_INSTRUMENTS or instrument in self.bed_instruments
         raise PlanError(
             f"unknown tension admission mode {mode!r}",
             preset=self.preset,

@@ -932,13 +932,39 @@ def _form_for(station: StationPreset, duration_frames: int | None) -> Form:
     return station.forms[0].form
 
 
-def _admission_mode(tension: int) -> str:
+ADMISSION_RULE: str = "current"
+HIGH_THRESHOLD: int = 700
+LOW_THRESHOLD: int = 300
+
+
+def _admission_mode(
+    tension: int,
+    rule: str | None = None,
+    high_threshold: int | None = None,
+    low_threshold: int | None = None,
+) -> str:
     """The layer mode a planned tension level selects.
 
     Tension tracks arrangement fullness (#38): sparse sections have low
     tension, so ``all`` fires at T <= 421 to fill them. Full sections defer
     to the density gate.
+
+    ``rule="highlow"`` (issue #39 evidence slice) selects high/low families
+    by tension; default rule preserves current behavior. When ``rule`` is
+    None, the module-level ``ADMISSION_RULE`` is used (set by harnesses).
     """
+    if rule is None:
+        rule = ADMISSION_RULE
+    if rule == "highlow":
+        if high_threshold is None:
+            high_threshold = HIGH_THRESHOLD
+        if low_threshold is None:
+            low_threshold = LOW_THRESHOLD
+        if tension >= high_threshold:
+            return "high"
+        if tension <= low_threshold:
+            return "low"
+        return "density"
     if tension <= 421:
         return "all"
     return "density"
@@ -1413,7 +1439,18 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         tension_values_pass1, tension_steps_pass1, tension_levels_pass1 = _tension_walk(
             preset, seed, nodes, boundaries, lengths, frames_per_bar, events_pass1
         )
-        admission_modes = [_admission_mode(value) for value in tension_values_pass1]
+        if ADMISSION_RULE == "highlow" and tension_values_pass1:
+            ordered = sorted(tension_values_pass1)
+            n = len(ordered)
+            low_cut = ordered[n // 3]
+            high_cut = ordered[(2 * n) // 3]
+            globals()["HIGH_THRESHOLD"] = high_cut
+            globals()["LOW_THRESHOLD"] = low_cut
+        _ht = globals().get("HIGH_THRESHOLD")
+        _lt = globals().get("LOW_THRESHOLD")
+        admission_modes = [
+            _admission_mode(value, high_threshold=_ht, low_threshold=_lt) for value in tension_values_pass1
+        ]
         rng.restore(snap)
         ctx = _make_ctx(admission_modes, True)
         events = _events_for_lane(
