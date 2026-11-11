@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from indiegen.errors import PlanError
 from indiegen.plan import (
@@ -342,6 +342,23 @@ class LanePreset(FrozenModel):
     snap_permille: int = Field(default=0, ge=0, le=1000)
     duck: DuckSpec | None = None
     reverb: ReverbCard | None = None
+    # issue #17: the sonority the lane's harmony is built on, as semitone
+    # offsets from the root. It is the chord the consonance scorer measures
+    # against the lane's own spectrum, and the chord the harmonic centre has
+    # to be able to carry. Empty when the lane declares no chord: a pedal
+    # lane has none, and a lane whose dissonance is deliberate (indie-noise)
+    # must not have one.
+    chord_intervals: list[int] = []
+
+    @field_validator("chord_intervals")
+    @classmethod
+    def _chord_intervals_shape(cls, value: list[int]) -> list[int]:
+        """A declared sonority: 3-5 tones, each a pitch class 0..11."""
+        if value and not 3 <= len(value) <= 5:
+            raise ValueError(f"chord_intervals needs 3..5 tones, got {len(value)}")
+        if any(not 0 <= tone <= 11 for tone in value):
+            raise ValueError(f"chord_intervals must be pitch classes 0..11, got {value}")
+        return value
 
 
 class LaneEntry(FrozenModel):
@@ -388,6 +405,17 @@ class StationPreset(FrozenModel):
     chord_tone_intervals: list[int] = []
     # c12: opt-in constraint-programming harmonic progression.
     harmony_cp_enabled: bool = True
+    # issue #17: opt-in consonance scoring. When on, the harmonic centre is
+    # drawn from the roots whose chord the lane's own spectrum can voice
+    # cleanly, instead of from the whole scale. Off by default: the plans
+    # stay byte-identical to the pre-c17 path until the lane's sonority is
+    # declared and measured.
+    consonance_scoring_enabled: bool = False
+    # How much rougher than the cheapest candidate the arranger accepts, in
+    # permille of the score. 0 admits only the cheapest candidate; a bigger
+    # number admits the near-ties, which is where the draw still has a
+    # choice to make.
+    consonance_tolerance_permille: int = Field(default=0, ge=0, le=1000)
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     # c13: orbifold-geodesic voice leading (wrapped mod-12 quotient).
     # Code-only, never declared in preset YAML (c12 precedent).

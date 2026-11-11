@@ -14,6 +14,12 @@ scale_midi: [36, 38, 39, 41, 43, 45, 48, 50, 51, 53, 55, 57, 60, 62, 63, 65]
 # T16: the modal centre drifts between these, at the section boundaries.
 mode_pool: [aeolian, dorian]
 
+# c17: the sonority the lane's harmony is built on, as semitone offsets from
+# the root. The lane is a drone bed with a lead whose palette BRIEF 5 names
+# as "detuned pair, fifth and add9" (c37), so the chord is the root, the
+# fifth and the ninth: 0, 7 and 2. Both of the lane's modes carry it.
+chord_intervals: [0, 7, 2]
+
 # The lane has a pulse, so the sections are measured in bars.
 pulse: bars
 

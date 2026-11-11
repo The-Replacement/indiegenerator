@@ -14,6 +14,14 @@ scale_midi: [38, 40, 41, 43, 45, 47, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65]
 # T16: the harmonic centre moves among these modes, at a section boundary.
 mode_pool: [dorian, mixolydian, aeolian]
 
+# c17: the sonority the lane's harmony is built on, as semitone offsets from
+# the root. BRIEF 5 asks for "one chord for 32-64 bars" over a bass that plays
+# the root with "fifth passes at phrase ends", and BRIEF 6 names the
+# vocabulary: quintal stacks and add9 colour. A root, a fifth and the ninth
+# is that stack - 0, 7 and 2 - and all three of the lane's modes carry it,
+# so the harmonic centre can hold the chord whichever mode a section is in.
+chord_intervals: [0, 7, 2]
+
 # The lane has a pulse, so the sections are measured in bars and the
 # Director fires every 8 to 32 of them.
 pulse: bars

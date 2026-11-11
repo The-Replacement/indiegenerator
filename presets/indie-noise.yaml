@@ -14,6 +14,11 @@ scale_midi: [38, 40, 42, 43, 45, 47, 50, 52, 54, 55, 57, 59, 62, 64, 66, 67]
 # T16: the harmonic centre moves between these, at the section boundaries.
 mode_pool: [dorian, phrygian]
 
+# c17: NO sonority is declared here, on purpose. BRIEF 6 makes this lane's
+# dissonance deliberate ("indie-noise clusters"), so there is no chord the
+# arranger should be steering towards: a consonance score would be fighting
+# the brief. The lane's harmony is a pedal bass under the stabs.
+
 # The lane has a pulse, so the sections are measured in bars.
 pulse: bars
 

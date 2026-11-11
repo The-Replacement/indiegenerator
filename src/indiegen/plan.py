@@ -663,6 +663,15 @@ class Plan(FrozenModel):
     harmony_cp_solution_count: int = Field(default=0, ge=0)
     # c12 slice 4: number of CP fallbacks (0/1 today; reserved for counts).
     harmony_cp_fallback_count: int = Field(default=0, ge=0)
+    # issue #17: opt-in consonance scoring (0 = the legacy draw).
+    consonance_scoring_enabled: int = Field(default=0, ge=0, le=1)
+    # How much rougher than the cheapest candidate the arranger accepted, in
+    # permille of the score.
+    consonance_tolerance_permille: int = Field(default=0, ge=0, le=1000)
+    # The lane's declared sonority: the chord its harmony is built on, as
+    # semitone offsets from the root. NOT chord_tone_intervals, which is the
+    # station's chromatic override of what the poly-period voice plays.
+    chord_intervals: list[int] = Field(default_factory=list, max_length=5)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)
@@ -720,6 +729,16 @@ class Plan(FrozenModel):
             raise PlanError(f"chord_tone_intervals needs 3..5 tones, got {len(tones)}")
         if any(not 0 <= tone <= 11 for tone in tones):
             raise PlanError(f"chord_tone_intervals must be pitch classes 0..11, got {tones}")
+        return self
+
+    @model_validator(mode="after")
+    def _chord_intervals_shape(self) -> Self:
+        """The lane's declared sonority: 3–5 tones, each a pitch class 0..11."""
+        tones = self.chord_intervals
+        if tones and not 3 <= len(tones) <= 5:
+            raise PlanError(f"chord_intervals needs 3..5 tones, got {len(tones)}")
+        if any(not 0 <= tone <= 11 for tone in tones):
+            raise PlanError(f"chord_intervals must be pitch classes 0..11, got {tones}")
         return self
 
     @model_validator(mode="after")

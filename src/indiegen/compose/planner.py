@@ -370,6 +370,76 @@ def _chord_roots(scale_midi: list[int], intervals: list[int], tones: int) -> lis
     return [root for root in scale_midi if all(root + interval in scale_midi for interval in wanted)]
 
 
+def _lane_sonority(lane: LanePreset, station: StationPreset) -> list[int]:
+    """The chord the lane's harmony is built on, as offsets from the root.
+
+    The station's chromatic override comes first: when the station declares a
+    sonority, that is what the voices play. Otherwise the lane's own
+    declaration, and otherwise the poly-period card's chord - the only card
+    that plays a chord at all.
+    """
+    if station.chord_tone_intervals:
+        return list(station.chord_tone_intervals)
+    if lane.chord_intervals:
+        return list(lane.chord_intervals)
+    card = next((card for card in lane.techniques if isinstance(card, PolyPeriodCard)), None)
+    return list(card.chord_intervals) if card is not None else []
+
+
+def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
+    """The lane's additive spectra, one partial-ratio list per voice.
+
+    The poly-period's stack, the drone's just ratios, the lead's detuned pair
+    and the pad's harmonic series. The voices whose spectrum is not a list of
+    partials (the plucked string, the bass, the noise) are not here: a
+    spectrum nobody declared is not a measurement, and inventing one would
+    put a number in the plan that nothing measured.
+    """
+    voices: list[tuple[tuple[int, int], ...]] = []
+    for card in lane.techniques:
+        if isinstance(card, PolyPeriodCard):
+            voices.append(tuple((ratio.numerator, ratio.denominator) for ratio in card.partial_ratios))
+        elif isinstance(card, DroneCard):
+            voices.append(tuple((ratio.numerator, ratio.denominator) for ratio in card.ratios))
+        elif isinstance(card, LeadCard):
+            voices.append(LEAD_RATIOS)
+        elif isinstance(card, PadCard):
+            voices.append(tuple((index, 1) for index in range(1, card.partials.max + 1)))
+    return voices
+
+
+def _consonant_roots(lane: LanePreset, station: StationPreset, pool: list[int]) -> list[int]:
+    """The roots of the pool whose chord the lane's own spectrum voices cleanly.
+
+    The lane's declared sonority is the chord a candidate root would voice;
+    the score is the roughness of the spectrum that would sound, measured
+    against the lane's additive voices. The roots whose chord is cleanest are
+    the ones the arranger may choose from.
+
+    A lane that declares no sonority, or that has no additive voice to
+    measure against, has nothing to score: the pool comes back untouched.
+    """
+    from indiegen.theory.consonance import chord_candidates, consonant_chords
+
+    sonority = _lane_sonority(lane, station)
+    voices = _lane_voices(lane)
+    if not sonority or not voices:
+        return pool
+    # The candidates are the roots of the pool whose chord the scale (and
+    # the chromatic budget) can carry: a root that could voice only a
+    # fragment of the sonority is not a candidate at all.
+    candidates = chord_candidates(
+        lane.scale_midi,
+        sonority,
+        pool,
+        station.chromatic_budget_permille,
+    )
+    eligible = consonant_chords(candidates, voices, station.consonance_tolerance_permille)
+    if not eligible:
+        return pool
+    return [root for root, _ in eligible]
+
+
 def _segment_roots(section_roots: list[int], pool: list[int], segments: int) -> list[list[int]]:
     """Per-section chord-segment roots. ``segments=1`` degenerates to the section root."""
     if segments <= 1:
@@ -1039,6 +1109,9 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         ),
         harmony_cp_solution_count=inputs.harmony_cp_solution_count,
         harmony_cp_fallback_count=inputs.harmony_cp_fallback_count,
+        consonance_scoring_enabled=1 if station.consonance_scoring_enabled else 0,
+        consonance_tolerance_permille=station.consonance_tolerance_permille,
+        chord_intervals=list(lane.chord_intervals),
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1263,7 +1336,13 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         [],
     )
     roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
-    root_midi = rng.choice(roots if roots else lane.scale_midi)
+    pool = roots if roots else list(lane.scale_midi)
+    # c17: the harmonic centre is drawn from the roots whose chord the lane's
+    # own spectrum can voice cleanly. The draw is the same one the legacy path
+    # makes, so the flag changes the root and nothing else.
+    if station.consonance_scoring_enabled:
+        pool = _consonant_roots(lane, station, pool)
+    root_midi = rng.choice(pool)
 
     modes = _assign_modes(lane.mode_pool, nodes, lengths, frames_per_bar, root_midi, rng)
     section_roots = [root for _, root in modes]
