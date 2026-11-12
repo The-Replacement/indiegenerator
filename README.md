@@ -91,7 +91,7 @@ the numbers are what the machine does, not a benchmark. The host is shared and
 repeat runs of the same command have differed by up to 30%, so read the times
 as an order of magnitude and the hashes as the fact.
 
-Eight-minute pieces, measured on 2026-10-24 with exactly this command, one
+Eight-minute pieces, measured on 2026-11-11 with exactly this command, one
 process each:
 
 ```bash
@@ -100,21 +100,22 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 89.3 s | 121.1 s | 119.4 s | 129.9 s | 127.3 s |
-| Faster than realtime | 5.4× | 4.0× | 4.0× | 3.7× | 3.8× |
+| Render time (whole command) | 150.6 s | 136.6 s | 147.6 s | 126.3 s | 143.1 s |
+| Faster than realtime | 3.2× | 3.5× | 3.3× | 3.8× | 3.4× |
 | Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
-| Integrated loudness | −16.083 LUFS | −16.051 LUFS | −16.099 LUFS | −16.106 LUFS | −16.095 LUFS |
-| True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.297 dBTP | −4.293 dBTP | −4.299 dBTP |
-| Loudness range | 10.37 LU | 10.06 LU | 11.75 LU | 10.16 LU | 11.44 LU |
-| Sections | 5 | 6 | 4 | 4 | 3 |
-| `plan_sha256` | `8457b370…` | `33bbe32c…` | `4f27d08b…` | `6d62480c…` | `dca339aa…` |
-| `pcm_sha256` | `7a5b7afb…` | `d76b61b0…` | `bac6ed95…` | `d7c75aa8…` | `1ca0885d…` |
+| Integrated loudness | −16.075 LUFS | −16.023 LUFS | −16.065 LUFS | −16.078 LUFS | −16.070 LUFS |
+| True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.293 dBTP | −4.300 dBTP |
+| Loudness range | 9.208 LU | 9.251 LU | 11.048 LU | 9.155 LU | 10.682 LU |
+| Sections | 5 | 6 | 4 | 4 | 4 |
+| `plan_sha256` | `b74ffd0f…` | `f7f1f837…` | `2a58be51…` | `14b67abb…` | `23700127…` |
+| `pcm_sha256` | `2d6263cc…` | `f17faddf…` | `7d7e38ef…` | `03e8b167…` | `ca934e0e…` |
 
-These rows were re-measured at c41 (issue #37), which added
-`declared_centroid_millihz` to every section: every `plan_sha256` moved, because
-the leaf is plan bytes. The row before this one was itself stale — it predated
-c39, which had added the tension fields and moved the plan without moving the
-row. Measure the row you publish.
+These rows were re-measured on 2026-11-11, when the consonance scoring
+(issue #17) moved every lane's harmonic centre onto a root that can carry
+the lane's declared chord: every hash moved, and the loudness ranges with
+them. The row before this one was itself stale — it predated c39, which
+had added the tension fields and moved the plan without moving the row.
+Measure the row you publish.
 
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
@@ -127,7 +128,7 @@ command and c31 reads 746 MB, inside the run-to-run spread this file warns
 about below.
 
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
-both hold with room: the slowest lane is the ambient at 127.3 s, and the
+both hold with room: the slowest lane is the motorik at 150.6 s, and the
 master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
 at eight minutes, below the render's own peak.
 
@@ -321,6 +322,15 @@ preset.yaml + seed ──compose()──▶ Plan ──director()──▶ Plan 
   back every eight bars, transformed — transposed, inverted, reversed,
   stretched or cut — so the station's signature is heard and not just
   declared. Every appearance is recorded in the plan.
+- **The harmonic centre is measured, not drawn.** Each lane declares the
+  chord its harmony is built on — motorik and kosmische the root, the fifth
+  and the ninth; dub-electronic the minor ninth's voicing; indie-noise
+  none, because its dissonance is deliberate. The composer scores every
+  root that could carry that chord against the lane's own spectrum
+  (Sethares' critical-band roughness, at one reference pitch so the
+  register cannot leak in) and draws the track's centre from the roots
+  that come out cleanest. The score is a pure function of the plan: the
+  same lane and seed always land on the same centre.
 - **The Director draws, the Director applies.** `compose()` draws the
   Director's moves from the station's strategy pool (every 8 to 32 bars in a
   pulsed lane, every 60 to 180 s in a lane with no pulse), and `director()`
