@@ -67,6 +67,42 @@ def test_the_sounding_frame_density_is_between_half_and_two(ambient_plan: Plan) 
         assert 0.5 <= density <= 2.0
 
 
+def test_the_periods_fit_inside_the_track_when_the_card_floor_is_longer(presets_dir: Path) -> None:
+    """A period that outlives the track never cycles: the voice is always on.
+
+    The card asks for periods of fifteen to ninety seconds. A ten-second
+    track is shorter than the card's floor, and a voice whose period
+    outlives the piece sounds one whole window and is then off for the
+    rest of it - so the density counts voices that never rest, over the
+    ceiling. The floor drops to one second instead: the periods fit, the
+    voices cycle, and the density is the card's own declaration.
+    """
+    plan = director(compose(load_preset("ambient", presets_dir=presets_dir), 1042, 10 * 44100))
+    events = [event for event in plan.events if event.kind == "poly_period"]
+    assert events
+    for event in events:
+        for voice in event.voices:
+            assert voice.period_frames <= plan.duration_frames
+
+
+def test_the_ambient_composes_at_ten_seconds(presets_dir: Path) -> None:
+    """A short track with a whole chord at its centre is a plan, not a refusal.
+
+    The harmonic centre now stands on a root that can carry the lane's
+    whole chord, and the poly-period then voices every tone of it: five
+    voices on a ten-second track.
+    """
+    plan = director(compose(load_preset("ambient", presets_dir=presets_dir), 1042, 10 * 44100))
+    events = [event for event in plan.events if event.kind == "poly_period"]
+    assert events
+    for event in events:
+        frames = sum(
+            sounding_frames(voice.period_frames, voice.on_frames, voice.phase_frames, plan.duration_frames)
+            for voice in event.voices
+        )
+        assert 0.5 <= frames / plan.duration_frames <= 2.0
+
+
 def test_the_voices_come_from_one_chord_in_the_scale(ambient_plan: Plan) -> None:
     scale = ambient_plan.scale_midi
     for event in ambient_plan.events:

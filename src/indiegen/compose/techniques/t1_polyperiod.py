@@ -82,17 +82,25 @@ def _draw_periods(
     card_low = card.period_seconds_range.min * sample_rate
     card_high = card.period_seconds_range.max * sample_rate
     capped_high = min(card_high, max_period_frames)
-    # Only cap when the shortened range still holds enough distinct
-    # periods for every voice: otherwise the cap would collapse to a
-    # single value and break T1's distinctness rule (and its 15 s floor).
-    high = capped_high if capped_high - card_low + 1 >= count else card_high
-    if high < sample_rate:
-        high = sample_rate
-    low = min(card_low, high)
-    if low < sample_rate:
+    if capped_high < card_low:
+        # The track is shorter than the card's shortest period: the floor
+        # drops to one second, so the periods still fit inside the track.
+        # A period that outlives the track never cycles - the voice sounds
+        # one whole window and is then off for the rest of the piece - and
+        # the density then counts voices that are always on, over the
+        # ceiling, for a configuration the card never asked for.
+        high = max(capped_high, sample_rate)
         low = sample_rate
-    if low > high:
-        low = high
+    else:
+        # Only cap when the shortened range still holds enough distinct
+        # periods for every voice: otherwise the cap would collapse to a
+        # single value and break T1's distinctness rule (and its 15 s floor).
+        high = capped_high if capped_high - card_low + 1 >= count else card_high
+        low = min(card_low, high)
+        if low < sample_rate:
+            low = sample_rate
+        if low > high:
+            low = high
     periods: list[int] = []
     # If the usable range is too narrow for ``count`` distinct integers,
     # fall back to allowing repeats rather than looping forever.
