@@ -44,17 +44,18 @@ def test_the_plan_names_the_sonority_it_built(motorik: Preset) -> None:
     assert plan.chord_intervals == [0, 7, 2]
 
 
-def test_the_switch_is_off_by_default(motorik: Preset) -> None:
-    """Off means off: the plan says so, and nothing is scored."""
+def test_the_switch_is_on_by_default(motorik: Preset) -> None:
+    """On by default: the lane's sonority is measured, and the root follows it."""
     plan = compose(motorik, SEED, FRAMES)
-    assert plan.consonance_scoring_enabled == 0
+    assert plan.consonance_scoring_enabled == 1
 
 
-def test_the_switch_off_leaves_the_plan_byte_identical(motorik: Preset) -> None:
+def test_the_switch_off_is_the_legacy_draw(motorik: Preset) -> None:
     """With the switch off the composer draws exactly as it did before."""
     off = compose(_with_scoring(motorik, False), SEED, FRAMES)
     again = compose(_with_scoring(motorik, False), SEED, FRAMES)
     assert canonical_bytes(off.model_dump()) == canonical_bytes(again.model_dump())
+    assert off.consonance_scoring_enabled == 0
 
 
 def test_the_scored_root_is_one_that_can_carry_the_sonority(motorik: Preset) -> None:
@@ -66,8 +67,8 @@ def test_the_scored_root_is_one_that_can_carry_the_sonority(motorik: Preset) -> 
     roots voice is the declared sonority.
     """
     lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
-    station = motorik.station.model_copy(update={"consonance_scoring_enabled": True})
-    scored = compose(motorik.model_copy(update={"station": station}), SEED, FRAMES)
+    station = motorik.station
+    scored = compose(motorik, SEED, FRAMES)
 
     root = scored.sections[0].root_midi
     sonority = _lane_sonority(lane, station)

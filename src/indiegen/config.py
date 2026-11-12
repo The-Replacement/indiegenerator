@@ -405,16 +405,19 @@ class StationPreset(FrozenModel):
     chord_tone_intervals: list[int] = []
     # c12: opt-in constraint-programming harmonic progression.
     harmony_cp_enabled: bool = True
-    # issue #17: opt-in consonance scoring. When on, the harmonic centre is
-    # drawn from the roots whose chord the lane's own spectrum can voice
-    # cleanly, instead of from the whole scale. Off by default: the plans
-    # stay byte-identical to the pre-c17 path until the lane's sonority is
-    # declared and measured.
-    consonance_scoring_enabled: bool = False
+    # issue #17: consonance scoring. When on, the harmonic centre is drawn
+    # from the roots whose chord the lane's own spectrum can voice cleanly,
+    # instead of from the whole scale. On by default: the lane's declared
+    # sonority is measured, and the root that can carry it is the root the
+    # track should stand on. Code-only, never declared in preset YAML (c12
+    # precedent).
+    consonance_scoring_enabled: bool = True
     # How much rougher than the cheapest candidate the arranger accepts, in
     # permille of the score. 0 admits only the cheapest candidate; a bigger
     # number admits the near-ties, which is where the draw still has a
-    # choice to make.
+    # choice to make. Measured at 0: the eligible pools are 4-7 roots per
+    # lane and the harmonic centre still varies across seeds (3-4 distinct
+    # centres over five seeds), so the variety does not need the slack.
     consonance_tolerance_permille: int = Field(default=0, ge=0, le=1000)
     harmony_voice_leading_limit: int = Field(default=7, ge=1, le=24)
     # c13: orbifold-geodesic voice leading (wrapped mod-12 quotient).
