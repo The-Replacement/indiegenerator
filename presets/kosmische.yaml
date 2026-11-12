@@ -1,7 +1,7 @@
 kind: lane
 lane: kosmische
-alias: Hollow Signal
-album: Sustained Weather
+alias: Señal Hueca
+album: Tiempo Sostenido
 # The filename token: the output regex forbids hyphens.
 file_token: kosmische
 

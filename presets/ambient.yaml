@@ -1,7 +1,7 @@
 kind: lane
 lane: ambient
-alias: Long Exposure
-album: Rooms in Half Light
+alias: Exposición Larga
+album: Habitaciones en Media Luz
 # The filename token: the output regex forbids hyphens.
 file_token: ambient
 

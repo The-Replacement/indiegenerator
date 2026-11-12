@@ -32,26 +32,26 @@ motif_bank:
 motif_rhythm: [1, 1, 2, 1]
 
 title_words:
-  - Low
-  - Tide
-  - Glass
-  - Harbour
-  - Hollow
-  - Signal
-  - Quiet
-  - Circuit
-  - Paper
-  - Salt
-  - Ember
-  - Drift
-  - North
-  - Compass
-  - Slow
-  - Weather
-  - Pale
-  - Lantern
-  - Iron
-  - Meadow
+  - Bajo
+  - Marea
+  - Vidrio
+  - Puerto
+  - Hueco
+  - Señal
+  - Quieto
+  - Circuito
+  - Papel
+  - Sal
+  - Brasa
+  - Deriva
+  - Norte
+  - Brújula
+  - Lento
+  - Tiempo
+  - Pálido
+  - Farol
+  - Hierro
+  - Prado
 
 # THE SECTION GRAPH. A track is a walk over this: the walk starts at the
 # intro, follows the declared successors, and ends at the outro. The

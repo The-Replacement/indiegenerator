@@ -1,7 +1,7 @@
 kind: lane
 lane: dub-electronic
-alias: Silt
-album: Chamber Echoes
+alias: Sedimento
+album: Ecos de Cámara
 # The filename token: the output regex forbids hyphens.
 file_token: dubelectronic
 

@@ -1,7 +1,7 @@
 kind: lane
 lane: motorik
-alias: Steady Hand
-album: Sixteen Steps
+alias: Mano Firme
+album: Dieciséis Pasos
 # The filename token: the output regex forbids hyphens.
 file_token: motorik
 

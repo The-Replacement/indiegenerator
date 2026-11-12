@@ -44,6 +44,9 @@ class CatalogEntry:
     director_log: list[dict[str, Any]]
     path: str
     size_bytes: int
+    alias: str = ""
+    album: str = ""
+    title: str = ""
 
 
 @dataclass
@@ -78,6 +81,9 @@ class Catalog:
                     "preset": entry.preset,
                     "lane": entry.lane,
                     "form": entry.form,
+                    "alias": entry.alias,
+                    "album": entry.album,
+                    "title": entry.title,
                     "duration_seconds": round(entry.duration_seconds, 3),
                     "integrated_lufs": round(entry.integrated_lufs, 3),
                     "true_peak_dbtp": round(entry.true_peak_dbtp, 3),
@@ -127,6 +133,9 @@ def entry_from_sidecar(path: Path, payload: dict[str, Any], size_bytes: int) -> 
         preset=str(payload.get("preset", "")),
         lane=str(payload.get("lane", "")),
         form=str(plan.get("form", "")),
+        alias=str(plan.get("alias", "")),
+        album=str(plan.get("album", "")),
+        title=str(plan.get("title", "")),
         duration_seconds=float(measurements.get("duration_seconds", 0.0)),
         integrated_lufs=float(measurements.get("integrated_lufs", 0.0)),
         true_peak_dbtp=float(measurements.get("true_peak_dbtp", 0.0)),

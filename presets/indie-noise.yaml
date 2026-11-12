@@ -1,7 +1,7 @@
 kind: lane
 lane: indie-noise
-alias: Tin Roof
-album: Loose Ends
+alias: Techo de Lata
+album: Cabos Sueltos
 # The filename token: the output regex forbids hyphens.
 file_token: indienoise
 
