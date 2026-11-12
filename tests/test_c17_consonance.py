@@ -10,10 +10,16 @@ from __future__ import annotations
 import pytest
 
 from indiegen.compose import compose
-from indiegen.compose.planner import _chord_roots, _consonant_roots, _lane_sonority, _lane_voices
+from indiegen.compose.director import director
+from indiegen.compose.planner import (
+    _chord_roots,
+    _consonant_roots,
+    _lane_sonority,
+    _lane_voices,
+)
 from indiegen.config import Preset, StationPreset, load_preset
 from indiegen.plan import canonical_bytes
-from indiegen.theory.scales import chord_pool
+from indiegen.theory.scales import chord_pool, mode_scale, relative_of
 
 SECONDS = 30
 SEED = 1042
@@ -126,3 +132,113 @@ def test_the_tolerance_gives_the_draw_more_choices(motorik: Preset) -> None:
     strict_pool = _consonant_roots(lane, strict, list(lane.scale_midi))
     loose_pool = _consonant_roots(lane, loose, list(lane.scale_midi))
     assert len(loose_pool) >= len(strict_pool)
+
+
+def test_the_segments_walk_the_scored_pool(motorik: Preset) -> None:
+    """Slice 4, AC-1: a chord segment sits on a root that can carry the sonority.
+
+    With the switch on, the composer's segment walk reads the scored pool -
+    the roots whose chord the lane's spectrum voices cleanly - so the pad's
+    per-segment events land on roots the legacy draw could have avoided.
+    """
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    station = motorik.station.model_copy(update={"consonance_scoring_enabled": True, "chord_segments_per_section": 3})
+    preset = motorik.model_copy(update={"station": station})
+    # The pool the composer scores over: the chord-capable roots when the
+    # lane's poly-period card declares a chord, the whole scale otherwise -
+    # the same two lines compose runs (planner.py, the roots/pool draw).
+    from indiegen.config import PolyPeriodCard
+
+    intervals = next((card.chord_intervals for card in lane.techniques if isinstance(card, PolyPeriodCard)), [])
+    chord_roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
+    scored = _consonant_roots(lane, station, chord_roots if chord_roots else list(lane.scale_midi))
+    assert 0 < len(scored) < len(chord_roots)
+
+    plan = compose(preset, SEED, FRAMES)
+    pads = [event for event in plan.events if event.instrument == "pad"]
+    assert pads  # the lane declares a pad, so the segments are audible
+    for event in pads:
+        assert event.midi in scored
+
+
+def test_the_segments_walk_the_legacy_roots_when_off(motorik: Preset) -> None:
+    """Slice 4, AC-2: with the switch off the walk reads the unscored scale.
+
+    The contrast with the previous test pins both paths: off, the pad's
+    segment roots are only required to sit in the lane's scale; on, they sit
+    in the scored pool.
+    """
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    preset = _with_scoring(motorik, False)
+    station_off = preset.station.model_copy(update={"chord_segments_per_section": 3})
+    plan = compose(preset.model_copy(update={"station": station_off}), SEED, FRAMES)
+    pads = [event for event in plan.events if event.instrument == "pad"]
+    assert pads
+    scale = set(lane.scale_midi)
+    for event in pads:
+        assert event.midi in scale
+
+
+def test_the_plan_carries_the_voices_it_measured(motorik: Preset) -> None:
+    """Slice 4, AC-3: the plan names the spectra the sonority is judged against."""
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    expected = _lane_voices(lane)
+    assert expected
+    plan = compose(motorik, SEED, FRAMES)
+    voices = [[(ratio.numerator, ratio.denominator) for ratio in voice] for voice in plan.chord_voices]
+    assert voices == [list(voice) for voice in expected]
+
+
+def test_the_director_measures_every_section(motorik: Preset) -> None:
+    """Slice 4, AC-4: after the moves each section names what its own scale admits.
+
+    The motorik sonority is three tones and the lane's scale admits it at
+    every drawn root, so every section reports the full chord and a nonzero
+    roughness against the plan's own voices.
+    """
+    plan = compose(motorik, SEED, FRAMES)
+    directed = director(plan)
+    sonority = plan.chord_intervals
+    assert sonority
+    for section in directed.sections:
+        assert section.chord_tones_admitted == len(sonority)
+        assert section.chord_consonance_permille > 0
+
+
+def test_the_director_measures_a_moved_section_at_its_moved_root(motorik: Preset) -> None:
+    """Slice 4, AC-5: a reharmonized section is measured where the move left it.
+
+    The measurement is recomputed here from the section's own post-move mode
+    and root, so the test holds the director to its own arithmetic rather
+    than to a pinned number.
+    """
+    from indiegen.plan import DirectorMove
+    from indiegen.theory.scales import chord_pool as pool
+
+    plan = compose(motorik, SEED, FRAMES)
+    move = DirectorMove(
+        sample=0,
+        strategy="reharmonize_relative",
+        detail="reharmonize to the relative mode",
+        parameter=0,
+        crossfade_frames=0,
+        applies_to=["bass"],
+    )
+    directed = director(plan.model_copy(update={"strategy_deck": [move]}))
+    assert directed.director_log  # the move changed something
+    for before, after in zip(plan.sections, directed.sections, strict=True):
+        relative, interval = relative_of(before.mode)
+        assert (after.mode, after.root_midi) == (relative, before.root_midi + interval)
+        scale = mode_scale(after.mode, after.root_midi, 2)
+        tones = pool(scale, after.root_midi, directed.chord_intervals, directed.chromatic_budget_permille)
+        assert after.chord_tones_admitted == len(tones)
+
+
+def test_the_measurement_is_a_strict_no_op_when_off(motorik: Preset) -> None:
+    """Slice 4, AC-6: with the switch off the new fields stay zero."""
+    off = _with_scoring(motorik, False)
+    plan = compose(off, SEED, FRAMES)
+    directed = director(plan)
+    for section in directed.sections:
+        assert section.chord_tones_admitted == 0
+        assert section.chord_consonance_permille == 0

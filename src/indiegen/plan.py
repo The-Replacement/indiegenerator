@@ -554,6 +554,16 @@ class SectionPlan(FrozenModel):
     harmony_voice_leading_distance: int = Field(default=0, ge=0)
     # c12 slice 4: 1 when this section's CP progression fell back to roots-only.
     harmony_cp_fallback: int = Field(default=0, ge=0, le=1)
+    # issue #17: what this section's own scale admits of the plan's declared
+    # sonority at its (post-Director) root, and how rough that admitted chord
+    # is against the plan's chord voices. Two fields, not one: the scorer is
+    # register-fair and per-pair averaged, so a fragment - a dyad prefix -
+    # scores LOW, and the roughness alone would praise a section that cannot
+    # carry the sonority at all. The count is the candidacy fact; the permille
+    # is the roughness fact. Both 0 when consonance scoring is off, the lane
+    # declares no sonority, or the plan declares no voices.
+    chord_tones_admitted: int = Field(default=0, ge=0, le=5)
+    chord_consonance_permille: int = Field(default=0, ge=0, le=1000)
 
 
 class MotifNote(FrozenModel):
@@ -672,6 +682,12 @@ class Plan(FrozenModel):
     # semitone offsets from the root. NOT chord_tone_intervals, which is the
     # station's chromatic override of what the poly-period voice plays.
     chord_intervals: list[int] = Field(default_factory=list, max_length=5)
+    # issue #17: the additive voices the lane's sonority is measured against,
+    # one exact-ratio partial list per voice, as _lane_voices declares them.
+    # A declaration like chord_intervals, not a measurement: it is recorded
+    # whatever the switch says, so the Director's post-move consonance
+    # measurement is a pure function of the plan alone.
+    chord_voices: list[list[Rational]] = Field(default_factory=list, max_length=8)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)

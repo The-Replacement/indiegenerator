@@ -1112,6 +1112,13 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         consonance_scoring_enabled=1 if station.consonance_scoring_enabled else 0,
         consonance_tolerance_permille=station.consonance_tolerance_permille,
         chord_intervals=list(lane.chord_intervals),
+        # issue #17: the additive voices the sonority is measured against, as
+        # exact ratios, so the Director's post-move measurement is a pure
+        # function of the plan.
+        chord_voices=[
+            [Rational(numerator=numerator, denominator=denominator) for numerator, denominator in voice]
+            for voice in _lane_voices(lane)
+        ],
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1347,7 +1354,13 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     modes = _assign_modes(lane.mode_pool, nodes, lengths, frames_per_bar, root_midi, rng)
     section_roots = [root for _, root in modes]
     section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
-    section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
+    # c17 slice 4: the segments walk the SCORED pool, so a chord segment can
+    # never sit on a root that cannot carry the declared sonority. The CP
+    # paths below walk the same scored pool: a CP section root that is not in
+    # it anchors at the pool's head, so its segments are scored roots even
+    # though the CP domain itself stays untouched (slice 3's measured
+    # deferral).
+    section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
 
     # c12: opt-in CP harmonic progression. When enabled, replace the
     # RNG-chosen section roots with a deterministically selected feasible
@@ -1402,7 +1415,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         if chosen_voicings is not None and len(chosen_voicings) == len(nodes):
             section_roots = [int(v[0]) for v in chosen_voicings]
             section_scales = [mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)]
-            section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
+            section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
             geodesic_dists = [0] + [
                 voicing_distance(tuple(chosen_voicings[i - 1]), tuple(chosen_voicings[i]))
                 for i in range(1, len(chosen_voicings))
@@ -1423,7 +1436,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
                 section_scales = [
                     mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)
                 ]
-                section_segment_roots = _segment_roots(section_roots, roots, station.chord_segments_per_section)
+                section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
                 cp_fallback = 1
             else:
                 cp_fallback = 1

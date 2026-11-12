@@ -34,7 +34,8 @@ from indiegen.plan import (
     SnareEvent,
 )
 from indiegen.spectrum import declared_centroid_millihz
-from indiegen.theory.scales import mode_scale, relative_of
+from indiegen.theory.consonance import chord_dissonance
+from indiegen.theory.scales import chord_pool, mode_scale, relative_of
 
 TRANSPOSE_UP_FOURTH: str = "transpose_up_fourth"
 TRANSPOSE_MOTIF: str = "transpose_motif"
@@ -254,6 +255,33 @@ def _ending(plan: Plan) -> int:
     return max(0, plan.duration_frames - ENDING_GUARD_SECONDS * plan.sample_rate)
 
 
+def _section_consonance(plan: Plan, section: SectionPlan) -> dict[str, int]:
+    """What the section's own scale admits of the declared sonority, and its roughness.
+
+    The section is measured at its CURRENT mode and root - the ones the moves
+    left it with - so a reharmonized section is measured at the root it moved
+    to, with the same ruler the composer drew the harmonic centre with: the
+    declared sonority against the plan's declared voices, admitted under the
+    section's own scale and the plan's chromatic budget.
+
+    Two facts, not one: the register-fair scorer averages per pair, so a
+    fragment (a dyad prefix) scores LOW and the roughness alone would praise a
+    section that cannot carry the sonority at all. The admitted count is the
+    candidacy fact; the permille is the roughness fact. Both 0 when consonance
+    scoring is off, the lane declares no sonority, or the plan declares no
+    voices.
+    """
+    if not plan.consonance_scoring_enabled or not plan.chord_intervals or not plan.chord_voices:
+        return {"chord_tones_admitted": 0, "chord_consonance_permille": 0}
+    scale = mode_scale(section.mode, section.root_midi, 2)
+    tones = chord_pool(scale, section.root_midi, plan.chord_intervals, plan.chromatic_budget_permille)
+    voices = [[(ratio.numerator, ratio.denominator) for ratio in voice] for voice in plan.chord_voices]
+    return {
+        "chord_tones_admitted": len(tones),
+        "chord_consonance_permille": chord_dissonance(tones, voices) if tones else 0,
+    }
+
+
 def _apply(move: DirectorMove, plan: Plan) -> Arrangement | None:
     """Apply one move. ``None`` means it changed nothing."""
     handler = _HANDLERS.get(move.strategy)
@@ -416,6 +444,11 @@ def director(plan: Plan) -> Plan:
                 "declared_centroid_millihz": declared_centroid_millihz(events, section.start_frame, section.end_frame),
                 "tension_permille": rederived[index][0],
                 "tension_delta_permille": rederived[index][1],
+                # issue #17: what the section's post-move harmony measures. A
+                # pure function of the plan - the moves may have rewritten the
+                # section's mode and root, and this is the plan saying whether
+                # the centre it ended on can still carry the lane's sonority.
+                **_section_consonance(plan, section),
             }
         )
         for index, section in enumerate(sections)
