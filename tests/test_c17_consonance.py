@@ -117,7 +117,7 @@ def test_a_lane_without_a_sonority_is_not_scored(presets_dir: object) -> None:
     preset = load_preset("indie-noise")
     lane = next(entry.parameters for entry in preset.lanes if entry.lane == "indie-noise")
     assert lane.chord_intervals == []
-    assert _lane_voices(lane) == []
+    assert _lane_voices(lane) == [tuple((n, 1) for n in range(1, 6))]
 
     station = preset.station.model_copy(update={"consonance_scoring_enabled": True})
     scored = preset.model_copy(update={"station": station})

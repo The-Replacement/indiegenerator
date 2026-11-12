@@ -146,6 +146,7 @@ class PluckCard(FrozenModel):
     pluck_position_permille: int
     duration_seconds: RangeInt
     spacing_seconds: RangeInt
+    partial_ratios: list[Rational] = []
 
 
 class PatternCard(FrozenModel):
@@ -220,6 +221,7 @@ class BassCard(FrozenModel):
     octave_jump_permille: int
     fifth_permille: int = Field(ge=0, le=1000)
     midi_offset_semitones: int = Field(default=-12, ge=-12, le=12)
+    partial_ratios: list[Rational] = []
 
 
 class PinkCard(FrozenModel):
@@ -248,6 +250,7 @@ class DejaVuCard(FrozenModel):
     brightness: Rational
     pluck_position_permille: int
     detune_cents: int
+    partial_ratios: list[Rational] = []
 
 
 TechniqueCard = Annotated[

@@ -91,6 +91,12 @@ techniques:
     pluck_position_permille: 300
     duration_seconds: {min: 3, max: 6}
     spacing_seconds: {min: 4, max: 12}
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+      - {numerator: 5, denominator: 1}
 
 section_count_range: [3, 4]
 # The durations this lane may be rendered at: the full tracks, the

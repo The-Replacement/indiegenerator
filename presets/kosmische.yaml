@@ -97,6 +97,12 @@ techniques:
     brightness: {numerator: 3, denominator: 10}
     pluck_position_permille: 250
     detune_cents: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+      - {numerator: 5, denominator: 1}
 
   # T3: the Frippertronics. A long feedback delay whose passes darken and
   # die, with the tape wow on top. It is the kosmische engine.

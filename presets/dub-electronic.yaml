@@ -114,6 +114,12 @@ techniques:
     brightness: {numerator: 4, denominator: 10}
     pluck_position_permille: 300
     detune_cents: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+      - {numerator: 5, denominator: 1}
 
   - kind: bass
     pattern:
@@ -130,6 +136,10 @@ techniques:
     decay_frames: 6500
     octave_jump_permille: 200
     fifth_permille: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
 
   # c42: a sustained bed so the Director's drops do not silence the mix.
   # The dub lane is the only pulsed lane without a bed; its sparse stabs

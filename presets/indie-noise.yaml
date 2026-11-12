@@ -63,6 +63,12 @@ techniques:
     brightness: {numerator: 7, denominator: 10}
     pluck_position_permille: 180
     detune_cents: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+      - {numerator: 5, denominator: 1}
 
   # T6: the noise wall. It crests in the plateau and cuts to near silence
   # with the outro: the dynamics are the point of this lane. The wall

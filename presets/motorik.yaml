@@ -125,6 +125,10 @@ techniques:
     decay_frames: 7000
     octave_jump_permille: 120
     fifth_permille: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
 
   # The chord bed.
   - kind: pad
@@ -151,6 +155,12 @@ techniques:
     brightness: {numerator: 1, denominator: 2}
     pluck_position_permille: 320
     detune_cents: 0
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+      - {numerator: 5, denominator: 1}
 
 section_count_range: [4, 6]
 # The durations this lane may be rendered at: the full tracks, the

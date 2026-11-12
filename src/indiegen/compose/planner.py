@@ -406,10 +406,10 @@ def _lane_sonority_secondary(lane: LanePreset, station: StationPreset) -> list[i
 def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
     """The lane's additive spectra, one partial-ratio list per voice.
 
-    The poly-period's stack, the drone's just ratios, the lead's detuned pair
-    and the pad's harmonic series. The voices whose spectrum is not a list of
-    partials (the plucked string, the bass, the noise) are not here: a
-    spectrum nobody declared is not a measurement, and inventing one would
+    The poly-period's stack, the drone's just ratios, the lead's detuned pair,
+    the pad's harmonic series, and any pluck/deja-vu/bass voice that declares
+    its own partial_ratios. Only the noise (no declared spectrum) stays out:
+    a spectrum nobody declared is not a measurement, and inventing one would
     put a number in the plan that nothing measured.
     """
     voices: list[tuple[tuple[int, int], ...]] = []
@@ -422,6 +422,8 @@ def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
             voices.append(LEAD_RATIOS)
         elif isinstance(card, PadCard):
             voices.append(tuple((index, 1) for index in range(1, card.partials.max + 1)))
+        elif isinstance(card, (PluckCard, DejaVuCard, BassCard)) and card.partial_ratios:
+            voices.append(tuple((ratio.numerator, ratio.denominator) for ratio in card.partial_ratios))
     return voices
 
 
