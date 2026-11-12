@@ -1298,6 +1298,8 @@ def _motif_and_postproc(
     out = _apply_timbre(out, lane.drive_permille, lane.snap_permille)
     out = _ornament_events(out, boundaries, seed, station.ornament_permille, station.grace_offset_frames)
     out = _double_events(out, station.double_copies, station.double_offset_frames, frames)
+    _bass_card = next((c for c in lane.techniques if isinstance(c, BassCard)), None)
+    _bass_offset = _bass_card.midi_offset_semitones if _bass_card is not None else 0
     out, appearances = _apply_voice_leading(
         out,
         appearances,
@@ -1307,6 +1309,7 @@ def _motif_and_postproc(
         section_scales,
         station,
         voice_intervals=_lane_sonority(lane, station),
+        bass_offset=_bass_offset,
     )
     return out, list(cell), appearances
 
@@ -2296,6 +2299,7 @@ def _apply_voice_leading(
     section_scales: list[list[int]],
     station: StationPreset,
     voice_intervals: list[int] | None = None,
+    bass_offset: int = 0,
 ) -> tuple[list[Event], list[MotifAppearance]]:
     """Voice leading pass, heuristic by default, geodesic when opted in.
 
@@ -2311,7 +2315,7 @@ def _apply_voice_leading(
     out = list(events)
     if station.geodesic_voice_leading:
         intervals = voice_intervals if voice_intervals is not None else station.chord_tone_intervals
-        moved_motif = _lead_geodesic(out, boundaries, section_roots, intervals)
+        moved_motif = _lead_geodesic(out, boundaries, section_roots, intervals, bass_offset=bass_offset)
     else:
         moved_motif = _lead_plucks(out, boundaries, section_scales)
         _lead_bass(out, boundaries, section_scales)
@@ -2342,6 +2346,7 @@ def _lead_geodesic(
     boundaries: list[int],
     section_roots: list[int],
     chord_tone_intervals: list[int],
+    bass_offset: int = 0,
 ) -> dict[tuple[int, int], int]:
     """Walk section voicings along the geodesic and snap plucks and bass to it.
 
@@ -2380,6 +2385,6 @@ def _lead_geodesic(
             for hit in event.hits:
                 section = _section_at_frame(boundaries, hit.frame)
                 root = section_roots[section] if section < len(section_roots) else section_roots[-1]
-                new_hits.append(hit.model_copy(update={"midi": _snap_to_register(root, 24, 72)}))
+                new_hits.append(hit.model_copy(update={"midi": _snap_to_register(root + bass_offset, 24, 72)}))
             out[idx] = event.model_copy(update={"hits": new_hits})
     return moved_motif
