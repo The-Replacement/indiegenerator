@@ -1306,6 +1306,7 @@ def _motif_and_postproc(
         [mode for mode, _ in harmonic_modes],
         section_scales,
         station,
+        voice_intervals=_lane_sonority(lane, station),
     )
     return out, list(cell), appearances
 
@@ -2294,6 +2295,7 @@ def _apply_voice_leading(
     section_modes: list[str],
     section_scales: list[list[int]],
     station: StationPreset,
+    voice_intervals: list[int] | None = None,
 ) -> tuple[list[Event], list[MotifAppearance]]:
     """Voice leading pass, heuristic by default, geodesic when opted in.
 
@@ -2308,7 +2310,8 @@ def _apply_voice_leading(
     """
     out = list(events)
     if station.geodesic_voice_leading:
-        moved_motif = _lead_geodesic(out, boundaries, section_roots, station.chord_tone_intervals)
+        intervals = voice_intervals if voice_intervals is not None else station.chord_tone_intervals
+        moved_motif = _lead_geodesic(out, boundaries, section_roots, intervals)
     else:
         moved_motif = _lead_plucks(out, boundaries, section_scales)
         _lead_bass(out, boundaries, section_scales)
