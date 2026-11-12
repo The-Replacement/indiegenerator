@@ -323,7 +323,17 @@ def explain(
 
 @app.command()
 def cycle(
-    music_dir: Annotated[Path, typer.Option("--music-dir", help="Radio music directory to replace.")] = Path("/music"),
+    music_dir: Annotated[
+        Path, typer.Option("--music-dir", help="Radio music directory (legacy single-dir layout).")
+    ] = Path("/music"),
+    audio_dir: Annotated[
+        Path | None,
+        typer.Option("--audio-dir", help="Audio scan root (split layout, *.flac)."),
+    ] = None,
+    meta_dir: Annotated[
+        Path | None,
+        typer.Option("--meta-dir", help="Metadata root (split layout, *.json/catalog)."),
+    ] = None,
     preset: Annotated[str, typer.Option("--preset", help="Preset name.")] = "station",
     count: Annotated[int, typer.Option("--count", help="Tracks per cycle.")] = 10,
     seed_base: Annotated[int, typer.Option("--seed-base", help="Base seed.")] = 1000,
@@ -344,12 +354,21 @@ def cycle(
     presets_dir: Annotated[Path | None, typer.Option("--presets-dir", help="Directory holding the presets.")] = None,
 ) -> None:
     """Generate a fresh batch, replace the radio library, and restart Liquidsoap."""
+    audio = audio_dir or music_dir
+    meta = meta_dir or (audio_dir and audio_dir)  # placeholder
+    if meta_dir is not None:
+        meta = meta_dir
+    elif audio_dir is not None:
+        meta = audio_dir
+    else:
+        meta = music_dir
     try:
         result = run_rotation_cycle(
             preset=preset,
             count=count,
             seed_base=seed_base,
-            music_dir=music_dir,
+            audio_dir=audio,
+            meta_dir=meta,
             work_dir=work_dir,
             presets_dir=presets_dir,
             restart=restart,
@@ -371,7 +390,17 @@ def cycle(
 
 @app.command()
 def serve(
-    music_dir: Annotated[Path, typer.Option("--music-dir", help="Radio music directory to replace.")] = Path("/music"),
+    music_dir: Annotated[
+        Path, typer.Option("--music-dir", help="Radio music directory (legacy single-dir layout).")
+    ] = Path("/music"),
+    audio_dir: Annotated[
+        Path | None,
+        typer.Option("--audio-dir", help="Audio scan root (split layout, *.flac)."),
+    ] = None,
+    meta_dir: Annotated[
+        Path | None,
+        typer.Option("--meta-dir", help="Metadata root (split layout, *.json/catalog)."),
+    ] = None,
     preset: Annotated[str, typer.Option("--preset", help="Preset name.")] = "station",
     count: Annotated[int, typer.Option("--count", help="Tracks per cycle.")] = 10,
     seed_base: Annotated[int, typer.Option("--seed-base", help="Base seed.")] = 1000,
@@ -411,12 +440,20 @@ def serve(
         level=getattr(logging, log_level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    audio = audio_dir or music_dir
+    if meta_dir is not None:
+        meta = meta_dir
+    elif audio_dir is not None:
+        meta = audio_dir
+    else:
+        meta = music_dir
     try:
         run_server(
             preset=preset,
             count=count,
             seed_base=seed_base,
-            music_dir=music_dir,
+            audio_dir=audio,
+            meta_dir=meta,
             work_dir=work_dir,
             presets_dir=presets_dir,
             restart=restart,
