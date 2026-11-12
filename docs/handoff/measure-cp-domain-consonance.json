@@ -1,0 +1,6499 @@
+{
+  "aggregates": [
+    {
+      "distinct_harmonic_centres": 14,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "motorik",
+      "mean_admitted": 2.836666666666667,
+      "mean_permille": 6.1466666666666665,
+      "median_solution_count": 2048.0,
+      "variant": "V0"
+    },
+    {
+      "distinct_harmonic_centres": 14,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.8833333333333333,
+      "mean_permille": 20.483333333333334,
+      "median_solution_count": 2048.0,
+      "variant": "V0"
+    },
+    {
+      "distinct_harmonic_centres": 12,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.02,
+      "mean_permille": 10.773333333333333,
+      "median_solution_count": 2048.0,
+      "variant": "V0"
+    },
+    {
+      "distinct_harmonic_centres": 12,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 397.0,
+      "variant": "V0"
+    },
+    {
+      "distinct_harmonic_centres": 11,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 60.0,
+      "variant": "V0"
+    },
+    {
+      "distinct_harmonic_centres": 10,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "motorik",
+      "mean_admitted": 2.836666666666667,
+      "mean_permille": 6.1466666666666665,
+      "median_solution_count": 301.0,
+      "variant": "V1"
+    },
+    {
+      "distinct_harmonic_centres": 13,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.8833333333333333,
+      "mean_permille": 20.483333333333334,
+      "median_solution_count": 589.0,
+      "variant": "V1"
+    },
+    {
+      "distinct_harmonic_centres": 9,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.02,
+      "mean_permille": 10.773333333333333,
+      "median_solution_count": 34.0,
+      "variant": "V1"
+    },
+    {
+      "distinct_harmonic_centres": 12,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 397.0,
+      "variant": "V1"
+    },
+    {
+      "distinct_harmonic_centres": 7,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 39.0,
+      "variant": "V1"
+    },
+    {
+      "distinct_harmonic_centres": 11,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "motorik",
+      "mean_admitted": 2.836666666666667,
+      "mean_permille": 6.1466666666666665,
+      "median_solution_count": 496.0,
+      "variant": "V2"
+    },
+    {
+      "distinct_harmonic_centres": 13,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.8833333333333333,
+      "mean_permille": 20.483333333333334,
+      "median_solution_count": 589.0,
+      "variant": "V2"
+    },
+    {
+      "distinct_harmonic_centres": 9,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.02,
+      "mean_permille": 10.773333333333333,
+      "median_solution_count": 34.0,
+      "variant": "V2"
+    },
+    {
+      "distinct_harmonic_centres": 12,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 397.0,
+      "variant": "V2"
+    },
+    {
+      "distinct_harmonic_centres": 7,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 39.0,
+      "variant": "V2"
+    },
+    {
+      "distinct_harmonic_centres": 13,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "motorik",
+      "mean_admitted": 2.836666666666667,
+      "mean_permille": 6.1466666666666665,
+      "median_solution_count": 1510.0,
+      "variant": "V3"
+    },
+    {
+      "distinct_harmonic_centres": 10,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.8833333333333333,
+      "mean_permille": 20.483333333333334,
+      "median_solution_count": 2048.0,
+      "variant": "V3"
+    },
+    {
+      "distinct_harmonic_centres": 11,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.02,
+      "mean_permille": 10.773333333333333,
+      "median_solution_count": 2048.0,
+      "variant": "V3"
+    },
+    {
+      "distinct_harmonic_centres": 7,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 216.0,
+      "variant": "V3"
+    },
+    {
+      "distinct_harmonic_centres": 7,
+      "fallback_rate": 0.0,
+      "gate_pass_rate": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "median_solution_count": 60.0,
+      "variant": "V3"
+    }
+  ],
+  "cells": [
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.6,
+      "mean_permille": 4.4,
+      "plan_hash": "70d32d4c25aaa04d42b29e0e54bb53b31cfaa95b1aa72472f6c0c87e5d5becc3",
+      "section_count": 5,
+      "section_roots": [
+        50,
+        47,
+        46,
+        52,
+        47
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 4
+        }
+      ],
+      "seed": 1042,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "8989b325cc1e9a78df33547aca126fbf9cf93d0893bc64d0c5ee2e2481033fbe",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        40,
+        40,
+        43,
+        55,
+        62
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 519,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.75,
+      "mean_permille": 5.0,
+      "plan_hash": "97ad12f99d097272ea8038e6f2e2241e2a652221515c1124cd2dbb7bcb074ad5",
+      "section_count": 4,
+      "section_roots": [
+        53,
+        59,
+        55,
+        55
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.8333333333333335,
+      "mean_permille": 5.333333333333333,
+      "plan_hash": "cb5009f363f1203dc0b853c6d86807ba151d1266768be0078f91783949e45fa4",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        50,
+        52,
+        55,
+        51,
+        58
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 4002,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "e36dcfe9494ce944cfe97d8f368806ff2c5cdd772d50124950fadeb7d9b86157",
+      "section_count": 5,
+      "section_roots": [
+        43,
+        43,
+        43,
+        45,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 5000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.6666666666666665,
+      "mean_permille": 17.666666666666668,
+      "plan_hash": "513996e44f252ef5b34ef166562338ea27a388443291f57d978ef14ba5597598",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        48,
+        47,
+        52,
+        40,
+        47
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 1042,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "ae24ff8f7ee80139deddffc6cdf0289e8a65e6ae96e7b05c36c3238ed2c25e64",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        38,
+        35,
+        38,
+        41,
+        37
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "5b0d69e1ba9a4c454319cd08877090e9163f76d13d28d27b61781ff3d67fadea",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        48,
+        45,
+        45,
+        48,
+        49
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1496,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "7e0bb8e2164a20900eb2fb6385bd07a46f85de1a4816c1abe94b805c9deed630",
+      "section_count": 5,
+      "section_roots": [
+        36,
+        37,
+        43,
+        42,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.75,
+      "mean_permille": 18.75,
+      "plan_hash": "d247e06b6bead9a95cbcd4c4077482afaa122fd28c8113a1763c834e8f3ddb0a",
+      "section_count": 4,
+      "section_roots": [
+        36,
+        38,
+        38,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 498,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.5,
+      "mean_permille": 8.0,
+      "plan_hash": "589dba14391eb5737763877c0cd22931e54873684aed85da064b150a6a513ff6",
+      "section_count": 4,
+      "section_roots": [
+        43,
+        39,
+        37,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.2,
+      "mean_permille": 6.4,
+      "plan_hash": "8e072f4f4d9ce0efda4c8850037063cd9c09c38b3ddd786c95a7ccfd9aaf67b9",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        45,
+        48,
+        51,
+        58
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 4
+        }
+      ],
+      "seed": 2000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 6,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.0,
+      "mean_permille": 10.666666666666666,
+      "plan_hash": "a05da938b98ba80a5a080b110c58c2a15af5c50b588a3c216b9d6cac53418017",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        38,
+        37,
+        46,
+        36,
+        39
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.4,
+      "mean_permille": 12.8,
+      "plan_hash": "e6022fe096d6908b0a62ebe30e75d5795e5ec5247c650d8a32725b4aae3586fd",
+      "section_count": 5,
+      "section_roots": [
+        53,
+        51,
+        45,
+        37,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 4.0,
+      "mean_permille": 16.0,
+      "plan_hash": "1ef22309786d3fecbe4bc1a94ff368ca25b0ca97351838b194d9b71d514a40c1",
+      "section_count": 6,
+      "section_roots": [
+        48,
+        41,
+        41,
+        46,
+        46,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 5000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 191,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "39bcd4d8d0c0835b40af9f06d8e5c9250b839658fe3cbff74457ced4c1faff66",
+      "section_count": 4,
+      "section_roots": [
+        66,
+        60,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 6,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "8e601bbaeb39b2463f5ad27ea0be74c308d308d7826fbb6a06101dd273c7492d",
+      "section_count": 6,
+      "section_roots": [
+        57,
+        50,
+        52,
+        55,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 397,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "6477d9924fefc4c1acf267605ef305ac78ddadf99b4aca51f820fbbbad4eb9c5",
+      "section_count": 4,
+      "section_roots": [
+        45,
+        45,
+        42,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 459,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "57afcf9ad3fce8103b7bba6e55dcf37f0a55cb296fb1dd9cef40f2aee9b7b14a",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        55,
+        57,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 303,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "59442609b924303ad068d59458d26e327bba7bfc15d700cb13541920e644fab0",
+      "section_count": 4,
+      "section_roots": [
+        62,
+        61,
+        62,
+        61
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 86,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        47,
+        50,
+        52,
+        57,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "e2770c2172bbdb81400c507a6371139ea8d01669f08df83464aae95067ea95cf",
+      "section_count": 4,
+      "section_roots": [
+        40,
+        38,
+        45,
+        47
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 26,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        47,
+        50,
+        52,
+        57,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "6bcc537eb82d121f07ce8a7d62799792565fb5391af16f11fb859b0acf548df7",
+      "section_count": 3,
+      "section_roots": [
+        50,
+        57,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 2000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 141,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        47,
+        50,
+        52,
+        57,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "19e38384cbc7bbb00fbca2c5ae3badc3b7aa21042ba1472189425d6e6dfc0e9c",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        47,
+        50,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 60,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        47,
+        50,
+        52,
+        57,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "94074c3421d0bca21f6e8b894fe4723ddd75736987adc31f1bf17746ed091590",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        41,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 29,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        47,
+        50,
+        52,
+        57,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "5b5d728411d4dfde3002b77c87fc8f9f37e5f171c1e430e99586f0eb70e4639f",
+      "section_count": 3,
+      "section_roots": [
+        52,
+        50,
+        49
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 5000,
+      "variant": "V0"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 135,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        50,
+        53,
+        55
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.6,
+      "mean_permille": 4.4,
+      "plan_hash": "d48f5dcec607f73b94166a228b73c028a096bdc7549a4b0eeca8ad7726cec883",
+      "section_count": 5,
+      "section_roots": [
+        50,
+        53,
+        51,
+        48,
+        50
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 4
+        }
+      ],
+      "seed": 1042,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1285,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "58db583b448ade25d45c7be37e91bfcd920b27b6d89a134934ea73f21ad2b7c9",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        45,
+        50,
+        46,
+        47,
+        47
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 33,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        43,
+        50,
+        53,
+        55
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.75,
+      "mean_permille": 5.0,
+      "plan_hash": "b8568c2f262d083b7339858d45b95562f306c87198ee276bda76999b3e6a8370",
+      "section_count": 4,
+      "section_roots": [
+        53,
+        50,
+        43,
+        50
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 351,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        50,
+        53,
+        55
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.8333333333333335,
+      "mean_permille": 5.333333333333333,
+      "plan_hash": "526d4ff008e67aa941471d3fceb7be74af73ed0fc5b1aae3e7fffe09a401b240",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        53,
+        50,
+        45,
+        48,
+        48
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 4002,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 301,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "1fc1f6c0c33617ca12ddf2544e84f751f76bbf1b58d0cc4056faee4c3ea484c0",
+      "section_count": 5,
+      "section_roots": [
+        43,
+        45,
+        50,
+        57,
+        53
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 5000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 589,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 2.6666666666666665,
+      "mean_permille": 17.666666666666668,
+      "plan_hash": "4420109e05b1a7a0c2a6aeae9ef9801e168659652aa75479b075d4612f9aa7bf",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        55,
+        50,
+        45,
+        38,
+        33
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 1042,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 926,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "10abea5b7f6e5e5e98b0b1e19a39191dfe86eb6634763837307d9d19f5ee0988",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        36,
+        39,
+        50,
+        43,
+        32
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 589,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "967db6dfc719e026ba99ff34b3f9bf23c2382232db8f8ab25994914880803540",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        48,
+        41,
+        48,
+        55,
+        49
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 167,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "8ad224396217612581176a4e397123d37d4c5fe25846ea52f02a64dc44117c21",
+      "section_count": 5,
+      "section_roots": [
+        36,
+        39,
+        46,
+        50,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 43,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 2.75,
+      "mean_permille": 18.75,
+      "plan_hash": "a36f652f7d6f103c6818ef27664c6bb1084e405f2f4161e63a93825384ae1536",
+      "section_count": 4,
+      "section_roots": [
+        36,
+        41,
+        38,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 21,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.5,
+      "mean_permille": 8.0,
+      "plan_hash": "8e5fcc3167cbbacf62973026a67c54f1b03089264e97da57fbbbdbf78ebbe3cd",
+      "section_count": 4,
+      "section_roots": [
+        43,
+        48,
+        39,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 34,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.2,
+      "mean_permille": 6.4,
+      "plan_hash": "38c11b1d3033dbcd7c6459fa9ea8db9e49ac530ee0230aa980ba0f24444e292c",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        43,
+        46,
+        41,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 4
+        }
+      ],
+      "seed": 2000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 144,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.0,
+      "mean_permille": 10.666666666666666,
+      "plan_hash": "b6b9be31048834b572fefaf3e6ca246de31b8bd34085488bd5c07b890047b11b",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        48,
+        44,
+        46,
+        46,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 34,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.4,
+      "mean_permille": 12.8,
+      "plan_hash": "edec552aa383f71a93b959189f251ed1093c719152f0ab1c05b19be9211ec4b1",
+      "section_count": 5,
+      "section_roots": [
+        53,
+        53,
+        48,
+        44,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 144,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 4.0,
+      "mean_permille": 16.0,
+      "plan_hash": "afbde59217fd64f13804bdea69dad45ff3564f0827b47f58c1a6e2b52539a2d2",
+      "section_count": 6,
+      "section_roots": [
+        48,
+        48,
+        53,
+        48,
+        53,
+        53
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 5000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 191,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "39bcd4d8d0c0835b40af9f06d8e5c9250b839658fe3cbff74457ced4c1faff66",
+      "section_count": 4,
+      "section_roots": [
+        66,
+        60,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 6,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "8e601bbaeb39b2463f5ad27ea0be74c308d308d7826fbb6a06101dd273c7492d",
+      "section_count": 6,
+      "section_roots": [
+        57,
+        50,
+        52,
+        55,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 397,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "6477d9924fefc4c1acf267605ef305ac78ddadf99b4aca51f820fbbbad4eb9c5",
+      "section_count": 4,
+      "section_roots": [
+        45,
+        45,
+        42,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 459,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "57afcf9ad3fce8103b7bba6e55dcf37f0a55cb296fb1dd9cef40f2aee9b7b14a",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        55,
+        57,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 303,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "59442609b924303ad068d59458d26e327bba7bfc15d700cb13541920e644fab0",
+      "section_count": 4,
+      "section_roots": [
+        62,
+        61,
+        62,
+        61
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "4d0499841fd3975eb6f8aff5a066b79e50d20d9699db0ed9e79f3b02c11db5c6",
+      "section_count": 4,
+      "section_roots": [
+        40,
+        45,
+        45,
+        38
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 11,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "be4e19c4391b83e80de150687b0463b17868dfe6d667213720291a9aadee3076",
+      "section_count": 3,
+      "section_roots": [
+        50,
+        52,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 2000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "335a01c21728439225d65455cd18b5e568f8e082f3c30e4b621e5ae658805270",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        45,
+        38,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "29bb1bd42a2a65825895cefc1986e26ea8bb37a519119b8ccf12c226c43bb7dd",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        34,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 11,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "b24d70094a9bf49887ac918311186ac2aecb17f03d3f89f7a00d8ddd6c6efd78",
+      "section_count": 3,
+      "section_roots": [
+        52,
+        50,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 5000,
+      "variant": "V1"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 496,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.6,
+      "mean_permille": 4.4,
+      "plan_hash": "addce498a8eb5795e34199d5177e990a381fc563743b02888528a70dea9b357a",
+      "section_count": 5,
+      "section_roots": [
+        50,
+        43,
+        46,
+        40,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 4
+        }
+      ],
+      "seed": 1042,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1285,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "58db583b448ade25d45c7be37e91bfcd920b27b6d89a134934ea73f21ad2b7c9",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        45,
+        50,
+        46,
+        47,
+        47
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 80,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.75,
+      "mean_permille": 5.0,
+      "plan_hash": "8eab2e2441586551289e4fb181982a1644375aec2f8f3c9adebbcdfbcecd5575",
+      "section_count": 4,
+      "section_roots": [
+        53,
+        55,
+        50,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1558,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 2.8333333333333335,
+      "mean_permille": 5.333333333333333,
+      "plan_hash": "d46e536688a591cae69c20950226ff39b0ba4bd54ece7b5422a760f0405fff59",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        55,
+        50,
+        52,
+        41,
+        43
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 4002,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 301,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        43,
+        45,
+        50,
+        53,
+        55,
+        57
+      ],
+      "domain_size": 7,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "1fc1f6c0c33617ca12ddf2544e84f751f76bbf1b58d0cc4056faee4c3ea484c0",
+      "section_count": 5,
+      "section_roots": [
+        43,
+        45,
+        50,
+        57,
+        53
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 5000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 589,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 2.6666666666666665,
+      "mean_permille": 17.666666666666668,
+      "plan_hash": "4420109e05b1a7a0c2a6aeae9ef9801e168659652aa75479b075d4612f9aa7bf",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        55,
+        50,
+        45,
+        38,
+        33
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 1042,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 926,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "10abea5b7f6e5e5e98b0b1e19a39191dfe86eb6634763837307d9d19f5ee0988",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        36,
+        39,
+        50,
+        43,
+        32
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 589,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "967db6dfc719e026ba99ff34b3f9bf23c2382232db8f8ab25994914880803540",
+      "section_count": 6,
+      "section_roots": [
+        55,
+        48,
+        41,
+        48,
+        55,
+        49
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 167,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "8ad224396217612581176a4e397123d37d4c5fe25846ea52f02a64dc44117c21",
+      "section_count": 5,
+      "section_roots": [
+        36,
+        39,
+        46,
+        50,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 43,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        36,
+        41,
+        43,
+        48,
+        53,
+        55
+      ],
+      "domain_size": 6,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "kosmische",
+      "mean_admitted": 2.75,
+      "mean_permille": 18.75,
+      "plan_hash": "a36f652f7d6f103c6818ef27664c6bb1084e405f2f4161e63a93825384ae1536",
+      "section_count": 4,
+      "section_roots": [
+        36,
+        41,
+        38,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 21,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.5,
+      "mean_permille": 8.0,
+      "plan_hash": "8e5fcc3167cbbacf62973026a67c54f1b03089264e97da57fbbbdbf78ebbe3cd",
+      "section_count": 4,
+      "section_roots": [
+        43,
+        48,
+        39,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 34,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.2,
+      "mean_permille": 6.4,
+      "plan_hash": "38c11b1d3033dbcd7c6459fa9ea8db9e49ac530ee0230aa980ba0f24444e292c",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        43,
+        46,
+        41,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 4
+        }
+      ],
+      "seed": 2000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 144,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.0,
+      "mean_permille": 10.666666666666666,
+      "plan_hash": "b6b9be31048834b572fefaf3e6ca246de31b8bd34085488bd5c07b890047b11b",
+      "section_count": 6,
+      "section_roots": [
+        43,
+        48,
+        44,
+        46,
+        46,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 34,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.4,
+      "mean_permille": 12.8,
+      "plan_hash": "edec552aa383f71a93b959189f251ed1093c719152f0ab1c05b19be9211ec4b1",
+      "section_count": 5,
+      "section_roots": [
+        53,
+        53,
+        48,
+        44,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 144,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        43,
+        48,
+        53
+      ],
+      "domain_size": 4,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "dub-electronic",
+      "mean_admitted": 4.0,
+      "mean_permille": 16.0,
+      "plan_hash": "afbde59217fd64f13804bdea69dad45ff3564f0827b47f58c1a6e2b52539a2d2",
+      "section_count": 6,
+      "section_roots": [
+        48,
+        48,
+        53,
+        48,
+        53,
+        53
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 5000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 191,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "39bcd4d8d0c0835b40af9f06d8e5c9250b839658fe3cbff74457ced4c1faff66",
+      "section_count": 4,
+      "section_roots": [
+        66,
+        60,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 6,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "8e601bbaeb39b2463f5ad27ea0be74c308d308d7826fbb6a06101dd273c7492d",
+      "section_count": 6,
+      "section_roots": [
+        57,
+        50,
+        52,
+        55,
+        64,
+        59
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 397,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "6477d9924fefc4c1acf267605ef305ac78ddadf99b4aca51f820fbbbad4eb9c5",
+      "section_count": 4,
+      "section_roots": [
+        45,
+        45,
+        42,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 459,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "57afcf9ad3fce8103b7bba6e55dcf37f0a55cb296fb1dd9cef40f2aee9b7b14a",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        55,
+        57,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 303,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "59442609b924303ad068d59458d26e327bba7bfc15d700cb13541920e644fab0",
+      "section_count": 4,
+      "section_roots": [
+        62,
+        61,
+        62,
+        61
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "4d0499841fd3975eb6f8aff5a066b79e50d20d9699db0ed9e79f3b02c11db5c6",
+      "section_count": 4,
+      "section_roots": [
+        40,
+        45,
+        45,
+        38
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 11,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "be4e19c4391b83e80de150687b0463b17868dfe6d667213720291a9aadee3076",
+      "section_count": 3,
+      "section_roots": [
+        50,
+        52,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 2000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "335a01c21728439225d65455cd18b5e568f8e082f3c30e4b621e5ae658805270",
+      "section_count": 4,
+      "section_roots": [
+        52,
+        45,
+        38,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 39,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "29bb1bd42a2a65825895cefc1986e26ea8bb37a519119b8ccf12c226c43bb7dd",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        34,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 11,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52
+      ],
+      "domain_size": 5,
+      "domain_size_matches_V0": null,
+      "domain_subset_of_V0": true,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "b24d70094a9bf49887ac918311186ac2aecb17f03d3f89f7a00d8ddd6c6efd78",
+      "section_count": 3,
+      "section_roots": [
+        52,
+        50,
+        52
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 5000,
+      "variant": "V2"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1510,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.6,
+      "mean_permille": 4.4,
+      "plan_hash": "45b912b5a3031f24cf334c5f13cf321ab9a63cd53d5dcdf42e644ed440ab3b9a",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        43,
+        46,
+        38,
+        37
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 4
+        }
+      ],
+      "seed": 1042,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "75f50b07a6609fa569cd5e9dde646dd8004a5f5e5c879bd02192780b5fa426e8",
+      "section_count": 6,
+      "section_roots": [
+        38,
+        40,
+        40,
+        43,
+        55,
+        62
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.75,
+      "mean_permille": 5.0,
+      "plan_hash": "bd0a3bbe3fb408391d3a577e7a7ba3e09a5ac613df62e68ef07c711bd6ed52df",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        47,
+        50
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 2.8333333333333335,
+      "mean_permille": 5.333333333333333,
+      "plan_hash": "5261d1e84ee7ddf2bd97747b48767d891893f75c59f88a02a337a6c6a84b50e2",
+      "section_count": 6,
+      "section_roots": [
+        38,
+        40,
+        40,
+        49,
+        41,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 2,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 6,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 4002,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1510,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        41,
+        43,
+        45,
+        47,
+        50,
+        52,
+        53,
+        55,
+        57,
+        59,
+        60,
+        62,
+        64,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "motorik",
+      "mean_admitted": 3.0,
+      "mean_permille": 8.0,
+      "plan_hash": "6f9125fe5b6341156bb33660299cd5109a38d675778f2eca0c101ae811e3b3c7",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        40,
+        47,
+        50,
+        50
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 8,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 5000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.6666666666666665,
+      "mean_permille": 17.666666666666668,
+      "plan_hash": "496b454b67760fdd0bc3c40f2ac2c3f66d09e42c82fcf13b39f5c3bc07149d43",
+      "section_count": 6,
+      "section_roots": [
+        36,
+        36,
+        43,
+        50,
+        38,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 1042,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "0103ccc96f865f7c9050b7f289c7d4777e7e30991bcd2c8f94f00ef20d5857ca",
+      "section_count": 6,
+      "section_roots": [
+        36,
+        38,
+        35,
+        38,
+        41,
+        37
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "bfb2ddf850effe4ea92d4ee8c644fd44128f542e22f0195246496e34cfe0f2f9",
+      "section_count": 6,
+      "section_roots": [
+        36,
+        36,
+        41,
+        43,
+        45,
+        35
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 1496,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 3.0,
+      "mean_permille": 22.0,
+      "plan_hash": "7e0bb8e2164a20900eb2fb6385bd07a46f85de1a4816c1abe94b805c9deed630",
+      "section_count": 5,
+      "section_roots": [
+        36,
+        37,
+        43,
+        42,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 2,
+      "domain_roots": [
+        36,
+        38,
+        39,
+        41,
+        43,
+        45,
+        48,
+        50,
+        51,
+        53,
+        55,
+        57,
+        60,
+        62,
+        63,
+        65
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "kosmische",
+      "mean_admitted": 2.75,
+      "mean_permille": 18.75,
+      "plan_hash": "d247e06b6bead9a95cbcd4c4077482afaa122fd28c8113a1763c834e8f3ddb0a",
+      "section_count": 4,
+      "section_roots": [
+        36,
+        38,
+        38,
+        36
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 9,
+          "chord_tones_admitted": 2,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 22,
+          "chord_tones_admitted": 3,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 265,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.5,
+      "mean_permille": 8.0,
+      "plan_hash": "72651db0b307bb16ee9d2b0f75087a4bcfcb404be9c4f768adde105a6e99a12f",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        46,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 2.2,
+      "mean_permille": 6.4,
+      "plan_hash": "8e072f4f4d9ce0efda4c8850037063cd9c09c38b3ddd786c95a7ccfd9aaf67b9",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        45,
+        48,
+        51,
+        58
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 4
+        }
+      ],
+      "seed": 2000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.0,
+      "mean_permille": 10.666666666666666,
+      "plan_hash": "42961e26e413515cdd58de161ddbb9bd200fa5b0be044d1bb8f4b9cb46f36eab",
+      "section_count": 6,
+      "section_roots": [
+        38,
+        38,
+        37,
+        46,
+        36,
+        39
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 3005,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 3.4,
+      "mean_permille": 12.8,
+      "plan_hash": "466c24a3568c26aeb8502a8d5355c5e583fbde2c029aa6d1426b02a5df870609",
+      "section_count": 5,
+      "section_roots": [
+        38,
+        45,
+        50,
+        41,
+        48
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 1,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        }
+      ],
+      "seed": 4002,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        39,
+        41,
+        43,
+        45,
+        46,
+        48,
+        50,
+        51,
+        53,
+        55,
+        56,
+        58,
+        60,
+        62,
+        63
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "dub-electronic",
+      "mean_admitted": 4.0,
+      "mean_permille": 16.0,
+      "plan_hash": "3dcede61c4e514bbce9eecdec23ae55e9dc1b933ca82e84ffeab8a9e4460fc36",
+      "section_count": 6,
+      "section_roots": [
+        38,
+        38,
+        41,
+        46,
+        46,
+        46
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 16,
+          "chord_tones_admitted": 4,
+          "index": 5
+        }
+      ],
+      "seed": 5000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "b0cafbcd24d328194bcdf1c1a2f4e02b99adeaa556a4037c867932138c3b40ad",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        43,
+        43,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 2048,
+      "determinism_ok": true,
+      "distinct_section_roots": 5,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "519410f413db09792cc8aa804d2ef02ad72bf2a08fd4305da0cc31301b0aea33",
+      "section_count": 6,
+      "section_roots": [
+        38,
+        40,
+        42,
+        36,
+        42,
+        43
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 4
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 5
+        }
+      ],
+      "seed": 2000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "7fccd25f0633464c8d10322cbceaede7ab88e32322925c0aeece5deb9bd53ef6",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        43,
+        47,
+        50
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "47b74fa2b762a930c9aeab7fc5fb6271e4f5910dc4e46789f9566c47491ac8d4",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        43,
+        36,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 216,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        42,
+        43,
+        45,
+        47,
+        50,
+        52,
+        54,
+        55,
+        57,
+        59,
+        62,
+        64,
+        66,
+        67
+      ],
+      "domain_size": 16,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "indie-noise",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "3111472aea4d3f986adf5d431802bfccef2527f38f4368bec790f5920e8e3ad8",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        42,
+        38,
+        40
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 5000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 60,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52,
+        57,
+        47,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "d6f80367f9bf91ba3dd140ab88dab87fd15d80df705bf845b225e34e484519a3",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        40,
+        45,
+        45
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 1042,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 13,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52,
+        57,
+        47,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "aecf969ac2fa6b678567f2b707c46aeaafa13d9b8df8f8f7c553c347f302023b",
+      "section_count": 3,
+      "section_roots": [
+        38,
+        45,
+        54
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 2000,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 60,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52,
+        57,
+        47,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "d25cec2500cfb95f82403a5292256d84015e1ba0024a992408c9b00cc616cd76",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        38,
+        40,
+        41
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 3005,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 60,
+      "determinism_ok": true,
+      "distinct_section_roots": 4,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52,
+        57,
+        47,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "d9b3873b2acd8f6f4fc1269efa3ef722d9065db05c3786619c6e7a42c7f96f59",
+      "section_count": 4,
+      "section_roots": [
+        38,
+        45,
+        41,
+        48
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 3
+        }
+      ],
+      "seed": 4002,
+      "variant": "V3"
+    },
+    {
+      "cp_fallback": 0,
+      "cp_solution_count": 13,
+      "determinism_ok": true,
+      "distinct_section_roots": 3,
+      "domain_roots": [
+        38,
+        40,
+        45,
+        50,
+        52,
+        57,
+        47,
+        59
+      ],
+      "domain_size": 8,
+      "domain_size_matches_V0": true,
+      "domain_subset_of_V0": null,
+      "lane": "ambient",
+      "mean_admitted": 0.0,
+      "mean_permille": 0.0,
+      "plan_hash": "226f91af42bb7682da6e9992ed10393be1296cf932de56dc3d4a0619cb728b07",
+      "section_count": 3,
+      "section_roots": [
+        38,
+        45,
+        42
+      ],
+      "sections": [
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 0
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 1
+        },
+        {
+          "chord_consonance_permille": 0,
+          "chord_tones_admitted": 0,
+          "index": 2
+        }
+      ],
+      "seed": 5000,
+      "variant": "V3"
+    }
+  ],
+  "change": "measure-cp-domain-consonance",
+  "falsifiers": {
+    "F1": {
+      "evidence": {
+        "starved_cells": []
+      },
+      "status": "PASS"
+    },
+    "F2": {
+      "evidence": {
+        "regressions": []
+      },
+      "status": "PASS"
+    },
+    "F3": {
+      "evidence": {
+        "failing_gate_cells": []
+      },
+      "status": "NOT_EVALUATED"
+    },
+    "F4": {
+      "evidence": {
+        "collapsed_lanes": []
+      },
+      "status": "PASS"
+    },
+    "F5": {
+      "evidence": {
+        "path": "tests/golden/plan_station_1042_s0.json",
+        "sha256": "e516fd9610c30211b71c0281d1b70794f90184f3d5fb9da71494dfd9955add44"
+      },
+      "status": "PASS"
+    },
+    "F6": {
+      "evidence": {
+        "git_porcelain": [],
+        "hash_mismatches": []
+      },
+      "status": "PASS"
+    },
+    "F7": {
+      "evidence": {
+        "all_determinism_ok": true
+      },
+      "status": "PASS"
+    },
+    "F8": {
+      "evidence": {
+        "offending_cells": []
+      },
+      "status": "PASS"
+    },
+    "F9": {
+      "evidence": {
+        "offending_cells": []
+      },
+      "status": "PASS"
+    }
+  },
+  "gate_seeds": [
+    1042,
+    2000,
+    3005
+  ],
+  "gates": [],
+  "issue": 17,
+  "lanes": [
+    "motorik",
+    "kosmische",
+    "dub-electronic",
+    "indie-noise",
+    "ambient"
+  ],
+  "plan_seeds": [
+    1042,
+    2000,
+    3005,
+    4002,
+    5000
+  ],
+  "recommendation": "keep V0",
+  "seconds": 240,
+  "soft_falsifiers": {
+    "evidence": {
+      "triggered": [
+        {
+          "lane": "motorik",
+          "ratio": 0.14697265625,
+          "v0_median": 2048.0,
+          "variant": "V1",
+          "variant_median": 301.0
+        },
+        {
+          "lane": "kosmische",
+          "ratio": 0.28759765625,
+          "v0_median": 2048.0,
+          "variant": "V1",
+          "variant_median": 589.0
+        },
+        {
+          "lane": "dub-electronic",
+          "ratio": 0.0166015625,
+          "v0_median": 2048.0,
+          "variant": "V1",
+          "variant_median": 34.0
+        },
+        {
+          "lane": "motorik",
+          "ratio": 0.2421875,
+          "v0_median": 2048.0,
+          "variant": "V2",
+          "variant_median": 496.0
+        },
+        {
+          "lane": "kosmische",
+          "ratio": 0.28759765625,
+          "v0_median": 2048.0,
+          "variant": "V2",
+          "variant_median": 589.0
+        },
+        {
+          "lane": "dub-electronic",
+          "ratio": 0.0166015625,
+          "v0_median": 2048.0,
+          "variant": "V2",
+          "variant_median": 34.0
+        }
+      ]
+    },
+    "status": "FAIL"
+  },
+  "variants": [
+    "V0",
+    "V1",
+    "V2",
+    "V3"
+  ],
+  "verdict": {
+    "V0": "baseline",
+    "V1": "REJECT (soft)",
+    "V2": "REJECT (soft)",
+    "V3": "SURVIVES"
+  }
+}
