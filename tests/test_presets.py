@@ -14,11 +14,11 @@ from indiegen.errors import PlanError
 from indiegen.plan import SAMPLE_RATE
 
 ALIAS_TABLE: dict[str, tuple[str, str]] = {
-    "motorik": ("Steady Hand", "Sixteen Steps"),
-    "kosmische": ("Hollow Signal", "Sustained Weather"),
-    "ambient": ("Long Exposure", "Rooms in Half Light"),
-    "dub-electronic": ("Silt", "Chamber Echoes"),
-    "indie-noise": ("Tin Roof", "Loose Ends"),
+    "motorik": ("Mano Firme", "Dieciséis Pasos"),
+    "kosmische": ("Señal Hueca", "Tiempo Sostenido"),
+    "ambient": ("Exposición Larga", "Habitaciones en Media Luz"),
+    "dub-electronic": ("Sedimento", "Ecos de Cámara"),
+    "indie-noise": ("Techo de Lata", "Cabos Sueltos"),
 }
 
 
