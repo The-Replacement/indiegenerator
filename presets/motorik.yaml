@@ -21,6 +21,12 @@ mode_pool: [dorian, mixolydian, aeolian]
 # is that stack - 0, 7 and 2 - and all three of the lane's modes carry it,
 # so the harmonic centre can hold the chord whichever mode a section is in.
 chord_intervals: [0, 7, 2]
+# c17 mechanism B: a second declared sonority. The draw may pick between
+# this and the primary; both contribute their own score-governed roots.
+# [0, 7, 9] is a BRIEF rival that LOSES to the primary by 3 permille at tol 0
+# in a joint pool (mechanism C would exclude it); under per-shape normalization
+# it contributes its own score-governed roots instead of being excluded.
+chord_intervals_secondary: [0, 7, 9]
 
 # The lane has a pulse, so the sections are measured in bars and the
 # Director fires every 8 to 32 of them.

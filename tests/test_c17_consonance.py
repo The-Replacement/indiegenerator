@@ -15,6 +15,7 @@ from indiegen.compose.planner import (
     _chord_roots,
     _consonant_roots,
     _lane_sonority,
+    _lane_sonority_secondary,
     _lane_voices,
 )
 from indiegen.config import Preset, StationPreset, load_preset
@@ -45,9 +46,14 @@ def test_the_lane_declares_the_sonority_the_scorer_measures(motorik: Preset) -> 
 
 
 def test_the_plan_names_the_sonority_it_built(motorik: Preset) -> None:
-    """The plan says which chord its harmony was built on."""
+    """The plan says which chord its harmony was built on.
+
+    With a second declared shape (mechanism B) the draw may pick either, so
+    the plan's chord is one of the declared shapes, not a single pinned one.
+    """
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
     plan = compose(motorik, SEED, FRAMES)
-    assert plan.chord_intervals == [0, 7, 2]
+    assert plan.chord_intervals in (lane.chord_intervals, lane.chord_intervals_secondary)
 
 
 def test_the_switch_is_on_by_default(motorik: Preset) -> None:
@@ -77,7 +83,7 @@ def test_the_scored_root_is_one_that_can_carry_the_sonority(motorik: Preset) -> 
     scored = compose(motorik, SEED, FRAMES)
 
     root = scored.sections[0].root_midi
-    sonority = _lane_sonority(lane, station)
+    sonority = scored.chord_intervals
     assert root in _chord_roots(lane.scale_midi, sonority, 3)
     assert chord_pool(lane.scale_midi, root, sonority, station.chromatic_budget_permille) == list(sonority)
 
@@ -87,12 +93,10 @@ def test_the_scored_pool_is_the_subset_that_can_carry_the_sonority(motorik: Pres
     lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
     station = motorik.station.model_copy(update={"consonance_scoring_enabled": True})
     legacy_pool = list(lane.scale_midi)
-    scored_pool = _consonant_roots(lane, station, legacy_pool)
-    assert 0 < len(scored_pool) < len(legacy_pool)
-    for root in scored_pool:
-        assert chord_pool(lane.scale_midi, root, _lane_sonority(lane, station), 0) == list(
-            _lane_sonority(lane, station)
-        )
+    scored_pairs = _consonant_roots(lane, station, legacy_pool)
+    assert 0 < len(scored_pairs) < len(legacy_pool)
+    for shape, root in scored_pairs:
+        assert chord_pool(lane.scale_midi, root, list(shape), 0) == list(shape)
 
 
 def test_the_scoring_is_deterministic(motorik: Preset) -> None:
@@ -151,8 +155,9 @@ def test_the_segments_walk_the_scored_pool(motorik: Preset) -> None:
 
     intervals = next((card.chord_intervals for card in lane.techniques if isinstance(card, PolyPeriodCard)), [])
     chord_roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
-    scored = _consonant_roots(lane, station, chord_roots if chord_roots else list(lane.scale_midi))
-    assert 0 < len(scored) < len(chord_roots)
+    scored_pairs = _consonant_roots(lane, station, chord_roots if chord_roots else list(lane.scale_midi))
+    assert 0 < len(scored_pairs) < len(chord_roots)
+    scored = [root for _, root in scored_pairs]
 
     plan = compose(preset, SEED, FRAMES)
     pads = [event for event in plan.events if event.instrument == "pad"]
@@ -242,3 +247,34 @@ def test_the_measurement_is_a_strict_no_op_when_off(motorik: Preset) -> None:
     for section in directed.sections:
         assert section.chord_tones_admitted == 0
         assert section.chord_consonance_permille == 0
+
+
+def test_mechanism_b_per_shape_eligibility_union(motorik: Preset) -> None:
+    """Each declared shape contributes its own score-governed roots (mechanism B)."""
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    assert _lane_sonority_secondary(lane, motorik.station) == [0, 7, 9]
+    legacy_pool = list(lane.scale_midi)
+    pairs = _consonant_roots(lane, motorik.station, legacy_pool)
+    shapes = {shape for shape, _ in pairs}
+    assert (0, 7, 2) in shapes
+    assert (0, 7, 9) in shapes
+    # every pair is (shape, root) with a root that carries that shape
+    for shape, root in pairs:
+        assert chord_pool(lane.scale_midi, root, list(shape), 0) == list(shape)
+
+
+def test_mechanism_b_variety_across_seeds(motorik: Preset) -> None:
+    """The draw selects both declared shapes across the sweep seeds."""
+    drawn = {tuple(compose(motorik, seed, FRAMES).chord_intervals) for seed in (1042, 2000, 3005)}
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    assert drawn == {tuple(lane.chord_intervals), tuple(lane.chord_intervals_secondary)}
+
+
+def test_mechanism_b_empty_secondary_falls_back(motorik: Preset) -> None:
+    """A lane with no secondary shape behaves like the single-shape path."""
+    lane = next(entry.parameters for entry in motorik.lanes if entry.lane == "motorik")
+    no_secondary = lane.model_copy(update={"chord_intervals_secondary": []})
+    new_lanes = [e.model_copy(update={"parameters": no_secondary}) for e in motorik.lanes if e.lane == "motorik"]
+    preset = motorik.model_copy(update={"lanes": new_lanes})
+    plan = compose(preset, SEED, FRAMES)
+    assert plan.chord_intervals == [0, 7, 2]

@@ -386,6 +386,23 @@ def _lane_sonority(lane: LanePreset, station: StationPreset) -> list[int]:
     return list(card.chord_intervals) if card is not None else []
 
 
+def _lane_sonority_secondary(lane: LanePreset, station: StationPreset) -> list[int]:
+    """The lane's SECOND declared sonority (mechanism B), if any.
+
+    Mirrors _lane_sonority's precedence: station override, then lane, then the
+    poly-period card. Empty when no second shape is declared - the common case,
+    in which mechanism B is inactive and behaviour is byte-identical to today.
+    """
+    if station.chord_tone_intervals_secondary:
+        return list(station.chord_tone_intervals_secondary)
+    if lane.chord_intervals_secondary:
+        return list(lane.chord_intervals_secondary)
+    card = next((card for card in lane.techniques if isinstance(card, PolyPeriodCard)), None)
+    if card is None:
+        return []
+    return list(getattr(card, "chord_intervals_secondary", []) or [])
+
+
 def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
     """The lane's additive spectra, one partial-ratio list per voice.
 
@@ -408,36 +425,56 @@ def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
     return voices
 
 
-def _consonant_roots(lane: LanePreset, station: StationPreset, pool: list[int]) -> list[int]:
-    """The roots of the pool whose chord the lane's own spectrum voices cleanly.
+def _consonant_roots(lane: LanePreset, station: StationPreset, pool: list[int]) -> list[tuple[tuple[int, ...], int]]:
+    """The (shape, root) pairs the arranger may choose from (mechanism B).
 
-    The lane's declared sonority is the chord a candidate root would voice;
-    the score is the roughness of the spectrum that would sound, measured
-    against the lane's additive voices. The roots whose chord is cleanest are
-    the ones the arranger may choose from.
+    Eligibility (tol 0) is computed INDEPENDENTLY within each declared
+    sonority shape (primary + optional secondary): a root is eligible for a
+    shape when its chord scores no worse than that shape's own minimum. The
+    draw then chooses among the union of the per-shape eligible pairs, so
+    both shapes contribute their own score-governed roots instead of one
+    shape's minimum winning the whole pool (the tol-0 winner-take-all that
+    killed the original "score picks the shape per track" premise).
 
-    A lane that declares no sonority, or that has no additive voice to
-    measure against, has nothing to score: the pool comes back untouched.
+    Returns a list of (shape_tuple, root) pairs sorted by (root, shape_tuple)
+    for deterministic rng.choice index mapping. A lane with no sonority, or
+    no additive voice, has nothing to score: every pool root comes back
+    paired with the primary declared shape (empty when none), preserving the
+    legacy draw. When no root is eligible under any shape, the same raw-pool
+    fallback applies.
     """
     from indiegen.theory.consonance import chord_candidates, consonant_chords
 
-    sonority = _lane_sonority(lane, station)
+    primary = _lane_sonority(lane, station)
+    secondary = _lane_sonority_secondary(lane, station)
     voices = _lane_voices(lane)
-    if not sonority or not voices:
-        return pool
-    # The candidates are the roots of the pool whose chord the scale (and
-    # the chromatic budget) can carry: a root that could voice only a
-    # fragment of the sonority is not a candidate at all.
-    candidates = chord_candidates(
-        lane.scale_midi,
-        sonority,
-        pool,
-        station.chromatic_budget_permille,
-    )
-    eligible = consonant_chords(candidates, voices, station.consonance_tolerance_permille)
-    if not eligible:
-        return pool
-    return [root for root, _ in eligible]
+    shapes: list[list[int]] = []
+    if primary:
+        shapes.append(list(primary))
+    if secondary and tuple(secondary) != tuple(primary):
+        shapes.append(list(secondary))
+    if not shapes or not voices:
+        return [(tuple(primary), root) for root in pool]
+    pairs: list[tuple[tuple[int, ...], int]] = []
+    seen_shapes: set[tuple[int, ...]] = set()
+    for shape in shapes:
+        key = tuple(shape)
+        if key in seen_shapes:
+            continue
+        seen_shapes.add(key)
+        candidates = chord_candidates(
+            lane.scale_midi,
+            shape,
+            pool,
+            station.chromatic_budget_permille,
+        )
+        eligible = consonant_chords(candidates, voices, station.consonance_tolerance_permille)
+        for root, _ in eligible:
+            pairs.append((key, root))
+    if not pairs:
+        return [(tuple(primary), root) for root in pool]
+    pairs.sort(key=lambda item: (item[1], item[0]))
+    return pairs
 
 
 def _segment_roots(section_roots: list[int], pool: list[int], segments: int) -> list[list[int]]:
@@ -1060,6 +1097,7 @@ class _PlanInputs:
     nodes: list[SectionProfile]
     harmony_cp_solution_count: int
     harmony_cp_fallback_count: int
+    drawn_chord_intervals: list[int]
     delay_send: DelaySend
     reverb: ReverbSpec | None
     frippertronics: FrippertronicsSpec | None
@@ -1111,7 +1149,7 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
         harmony_cp_fallback_count=inputs.harmony_cp_fallback_count,
         consonance_scoring_enabled=1 if station.consonance_scoring_enabled else 0,
         consonance_tolerance_permille=station.consonance_tolerance_permille,
-        chord_intervals=list(lane.chord_intervals),
+        chord_intervals=list(inputs.drawn_chord_intervals),
         # issue #17: the additive voices the sonority is measured against, as
         # exact ratios, so the Director's post-move measurement is a pure
         # function of the plan.
@@ -1344,23 +1382,41 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     )
     roots = _chord_roots(lane.scale_midi, intervals, 3) if intervals else list(lane.scale_midi)
     pool = roots if roots else list(lane.scale_midi)
-    # c17: the harmonic centre is drawn from the roots whose chord the lane's
-    # own spectrum can voice cleanly. The draw is the same one the legacy path
-    # makes, so the flag changes the root and nothing else.
+    # c17 mechanism B: eligibility (tol 0) is computed independently within
+    # each declared sonority shape; the draw chooses among the union of the
+    # per-shape eligible (shape, root) pairs, so both shapes contribute their
+    # own score-governed roots. A single rng.choice keeps the downstream
+    # stream identical in shape to the legacy path.
+    drawn_shape: tuple[int, ...] = tuple(lane.chord_intervals)
+    secondary_shape = _lane_sonority_secondary(lane, station)
     if station.consonance_scoring_enabled:
-        pool = _consonant_roots(lane, station, pool)
-    root_midi = rng.choice(pool)
+        pairs = _consonant_roots(lane, station, pool)
+        if not pairs:
+            pairs = [(drawn_shape, root) for root in pool]
+        drawn_shape, root_midi = rng.choice(pairs)
+        drawn_pool = [root for (shape, root) in pairs if shape == drawn_shape]
+    else:
+        root_midi = rng.choice(pool)
+        drawn_pool = list(pool)
+    # Backward compatibility: single-shape lanes keep recording the lane-level
+    # declaration in Plan.chord_intervals (byte-identical to pre-change), even
+    # when the scorer's primary shape came from the card. Mechanism B only
+    # rewrites Plan.chord_intervals when a second shape is actually declared.
+    if not secondary_shape:
+        drawn_shape = tuple(lane.chord_intervals)
+    if not drawn_pool:
+        drawn_pool = list(pool)
 
     modes = _assign_modes(lane.mode_pool, nodes, lengths, frames_per_bar, root_midi, rng)
     section_roots = [root for _, root in modes]
     section_scales = [mode_scale(mode, root, 2) for mode, root in modes]
-    # c17 slice 4: the segments walk the SCORED pool, so a chord segment can
-    # never sit on a root that cannot carry the declared sonority. The CP
-    # paths below walk the same scored pool: a CP section root that is not in
-    # it anchors at the pool's head, so its segments are scored roots even
-    # though the CP domain itself stays untouched (slice 3's measured
-    # deferral).
-    section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
+    # c17 slice 4: the segments walk the DRAWN shape's scored pool, so a
+    # chord segment can never sit on a root that cannot carry the sonority
+    # the draw actually chose. The CP paths below walk the same pool: a CP
+    # section root that is not in it anchors at the pool's head, so its
+    # segments are scored roots even though the CP domain itself stays
+    # untouched (slice 3's measured deferral).
+    section_segment_roots = _segment_roots(section_roots, drawn_pool, station.chord_segments_per_section)
 
     # c12: opt-in CP harmonic progression. When enabled, replace the
     # RNG-chosen section roots with a deterministically selected feasible
@@ -1415,7 +1471,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         if chosen_voicings is not None and len(chosen_voicings) == len(nodes):
             section_roots = [int(v[0]) for v in chosen_voicings]
             section_scales = [mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)]
-            section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
+            section_segment_roots = _segment_roots(section_roots, drawn_pool, station.chord_segments_per_section)
             geodesic_dists = [0] + [
                 voicing_distance(tuple(chosen_voicings[i - 1]), tuple(chosen_voicings[i]))
                 for i in range(1, len(chosen_voicings))
@@ -1436,7 +1492,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
                 section_scales = [
                     mode_scale(mode, root, 2) for (mode, _), root in zip(modes, section_roots, strict=True)
                 ]
-                section_segment_roots = _segment_roots(section_roots, pool, station.chord_segments_per_section)
+                section_segment_roots = _segment_roots(section_roots, drawn_pool, station.chord_segments_per_section)
                 cp_fallback = 1
             else:
                 cp_fallback = 1
@@ -1646,6 +1702,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         nodes=nodes,
         harmony_cp_solution_count=cp_solution_count,
         harmony_cp_fallback_count=cp_fallback,
+        drawn_chord_intervals=list(drawn_shape),
         delay_send=delay_send,
         reverb=reverb,
         frippertronics=frippertronics,

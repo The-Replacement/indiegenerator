@@ -82,6 +82,7 @@ class PolyPeriodCard(FrozenModel):
     on_fraction_permille: RangeInt
     attack_seconds_range: RangeInt
     chord_intervals: list[int]
+    chord_intervals_secondary: list[int] = []
     partial_ratios: list[Rational]
     min_density: int
 
@@ -349,6 +350,7 @@ class LanePreset(FrozenModel):
     # lane has none, and a lane whose dissonance is deliberate (indie-noise)
     # must not have one.
     chord_intervals: list[int] = []
+    chord_intervals_secondary: list[int] = []
 
     @field_validator("chord_intervals")
     @classmethod
@@ -358,6 +360,16 @@ class LanePreset(FrozenModel):
             raise ValueError(f"chord_intervals needs 3..5 tones, got {len(value)}")
         if any(not 0 <= tone <= 11 for tone in value):
             raise ValueError(f"chord_intervals must be pitch classes 0..11, got {value}")
+        return value
+
+    @field_validator("chord_intervals_secondary")
+    @classmethod
+    def _chord_intervals_secondary_shape(cls, value: list[int]) -> list[int]:
+        """A second declared sonority (mechanism B), same rules as the first."""
+        if value and not 3 <= len(value) <= 5:
+            raise ValueError(f"chord_intervals_secondary needs 3..5 tones, got {len(value)}")
+        if any(not 0 <= tone <= 11 for tone in value):
+            raise ValueError(f"chord_intervals_secondary must be pitch classes 0..11, got {value}")
         return value
 
 
@@ -403,6 +415,7 @@ class StationPreset(FrozenModel):
     chord_segments_per_section: int = Field(default=1, ge=1, le=8)
     chromatic_budget_permille: int = Field(default=0, ge=0, le=1000)
     chord_tone_intervals: list[int] = []
+    chord_tone_intervals_secondary: list[int] = []
     # c12: opt-in constraint-programming harmonic progression.
     harmony_cp_enabled: bool = True
     # issue #17: consonance scoring. When on, the harmonic centre is drawn
