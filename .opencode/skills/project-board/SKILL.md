@@ -25,7 +25,7 @@ All commands target the **The-Replacement Roadmap** project board.
 |----------|-------|
 | Project number | `2` |
 | Owner | `The-Replacement` |
-| Project ID (GraphQL) | `PVT_kwDOEeFGTc4Bc5Ct` |
+| Project ID (GraphQL) | `PVT_kwDOE1iio84BrhYz` |
 
 ## Field IDs
 
@@ -33,7 +33,7 @@ All commands target the **The-Replacement Roadmap** project board.
 
 | Field ID | Type |
 |----------|------|
-| `PVTSSF_lADOEeFGTc4Bc5CtzhXejII` | SingleSelect |
+| `PVTSSF_lADOE1iio84BrhYzzhpzwA4` | SingleSelect |
 
 | Option | ID |
 |--------|-----|
@@ -45,19 +45,19 @@ All commands target the **The-Replacement Roadmap** project board.
 
 | Field ID | Type |
 |----------|------|
-| `PVTSSF_lADOEeFGTc4Bc5CtzhYUpaI` | SingleSelect |
+| `PVTSSF_lADOE1iio84BrhYzzhpzwK4` | SingleSelect |
 
 | Option | ID | SDD Phase |
 |--------|-----|-----------|
-| Todo | `f649029b` | No SDD work started |
-| Explore | `cbe57d4d` | Phase 1 |
-| Propose | `f7b5e3ad` | Phase 2 |
-| Spec | `215b5bd3` | Phase 3 |
-| Design | `8a8f0ea4` | Phase 4 |
-| Tasks | `1b7d843f` | Phase 5 |
-| Apply | `e827dc3f` | Phase 6 |
-| Verify | `8242b830` | Phase 7 |
-| Done | `ce5c9fcc` | Phase 8 (archived) |
+| Todo | `66fa4f7d` | No SDD work started |
+| Explore | `751f2d04` | Phase 1 |
+| Propose | `33e3a016` | Phase 2 |
+| Spec | `ceb6e6d2` | Phase 3 |
+| Design | `c0dcb7b5` | Phase 4 |
+| Tasks | `d2705ad5` | Phase 5 |
+| Apply | `704d0a09` | Phase 6 |
+| Verify | `ca959d10` | Phase 7 |
+| Done | `f94cb7b6` | Phase 8 (archived) |
 
 ## SDD Phase → Board Update Map
 
@@ -65,14 +65,14 @@ When an SDD phase completes, update the board as follows:
 
 | SDD Phase Completes | Status | SDD Phase |
 |---------------------|--------|-----------|
-| explore | In Progress (`47fc9ee4`) | Explore (`cbe57d4d`) |
-| propose | In Progress (`47fc9ee4`) | Propose (`f7b5e3ad`) |
-| spec | In Progress (`47fc9ee4`) | Spec (`215b5bd3`) |
-| design | In Progress (`47fc9ee4`) | Design (`8a8f0ea4`) |
-| tasks | In Progress (`47fc9ee4`) | Tasks (`1b7d843f`) |
-| apply | In Progress (`47fc9ee4`) | Apply (`e827dc3f`) |
-| verify | In Progress (`47fc9ee4`) | Verify (`8242b830`) |
-| archive | Done (`98236657`) | Done (`ce5c9fcc`) |
+| explore | In Progress (`47fc9ee4`) | Explore (`751f2d04`) |
+| propose | In Progress (`47fc9ee4`) | Propose (`33e3a016`) |
+| spec | In Progress (`47fc9ee4`) | Spec (`ceb6e6d2`) |
+| design | In Progress (`47fc9ee4`) | Design (`c0dcb7b5`) |
+| tasks | In Progress (`47fc9ee4`) | Tasks (`d2705ad5`) |
+| apply | In Progress (`47fc9ee4`) | Apply (`704d0a09`) |
+| verify | In Progress (`47fc9ee4`) | Verify (`ca959d10`) |
+| archive | Done (`98236657`) | Done (`f94cb7b6`) |
 
 ## Commands
 
@@ -81,8 +81,8 @@ When an SDD phase completes, update the board as follows:
 ```bash
 gh project item-edit \
   --id <ITEM_ID> \
-  --field-id PVTSSF_lADOEeFGTc4Bc5CtzhXejII \
-  --project-id PVT_kwDOEeFGTc4Bc5Ct \
+  --field-id PVTSSF_lADOE1iio84BrhYzzhpzwA4 \
+  --project-id PVT_kwDOE1iio84BrhYz \
   --single-select-option-id <OPTION_ID>
 ```
 
@@ -91,21 +91,21 @@ gh project item-edit \
 ```bash
 gh project item-edit \
   --id <ITEM_ID> \
-  --field-id PVTSSF_lADOEeFGTc4Bc5CtzhYUpaI \
-  --project-id PVT_kwDOEeFGTc4Bc5Ct \
+  --field-id PVTSSF_lADOE1iio84BrhYzzhpzwK4 \
+  --project-id PVT_kwDOE1iio84BrhYz \
   --single-select-option-id <PHASE_OPTION_ID>
 ```
 
 ### Add an issue to the project board
 
 ```bash
-gh project item-add 2 --owner The-Replacement --url <ISSUE_URL>
+gh project item-add 1 --owner The-Replacement --url <ISSUE_URL>
 ```
 
 ### Find an item ID from an issue number
 
 ```bash
-gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:2){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id'
+gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:1){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id'
 ```
 
 Replace `<ISSUE_NUMBER>` with the actual issue number.

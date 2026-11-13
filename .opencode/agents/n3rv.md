@@ -73,14 +73,14 @@ When creating a new feature/satellite/enhancement issue:
 
 2. **Add it to the board** immediately:
    ```bash
-   gh project item-add 2 --owner The-Replacement --url "https://github.com/The-Replacement/hub/issues/<N>"
+   gh project item-add 1 --owner The-Replacement --url "https://github.com/The-Replacement/hub/issues/<N>"
    ```
 
 3. **Set initial board state** (the issue starts as Todo):
    ```bash
-   ITEM_ID=$(gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:2){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[]|select(.content.number==<N>).id')
-   gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOEeFGTc4Bc5CtzhXejII --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id f75ad846
-   gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOEeFGTc4Bc5CtzhYUpaI --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id f649029b
+   ITEM_ID=$(gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:1){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[]|select(.content.number==<N>).id')
+   gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOE1iio84BrhYzzhpzwA4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id f75ad846
+   gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOE1iio84BrhYzzhpzwK4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id 66fa4f7d
    ```
 
 4. **Return the issue number** to the user. They can then run `/sdd-new --issue <N> <description>`.
@@ -95,12 +95,12 @@ Key field/option IDs are defined in the `project-board` skill. All SDD subagents
 
 | SDD Phase | Status Option ID | Phase Option ID |
 |-----------|:----------------:|:----------------:|
-| Todo      | `f75ad846`       | `f649029b`       |
-| Explore   | `47fc9ee4`       | `cbe57d4d`       |
-| Propose   | `47fc9ee4`       | `f7b5e3ad`       |
-| Spec      | `47fc9ee4`       | `215b5bd3`       |
-| Design    | `47fc9ee4`       | `8a8f0ea4`       |
-| Tasks     | `47fc9ee4`       | `1b7d843f`       |
-| Apply     | `47fc9ee4`       | `e827dc3f`       |
-| Verify    | `47fc9ee4`       | `8242b830`       |
-| Done      | `98236657`       | `ce5c9fcc`       |
+| Todo      | `f75ad846`       | `66fa4f7d`       |
+| Explore   | `47fc9ee4`       | `751f2d04`       |
+| Propose   | `47fc9ee4`       | `33e3a016`       |
+| Spec      | `47fc9ee4`       | `ceb6e6d2`       |
+| Design    | `47fc9ee4`       | `c0dcb7b5`       |
+| Tasks     | `47fc9ee4`       | `d2705ad5`       |
+| Apply     | `47fc9ee4`       | `704d0a09`       |
+| Verify    | `47fc9ee4`       | `ca959d10`       |
+| Done      | `98236657`       | `f94cb7b6`       |

@@ -57,9 +57,9 @@ project-rules gate evaluated against `AGENTS.md`.
 6. **Board Update**: Check your prompt for an issue number (look for `for issue #N` or `#<number>`). If found, execute the commands below with `<ISSUE_NUMBER>` replaced by that number. **If no issue number is present in your prompt, skip this entire section.**
 
    ```bash
-   ITEM_ID=$(gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:2){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id')
-   [ -n "$ITEM_ID" ] && gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOEeFGTc4Bc5CtzhXejII --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id 47fc9ee4
-   [ -n "$ITEM_ID" ] && gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOEeFGTc4Bc5CtzhYUpaI --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id 8a8f0ea4
+   ITEM_ID=$(gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:1){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id')
+   [ -n "$ITEM_ID" ] && gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOE1iio84BrhYzzhpzwA4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id 47fc9ee4
+   [ -n "$ITEM_ID" ] && gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADOE1iio84BrhYzzhpzwK4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id c0dcb7b5
    ```
 
 ## Quality Bar

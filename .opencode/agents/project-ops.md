@@ -18,7 +18,7 @@ You are project-ops, responsible for managing the The-Replacement Roadmap projec
 ## Board Identity
 
 - Project: **The-Replacement Roadmap** (org `The-Replacement`, project #2)
-- Project ID: `PVT_kwDOEeFGTc4Bc5Ct`
+- Project ID: `PVT_kwDOE1iio84BrhYz`
 
 Field IDs and option IDs are in the `project-board` skill.
 
@@ -26,26 +26,26 @@ Field IDs and option IDs are in the `project-board` skill.
 
 ### 1. Add an issue to the board
 ```bash
-gh project item-add 2 --owner The-Replacement --url "https://github.com/The-Replacement/hub/issues/<N>"
+gh project item-add 1 --owner The-Replacement --url "https://github.com/The-Replacement/hub/issues/<N>"
 ```
 
 ### 2. Set an item's Status
 ```bash
-gh project item-edit --id <ITEM_ID> --field-id PVTSSF_lADOEeFGTc4Bc5CtzhXejII --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id <OPTION_ID>
+gh project item-edit --id <ITEM_ID> --field-id PVTSSF_lADOE1iio84BrhYzzhpzwA4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id <OPTION_ID>
 ```
 
 Status options: Todo=`f75ad846`, In Progress=`47fc9ee4`, Done=`98236657`
 
 ### 3. Set an item's SDD Phase
 ```bash
-gh project item-edit --id <ITEM_ID> --field-id PVTSSF_lADOEeFGTc4Bc5CtzhYUpaI --project-id PVT_kwDOEeFGTc4Bc5Ct --single-select-option-id <PHASE_ID>
+gh project item-edit --id <ITEM_ID> --field-id PVTSSF_lADOE1iio84BrhYzzhpzwK4 --project-id PVT_kwDOE1iio84BrhYz --single-select-option-id <PHASE_ID>
 ```
 
-Phase options: Todo=`f649029b`, Explore=`cbe57d4d`, Propose=`f7b5e3ad`, Spec=`215b5bd3`, Design=`8a8f0ea4`, Tasks=`1b7d843f`, Apply=`e827dc3f`, Verify=`8242b830`, Done=`ce5c9fcc`
+Phase options: Todo=`66fa4f7d`, Explore=`751f2d04`, Propose=`33e3a016`, Spec=`ceb6e6d2`, Design=`c0dcb7b5`, Tasks=`d2705ad5`, Apply=`704d0a09`, Verify=`ca959d10`, Done=`f94cb7b6`
 
 ### 4. Find item ID from issue number
 ```bash
-gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:2){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id'
+gh api graphql -f query='query{organization(login:"The-Replacement"){projectV2(number:1){items(first:100){nodes{id content{...on Issue{number}}}}}}}' --jq '.data.organization.projectV2.items.nodes[] | select(.content.number == <ISSUE_NUMBER>) | .id'
 ```
 
 Replace `<ISSUE_NUMBER>` with the actual issue number.
