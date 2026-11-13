@@ -24,7 +24,14 @@ from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
 from indiegen.compose.microtiming import apply_micro_timing
 from indiegen.compose.rng import SplitMix64, groove_offsets, seed_from_bytes
-from indiegen.compose.techniques import plan_drone, plan_phased_pair, plan_plucks, plan_poly_period, plan_tintinnabuli
+from indiegen.compose.techniques import (
+    plan_drone,
+    plan_granular_cloud,
+    plan_phased_pair,
+    plan_plucks,
+    plan_poly_period,
+    plan_tintinnabuli,
+)
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
 from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
 from indiegen.compose.techniques.t14_motif import StringVoice, build_cell, plan_motif
@@ -36,6 +43,7 @@ from indiegen.config import (
     DubChainCard,
     FormantChoirCard,
     FrippertronicsCard,
+    GranularCloudCard,
     HatCard,
     KickCard,
     LanePreset,
@@ -1995,6 +2003,17 @@ def _formant_events(
     return out
 
 
+def _granular_events(
+    card: TechniqueCard,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    frames: _LaneFrames,
+) -> Sequence[Event]:
+    """One granular cloud spanning the lane's track."""
+    cloud = cast(GranularCloudCard, card)
+    return list(plan_granular_cloud(cloud, rng, ctx, frames))
+
+
 def _no_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     """A card that is a send or a stream, not an instrument: it schedules nothing."""
     return []
@@ -2042,6 +2061,18 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "t15": CardSpec(_formant_events, "formant", _min_density_card),
         "t15_formant": CardSpec(_formant_events, "formant", _min_density_card),
         "t15_formant_choir": CardSpec(_formant_events, "formant", _min_density_card),
+        "granular": CardSpec(_granular_events, "cloud", _min_density_card),
+        "cloud": CardSpec(_granular_events, "cloud", _min_density_card),
+        "grains": CardSpec(_granular_events, "cloud", _min_density_card),
+        "clouds": CardSpec(_granular_events, "cloud", _min_density_card),
+        "granular_cloud": CardSpec(_granular_events, "cloud", _min_density_card),
+        "granular_clouds": CardSpec(_granular_events, "cloud", _min_density_card),
+        "grain": CardSpec(_granular_events, "cloud", _min_density_card),
+        "t12": CardSpec(_granular_events, "cloud", _min_density_card),
+        "t12_granular": CardSpec(_granular_events, "cloud", _min_density_card),
+        "t12_cloud": CardSpec(_granular_events, "cloud", _min_density_card),
+        "t12_granular_cloud": CardSpec(_granular_events, "cloud", _min_density_card),
+        "t12_granular_clouds": CardSpec(_granular_events, "cloud", _min_density_card),
         "pink": CardSpec(_no_events, None, lambda _: 0),
         "frippertronics": CardSpec(_no_events, None, lambda _: 0),
         "dub_chain": CardSpec(_no_events, None, lambda _: 0),

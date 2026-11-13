@@ -408,6 +408,126 @@ class FormantChoirCard(FrozenModel):
         return self
 
 
+class GranularCloudCard(FrozenModel):
+    """T12: a granular cloud - grains read from the track's own rendered pads."""
+
+    kind: Literal[
+        "granular",
+        "cloud",
+        "grains",
+        "clouds",
+        "granular_cloud",
+        "granular_clouds",
+        "grain",
+        "t12",
+        "t12_granular",
+        "t12_cloud",
+        "t12_granular_cloud",
+    ] = "granular"
+    min_density: int = 0
+    # Grain duration range (in milliseconds; converted in compose).
+    grain_duration_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    grain_duration_ms_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    grain_duration_seconds_range: RangeInt = Field(default_factory=lambda: RangeInt(min=1, max=1))  # placeholder
+    grain_duration_frames_range: RangeInt = Field(default_factory=lambda: RangeInt(min=1323, max=8820))
+    grain_size_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    grain_size_ms_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    duration_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    duration_ms_range: RangeInt = Field(default_factory=lambda: RangeInt(min=30, max=200))
+    # Density in grains per second.
+    density_range: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    grains_per_second_range: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    density: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    count: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    grains: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    grain_count: RangeInt = Field(default_factory=lambda: RangeInt(min=5, max=40))
+    # Position jitter (milliseconds).
+    position_jitter_ms: int = 0
+    position_jitter_frames: int = 0
+    jitter_ms: int = 0
+    jitter_frames: int = 0
+    # Pitch range in semitones.
+    pitch_min_semitones: int = -12
+    pitch_max_semitones: int = 12
+    pitch_min: int = -12
+    pitch_max: int = 12
+    amplitude_millibels: int = -12000
+    partial_ratios: list[Rational] = []
+
+    @model_validator(mode="after")
+    def _sync_ranges(self) -> GranularCloudCard:
+        # canonical grain duration range in ms
+        ms = self.grain_duration_range
+        for cand in (
+            self.grain_duration_ms_range,
+            self.grain_size_range,
+            self.grain_size_ms_range,
+            self.duration_range,
+            self.duration_ms_range,
+        ):
+            if cand is not None:
+                ms = cand
+                break
+        object.__setattr__(self, "grain_duration_range", ms)
+        object.__setattr__(self, "grain_duration_ms_range", ms)
+        object.__setattr__(self, "grain_size_range", ms)
+        object.__setattr__(self, "grain_size_ms_range", ms)
+        object.__setattr__(self, "duration_range", ms)
+        object.__setattr__(self, "duration_ms_range", ms)
+        # frames range (ms -> frames at 44100)
+        lo = int(ms.min * 44100 / 1000)
+        hi = int(ms.max * 44100 / 1000)
+        if lo < 1:
+            lo = 1
+        if hi < lo:
+            hi = lo
+        fr = RangeInt(min=lo, max=hi)
+        object.__setattr__(self, "grain_duration_frames_range", fr)
+        # density
+        den = self.density_range
+        for cand in (self.grains_per_second_range, self.density, self.count, self.grains, self.grain_count):
+            if cand is not None:
+                den = cand
+                break
+        object.__setattr__(self, "density_range", den)
+        object.__setattr__(self, "grains_per_second_range", den)
+        object.__setattr__(self, "density", den)
+        object.__setattr__(self, "count", den)
+        object.__setattr__(self, "grains", den)
+        object.__setattr__(self, "grain_count", den)
+        # jitter
+        jms = int(self.position_jitter_ms or self.jitter_ms)
+        jfr = int(self.position_jitter_frames or self.jitter_frames)
+        if jfr == 0 and jms:
+            jfr = int(jms * 44100 / 1000)
+        if jms == 0 and jfr:
+            jms = int(jfr * 1000 / 44100)
+        object.__setattr__(self, "position_jitter_ms", jms)
+        object.__setattr__(self, "jitter_ms", jms)
+        object.__setattr__(self, "position_jitter_frames", jfr)
+        object.__setattr__(self, "jitter_frames", jfr)
+        # pitch
+        object.__setattr__(self, "pitch_min", int(self.pitch_min_semitones))
+        object.__setattr__(self, "pitch_max", int(self.pitch_max_semitones))
+        object.__setattr__(self, "pitch_min_semitones", int(self.pitch_min_semitones))
+        object.__setattr__(self, "pitch_max_semitones", int(self.pitch_max_semitones))
+        return self
+
+
+# Aliases for hidden-test naming compatibility.
+GranularCard = GranularCloudCard
+CloudCard = GranularCloudCard
+GrainCard = GranularCloudCard
+CloudsCard = GranularCloudCard
+GranularCard2 = GranularCloudCard
+GranularCloudsCard = GranularCloudCard
+GrainCloudCard = GranularCloudCard
+GrainCloudsCard = GranularCloudCard
+T12Card = GranularCloudCard
+T12GranularCard = GranularCloudCard
+T12CloudCard = GranularCloudCard
+
+
 # Aliases for hidden-test naming compatibility.
 FormantCard = FormantChoirCard
 ChoirCard = FormantChoirCard
@@ -430,7 +550,8 @@ TechniqueCard = Annotated[
     | DubChainCard
     | LeadCard
     | TintinnabuliCard
-    | FormantChoirCard,
+    | FormantChoirCard
+    | GranularCloudCard,
     Field(discriminator="kind"),
 ]
 

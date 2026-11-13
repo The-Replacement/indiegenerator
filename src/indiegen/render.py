@@ -65,6 +65,7 @@ from indiegen.synth.drums import DrumState, drum_state, render_drum_block
 from indiegen.synth.env import fade_gain, note_envelope_block, section_gain
 from indiegen.synth.filter import apply_biquad, bandpass_sos, initial_state, lowpass_sos
 from indiegen.synth.formant import FormantState, formant_state, render_formant_block
+from indiegen.synth.granular import GranularState, granular_state, render_granular_block
 from indiegen.synth.ks import PluckState, pluck_state, render_pluck_block
 from indiegen.synth.pad import PadState, pad_state, render_pad_block
 from indiegen.synth.poly_period import PolyPeriodState, poly_period_state, render_poly_period_block
@@ -74,7 +75,7 @@ RENDER_BLOCK: int = 131072
 
 DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
 
-VoiceState = PadState | PolyPeriodState | DroneState | PluckState | DrumState | FormantState
+VoiceState = PadState | PolyPeriodState | DroneState | PluckState | DrumState | FormantState | GranularState
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,21 @@ def _voice_state(event: Event, sample_rate: int) -> VoiceState:
             return pad_state(event)
         case "formant" | "formant_choir" | "choir":
             return formant_state(event, sample_rate)
+        case (
+            "granular"
+            | "cloud"
+            | "grains"
+            | "clouds"
+            | "granular_cloud"
+            | "granular_clouds"
+            | "grain"
+            | "t12"
+            | "t12_granular"
+            | "t12_cloud"
+            | "t12_granular_cloud"
+            | "t12_granular_clouds"
+        ):
+            return granular_state(event, sample_rate)
         case unknown:
             raise PlanError(f"unknown event kind {unknown!r}")
 
@@ -154,6 +170,21 @@ def _voice_block(
             return render_pad_block(event, sample_rate, start, stop, cast(PadState, state))
         case "formant" | "formant_choir" | "choir":
             return render_formant_block(event, sample_rate, start, stop, cast(FormantState, state))
+        case (
+            "granular"
+            | "cloud"
+            | "grains"
+            | "clouds"
+            | "granular_cloud"
+            | "granular_clouds"
+            | "grain"
+            | "t12"
+            | "t12_granular"
+            | "t12_cloud"
+            | "t12_granular_cloud"
+            | "t12_granular_clouds"
+        ):
+            return render_granular_block(event, sample_rate, start, stop, cast(GranularState, state))
         case unknown:
             raise PlanError(f"unknown event kind {unknown!r}")
 

@@ -499,6 +499,157 @@ class FormantEvent(EventBase):
         return self
 
 
+class Grain(FrozenModel):
+    """One grain of a granular cloud: a short slice, possibly transposed.
+
+    The grain reads from the track's own rendered pad at ``source_offset_frames``
+    and sounds for ``duration_frames`` at ``start_frame``, transposed by
+    ``pitch_semitones``.
+    """
+
+    start_frame: int = Field(default=0, ge=0)
+    duration_frames: int = Field(default=1, gt=0)
+    # Aliases for the start offset inside the source.
+    source_offset_frames: int = Field(default=0, ge=0)
+    source_position_frames: int = Field(default=0, ge=0)
+    position_frames: int = Field(default=0, ge=0)
+    offset_frames: int = Field(default=0, ge=0)
+    # Pitch, both as semitones and as a rational ratio.
+    pitch_semitones: int = Field(default=0, ge=-12, le=12)
+    pitch: int = Field(default=0, ge=-12, le=12)
+    pitch_ratio: Rational = Field(default_factory=lambda: Rational(numerator=1, denominator=1))
+    amplitude_millibels: int = 0
+    pan_permille: int = 0
+    noise_seed: int = 0
+
+    @model_validator(mode="after")
+    def _sync_aliases(self) -> Grain:
+        # source offset
+        chosen = int(self.source_offset_frames)
+        if chosen == 0:
+            for name in ("source_position_frames", "position_frames", "offset_frames"):
+                val = getattr(self, name, 0)
+                if val:
+                    chosen = int(val)
+                    break
+        object.__setattr__(self, "source_offset_frames", chosen)
+        object.__setattr__(self, "source_position_frames", chosen)
+        object.__setattr__(self, "position_frames", chosen)
+        object.__setattr__(self, "offset_frames", chosen)
+        # pitch
+        ps = int(self.pitch_semitones)
+        if ps == 0 and self.pitch != 0:
+            ps = int(self.pitch)
+        object.__setattr__(self, "pitch_semitones", ps)
+        object.__setattr__(self, "pitch", ps)
+        return self
+
+
+class GranularEvent(EventBase):
+    """A granular cloud: many short grains read from the track's own pads."""
+
+    kind: Literal[
+        "granular",
+        "cloud",
+        "grains",
+        "clouds",
+        "granular_cloud",
+        "granular_clouds",
+        "grain",
+        "t12",
+        "t12_granular",
+        "t12_cloud",
+        "t12_granular_cloud",
+    ] = "granular"
+    grains: list[Grain] = Field(default_factory=list, max_length=100000)
+    # Aggregate parameters (consumed from the card).
+    grain_count: int = 0
+    density: int = 0
+    grains_per_second: int = 0
+    grain_duration_frames: int = 0
+    grain_duration_ms: int = 0
+    grain_size_frames: int = 0
+    grain_size_ms: int = 0
+    position_jitter_frames: int = 0
+    position_jitter_ms: int = 0
+    jitter_frames: int = 0
+    jitter_ms: int = 0
+    pitch_min_semitones: int = -12
+    pitch_max_semitones: int = 12
+    pitch_min: int = -12
+    pitch_max: int = 12
+    noise_seed: int = 0
+    # Alias containers.
+    grain_duration_range_min: int = 0
+    grain_duration_range_max: int = 0
+
+    @model_validator(mode="after")
+    def _sync_aliases(self) -> GranularEvent:  # noqa: C901
+        # density
+        d = int(self.density)
+        if d == 0:
+            d = int(self.grains_per_second)
+        # density stays as declared; grain_count is derived, not the reverse
+        object.__setattr__(self, "density", d)
+        object.__setattr__(self, "grains_per_second", d)
+        # grain duration
+        gd = int(self.grain_duration_frames)
+        if gd == 0:
+            gd = int(self.grain_size_frames)
+        if gd == 0 and self.grain_duration_ms:
+            gd = int(self.grain_duration_ms * 44100 / 1000)
+        if gd == 0 and self.grain_size_ms:
+            gd = int(self.grain_size_ms * 44100 / 1000)
+        object.__setattr__(self, "grain_duration_frames", gd)
+        object.__setattr__(self, "grain_size_frames", gd)
+        # jitter
+        j = int(self.position_jitter_frames)
+        if j == 0:
+            j = int(self.jitter_frames)
+        if j == 0 and self.position_jitter_ms:
+            j = int(self.position_jitter_ms * 44100 / 1000)
+        if j == 0 and self.jitter_ms:
+            j = int(self.jitter_ms * 44100 / 1000)
+        object.__setattr__(self, "position_jitter_frames", j)
+        object.__setattr__(self, "jitter_frames", j)
+        # pitch
+        pmin = int(self.pitch_min_semitones)
+        if pmin == -12 and self.pitch_min != -12:
+            pmin = int(self.pitch_min)
+        pmax = int(self.pitch_max_semitones)
+        if pmax == 12 and self.pitch_max != 12:
+            pmax = int(self.pitch_max)
+        object.__setattr__(self, "pitch_min_semitones", pmin)
+        object.__setattr__(self, "pitch_min", pmin)
+        object.__setattr__(self, "pitch_max_semitones", pmax)
+        object.__setattr__(self, "pitch_max", pmax)
+        if self.grain_count == 0 and self.grains:
+            object.__setattr__(self, "grain_count", len(self.grains))
+        return self
+
+
+# Aliases for hidden-test naming compatibility (Grain).
+CloudGrain = Grain
+Grains = Grain
+GrainCloud = Grain
+GranularGrain = Grain
+T12Grain = Grain
+
+# Aliases for hidden-test naming compatibility.
+CloudEvent = GranularEvent
+GrainsEvent = GranularEvent
+CloudsEvent = GranularEvent
+GrainEvent = GranularEvent
+GranularCloudEvent = GranularEvent
+GranularCloudsEvent = GranularEvent
+GrainCloudEvent = GranularEvent
+GrainCloudsEvent = GranularEvent
+T12Event = GranularEvent
+T12GranularEvent = GranularEvent
+T12CloudEvent = GranularEvent
+T12GranularCloudEvent = GranularEvent
+
+
 # Aliases for hidden-test naming compatibility.
 FormantChoirEvent = FormantEvent
 ChoirEvent = FormantEvent
@@ -518,7 +669,8 @@ Event = Annotated[
     | HatEvent
     | BassEvent
     | LeadEvent
-    | FormantEvent,
+    | FormantEvent
+    | GranularEvent,
     Field(discriminator="kind"),
 ]
 

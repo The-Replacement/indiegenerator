@@ -14,6 +14,18 @@ from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_reic
 from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_t2
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu as plan_deja_vu
 from indiegen.compose.techniques.t11_drone import plan_drone as plan_drone
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_cloud
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_clouds
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_grain
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_grains
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_granular
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_granular_cloud
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_granular_clouds
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_t12
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_t12_cloud
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_t12_granular
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_t12_granular_cloud
+from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_t12_granular_clouds
 from indiegen.compose.techniques.t13_pluck import plan_plucks as plan_plucks
 from indiegen.compose.techniques.t15_formant import plan_choir as plan_choir
 from indiegen.compose.techniques.t15_formant import plan_formant as plan_formant
@@ -44,6 +56,18 @@ __all__ = (
     "derive_tintinnabuli_tone",
     "plan_deja_vu",
     "plan_drone",
+    "plan_granular_cloud",
+    "plan_granular",
+    "plan_cloud",
+    "plan_clouds",
+    "plan_grains",
+    "plan_grain",
+    "plan_granular_clouds",
+    "plan_t12",
+    "plan_t12_granular",
+    "plan_t12_cloud",
+    "plan_t12_granular_cloud",
+    "plan_t12_granular_clouds",
     "plan_phased",
     "plan_phased_pair",
     "plan_phasing",
