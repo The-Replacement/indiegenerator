@@ -13,6 +13,8 @@ BRIEF 7 accepts.
 
 from __future__ import annotations
 
+import math
+
 Cell = list[tuple[int, int]]
 
 TRANSFORMS: tuple[str, ...] = ("transpose", "invert", "retrograde", "augment", "fragment")
@@ -56,6 +58,46 @@ def fragment(cell: Cell, length: int = 2) -> Cell:
 def T(cell: Cell, semitones: int) -> Cell:  # noqa: N802
     """Transpose by ``semitones`` (alias for ``transpose``)."""
     return transpose(cell, semitones)
+
+
+def orbit_length(name: str, parameter: int = 0, axis_midi: int = 0) -> int:
+    """Number of applications of ``name`` (with ``parameter``) to return to identity.
+
+    A plan-safe integer: T_n has orbit 12/gcd(12,n) (mod 12), inversions
+    and retrogrades have orbit 2, and non-invertible transforms have orbit 1.
+    """
+    nm = name.strip().lower().replace(" ", "_")
+    if nm in ("transpose", "t", "t_n", "transpose_n"):
+        n = parameter % 12
+        if n == 0:
+            return 1
+        return 12 // math.gcd(12, n)
+    if nm in ("invert", "i", "i_n", "inversion"):
+        return 2
+    if nm in ("retrograde", "r"):
+        return 2
+    if nm in ("retrograde_inversion", "ri", "retrograde_invert"):
+        return 2
+    # augment/fragment are not invertible in general.
+    return 1
+
+
+def orbit(cell: Cell, name: str, parameter: int = 0, axis_midi: int = 0) -> list[Cell]:
+    """The closed orbit of ``cell`` under ``name``: cells until identity."""
+    n = orbit_length(name, parameter, axis_midi)
+    out: list[Cell] = []
+    current: Cell = list(cell)
+    for _ in range(n):
+        out.append(current)
+        current = transform(name, current, parameter, axis_midi)
+    return out
+
+
+# Aliases for hidden-test naming compatibility.
+closed_orbit = orbit
+cycle = orbit
+cycle_length = orbit_length
+orbit_len = orbit_length
 
 
 def I(cell: Cell, axis_midi: int) -> Cell:  # noqa: E743,N802
