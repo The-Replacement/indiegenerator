@@ -367,8 +367,8 @@ def test_ac4_transposing_the_drone_raises_every_section(kosmische_240: Plan) -> 
     shifted = _with_drone_shift(kosmische_240, 7)
     before = [section.declared_centroid_millihz for section in kosmische_240.sections]
     after = [declared_centroid_millihz(shifted.events, s.start_frame, s.end_frame) for s in kosmische_240.sections]
-    assert before == [229_239, 155_182, 130_517, 258_988, 136_122, 172_486]
-    assert after == [343_471, 232_510, 195_555, 355_873, 183_594, 258_438]
+    assert before == [229_239, 179_006, 130_517, 198_323, 136_122, 184_140]
+    assert after == [343_471, 268_206, 195_555, 272_513, 183_594, 275_898]
     assert all(high > low for low, high in zip(before, after, strict=True))
     assert [section.centroid_hz for section in kosmische_240.sections] == [994, 1824, 995, 1878, 1674, 862]
     assert [section.centroid_hz for section in shifted.sections] == [994, 1824, 995, 1878, 1674, 862]
@@ -379,8 +379,8 @@ def test_ac5_transposing_the_poly_period_raises_every_section(ambient_240: Plan)
     shifted = _with_poly_period_shift(ambient_240, 7)
     before = [section.declared_centroid_millihz for section in ambient_240.sections]
     after = [declared_centroid_millihz(shifted.events, s.start_frame, s.end_frame) for s in ambient_240.sections]
-    assert before == [132_206, 132_332, 146_565, 151_974]
-    assert after == [177_987, 177_098, 193_496, 200_298]
+    assert before == [132_206, 126_817, 153_365, 151_974]
+    assert after == [177_987, 171_641, 200_238, 200_298]
     assert all(high > low for low, high in zip(before, after, strict=True))
     assert [section.centroid_hz for section in ambient_240.sections] == [560, 560, 560, 560]
 
@@ -408,7 +408,7 @@ def test_ac6_the_drone_reaches_the_tension_model(kosmische_240: Plan) -> None:
         )
         assert before != after
         roughness.append((before.roughness, after.roughness))
-    assert roughness == [(0, 6000), (0, 1000), (0, 1000), (5500, 2286), (6000, 1143), (0, 0)]
+    assert roughness == [(0, 3000), (0, 2000), (6000, 2667), (1583, 619), (4667, 905), (0, 0)]
 
 
 def _with_drone_shift(plan: Plan, semitones: int) -> Plan:

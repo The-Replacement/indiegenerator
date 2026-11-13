@@ -118,8 +118,19 @@ def plan_motif(  # noqa: C901
         # default: whole range -> no re-arm needed.
         whole_range = band is None or (band[0] <= -1000 and band[1] >= 1000)
 
-        name = "identity" if statement == 0 else TRANSFORMS[(statement - 1) % len(TRANSFORMS)]
-        parameter = _draw_param(name, rng)
+        # Closed orbit: T2 cycles through six transpositions and returns to
+        # identity, so the motif comes back transformed and full circle.
+        if statement == 0:
+            name = "identity"
+            parameter = 0
+        else:
+            step = statement % 6
+            if step == 0:
+                name = "identity"
+                parameter = 0
+            else:
+                name = "transpose"
+                parameter = 2 * step
         axis = ctx.section_roots[section] if ctx.section_roots else ctx.root_midi
         shaped = transform(name, cell, parameter, axis)
         total = sum(duration for _, duration in shaped)
