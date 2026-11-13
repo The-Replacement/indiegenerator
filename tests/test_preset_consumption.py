@@ -66,6 +66,12 @@ KEY_MUTATIONS: dict[str, Any] = {
     # A named condition is a literal: the sweep cannot change it without
     # making the preset unreadable, so it is left alone.
     "condition": lambda value: value,
+    # The tintinnabuli armature is a literal enum; the sweep cannot append a
+    # suffix without making the preset unreadable, so it swaps between the
+    # declared values instead.
+    "range_direction": lambda value: "superior" if value == "inferior" else "inferior",
+    "process": lambda value: {"constant": "alternating", "alternating": "step", "step": "constant"}[value],
+    "tonic_triad_mode": lambda value: {"auto": "major", "major": "minor", "minor": "auto"}[value],
     # The mode names are literals too, and the graph's node names are the
     # edges the arranger walks: both have to stay readable, so the sweep
     # moves the numbers around them instead.

@@ -1180,6 +1180,12 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
             ),
             -1,
         ),
+        tintinnabuli_process=next(
+            (card.process for card in lane.techniques if isinstance(card, TintinnabuliCard)), "constant"
+        ),
+        tintinnabuli_tonic_triad_mode=next(
+            (card.tonic_triad_mode for card in lane.techniques if isinstance(card, TintinnabuliCard)), "auto"
+        ),
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1334,6 +1340,14 @@ def _motif_and_postproc(
         voice_intervals=_lane_sonority(lane, station),
         bass_offset=_bass_offset,
     )
+    # The T-voice is derived LAST, from the M events the passes above settled.
+    # That is what keeps the duo note-against-note: the motif may have been
+    # groove-shifted, doubled or voice-led, and the T note follows the note
+    # that actually sounds, not the one the cell was built from.
+    tintinnabuli = next((card for card in lane.techniques if isinstance(card, TintinnabuliCard)), None)
+    if tintinnabuli is not None:
+        m_events = [event for event in out if isinstance(event, PluckEvent) and event.instrument == "motif"]
+        out.extend(plan_tintinnabuli(m_events, tintinnabuli, ctx, [mode for mode, _ in harmonic_modes]))
     return out, list(cell), appearances
 
 
@@ -1910,7 +1924,14 @@ def _deja_vu_events(
 def _tintinnabuli_events(
     card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
 ) -> Sequence[Event]:
-    return plan_tintinnabuli(cast(TintinnabuliCard, card), rng, ctx)
+    """The card plans no line of its own: the T-voice follows the motif.
+
+    ``_motif_and_postproc`` derives it from the final M events once the motif
+    and its production passes exist. Keeping this empty is what makes the
+    card an armature over the station signature instead of a second, unrelated
+    pluck line.
+    """
+    return []
 
 
 def _kick_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
@@ -2209,11 +2230,11 @@ def _smoothed_pluck(scale: list[int], previous: int, current: int) -> int | None
     return candidates[0][1]
 
 
-# The tintinnabuli duo's notes are a rule's output, not a line to smooth.
-# The voice-leading passes must leave them alone: snapping the M-voice or the
-# T-voice to the section voicing turns the duo into a unison and can pull the
-# T-voice off the tonic triad (issue #20 verify B1).
-TINTINNABULI_INSTRUMENTS: tuple[str, ...] = ("tintinnabuli", "tintinnabuli_m")
+# The tintinnabuli T-voice is a rule's output, not a line to smooth. It is
+# derived after the voice-leading passes, so this guard is belt and braces:
+# if a later change moves the derivation earlier, the T-voice still must not
+# be snapped to the section voicing (issue #20 verify B1).
+TINTINNABULI_INSTRUMENTS: tuple[str, ...] = ("tintinnabuli",)
 
 
 def _pluck_indices_by_instrument(out: list[Event]) -> dict[str, list[int]]:

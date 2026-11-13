@@ -1,9 +1,10 @@
-"""Tintinnabuli second-voice duo: the T-voice is a rule, not a draw.
+"""Tintinnabuli second voice: the T-voice is a rule, not a draw.
 
 The acceptance property is structural: every T-voice note is a member of the
 section's tonic triad, and it is derived from the M-voice note and the
-declared armature alone. These tests exercise the pure rule directly and the
-card through its planner.
+declared armature alone. The M-voice is the motif the lane already plans; the
+card is an armature over it. These tests exercise the pure rule directly, the
+derivation from synthetic M events, and the composed plan.
 """
 
 from __future__ import annotations
@@ -13,9 +14,8 @@ import pytest
 from indiegen.compose import compose, director
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.planner import CARD_SPECS
-from indiegen.compose.rng import SplitMix64
 from indiegen.compose.techniques.t15_tintinnabuli import plan_tintinnabuli
-from indiegen.config import RangeInt, TintinnabuliCard, load_preset
+from indiegen.config import TintinnabuliCard, load_preset
 from indiegen.plan import DirectorMove, PluckEvent, Rational
 from indiegen.theory.scales import (
     MODE_INTERVALS,
@@ -96,7 +96,6 @@ def test_the_card_is_registered_in_card_specs() -> None:
 def _card(**overrides: object) -> TintinnabuliCard:
     values: dict[str, object] = {
         "kind": "tintinnabuli",
-        "count": RangeInt(min=4, max=4),
         "min_density": 0,
         "position": 1,
         "range_direction": "inferior",
@@ -107,8 +106,6 @@ def _card(**overrides: object) -> TintinnabuliCard:
         "brightness": Rational(numerator=1, denominator=2),
         "pluck_position_permille": 150,
         "detune_cents": 5,
-        "duration_seconds": RangeInt(min=1, max=1),
-        "spacing_seconds": RangeInt(min=1, max=1),
         "amplitude_millibels": -6000,
         "tonic_triad_mode": "auto",
     }
@@ -137,27 +134,65 @@ def _ctx() -> TechniqueContext:
     )
 
 
-def test_the_planner_emits_an_m_voice_and_a_triad_t_voice() -> None:
-    events = plan_tintinnabuli(_card(), SplitMix64(7), _ctx())
-    assert events
-    m_events = [event for event in events if event.instrument == "tintinnabuli_m"]
-    t_events = [event for event in events if event.instrument == "tintinnabuli"]
-    assert len(m_events) == len(t_events) == 4
+def _m_events(count: int = 4) -> list[PluckEvent]:
+    return [
+        PluckEvent(
+            kind="pluck",
+            instrument="motif",
+            start_frame=index * RATE,
+            duration_frames=RATE // 2,
+            midi=ROOT + 12 + index,
+            pan_permille=0,
+            amplitude_millibels=-6000,
+            attack_frames=0,
+            release_frames=0,
+            feedback=Rational(numerator=900, denominator=1000),
+            brightness=Rational(numerator=1, denominator=2),
+            pluck_position_permille=150,
+            detune_cents=0,
+            excitation_seed=1000 + index,
+        )
+        for index in range(count)
+    ]
+
+
+def test_the_derivation_emits_one_triad_t_note_per_m_note() -> None:
+    events = plan_tintinnabuli(_m_events(), _card(), _ctx(), ["major"])
+    assert len(events) == 4
     classes = _triad_classes(ROOT, "major")
-    for m_event, t_event in zip(m_events, t_events, strict=True):
-        assert isinstance(m_event, PluckEvent)
+    for m_event, t_event in zip(_m_events(), events, strict=True):
         assert isinstance(t_event, PluckEvent)
-        assert m_event.start_frame == t_event.start_frame
+        assert t_event.instrument == "tintinnabuli"
+        assert t_event.start_frame == m_event.start_frame
+        assert t_event.duration_frames == m_event.duration_frames
         assert (t_event.midi - ROOT) % 12 in classes
 
 
-def test_the_planner_uses_the_section_root_and_triad_mode() -> None:
-    ctx = _ctx().model_copy(update={"section_roots": [50], "section_scales": [[50, 52, 53, 55, 57, 59, 60, 62]]})
-    events = plan_tintinnabuli(_card(tonic_triad_mode="minor"), SplitMix64(7), ctx)
+def test_the_derivation_uses_the_section_root_and_triad_mode() -> None:
+    ctx = _ctx().model_copy(
+        update={
+            "section_roots": [50],
+            "section_scales": [[50, 52, 53, 55, 57, 59, 60, 62]],
+        }
+    )
+    events = plan_tintinnabuli(_m_events(), _card(tonic_triad_mode="minor"), ctx, ["dorian"])
     classes = _triad_classes(50, "minor")
     for event in events:
-        if event.instrument == "tintinnabuli":
-            assert (event.midi - 50) % 12 in classes
+        assert (event.midi - 50) % 12 in classes
+
+
+def test_the_derivation_follows_the_section_mode_when_auto() -> None:
+    ctx = _ctx().model_copy(update={"section_roots": [50]})
+    events = plan_tintinnabuli(_m_events(), _card(tonic_triad_mode="auto"), ctx, ["phrygian"])
+    classes = _triad_classes(50, "phrygian")
+    for event in events:
+        assert (event.midi - 50) % 12 in classes
+
+
+def test_the_derivation_respects_min_density() -> None:
+    ctx = _ctx().model_copy(update={"section_densities": [10]})
+    events = plan_tintinnabuli(_m_events(), _card(min_density=50), ctx, ["major"])
+    assert events == []
 
 
 def _preset_with_tintinnabuli(presets_dir, **overrides: object):
@@ -174,20 +209,15 @@ def _section_for(plan, frame: int):
     return next(section for section in plan.sections if section.start_frame <= frame < section.end_frame)
 
 
-def test_the_composed_plan_keeps_the_duo_through_voice_leading(presets_dir) -> None:
-    """B1: the geodesic pass must not snap the duo into a unison.
-
-    The ambient station has geodesic voice leading on by default. Before the
-    exclusion, every PluckEvent - M-voice and T-voice included - was snapped
-    to the section voicing, so the two voices collapsed onto the same note.
-    """
-    preset = _preset_with_tintinnabuli(presets_dir, range_direction="inferior", position=1)
+def test_the_composed_plan_derives_t_from_the_motif(presets_dir) -> None:
+    """The M-voice is the motif the lane already plans, not a pedal."""
+    preset = _preset_with_tintinnabuli(presets_dir, position=1)
     plan = compose(preset, 1042, 30 * RATE)
-    m_events = [event for event in plan.events if event.instrument == "tintinnabuli_m"]
+    m_events = [event for event in plan.events if event.instrument == "motif"]
     t_events = [event for event in plan.events if event.instrument == "tintinnabuli"]
     assert m_events and t_events
     assert len(m_events) == len(t_events)
-    for m_event, t_event in zip(m_events, t_events, strict=True):
+    for index, (m_event, t_event) in enumerate(zip(m_events, t_events, strict=True)):
         section = _section_for(plan, t_event.start_frame)
         classes = _triad_classes(section.root_midi, section.mode)
         assert (t_event.midi - section.root_midi) % 12 in classes
@@ -200,22 +230,28 @@ def test_the_composed_plan_keeps_the_duo_through_voice_leading(presets_dir) -> N
             section.mode,
             plan.tintinnabuli_position,
             plan.tintinnabuli_range_direction,
+            index=index,
+            process=plan.tintinnabuli_process,
         )
 
 
 def test_the_armature_survives_the_director_round_trip(presets_dir) -> None:
-    """B2: exclude=True must not let director() reset the armature."""
-    preset = _preset_with_tintinnabuli(presets_dir, range_direction="superior", position=2)
+    """exclude=True must not let director() reset the armature."""
+    preset = _preset_with_tintinnabuli(presets_dir, range_direction="superior", position=2, process="alternating")
     plan = compose(preset, 1042, 30 * RATE)
     assert plan.tintinnabuli_position == 2
     assert plan.tintinnabuli_range_direction == 1
+    assert plan.tintinnabuli_process == "alternating"
+    assert plan.tintinnabuli_tonic_triad_mode == "auto"
     directed = director(plan)
     assert directed.tintinnabuli_position == 2
     assert directed.tintinnabuli_range_direction == 1
+    assert directed.tintinnabuli_process == "alternating"
+    assert directed.tintinnabuli_tonic_triad_mode == "auto"
 
 
 def test_the_director_moves_the_t_voice_to_a_new_position(presets_dir) -> None:
-    """B3: the new _HANDLERS key really moves the T-voice."""
+    """The new _HANDLERS key really moves the T-voice."""
     preset = _preset_with_tintinnabuli(presets_dir, range_direction="inferior", position=1)
     plan = compose(preset, 1042, 30 * RATE)
     move = DirectorMove(

@@ -121,6 +121,27 @@ techniques:
       - {numerator: 4, denominator: 1}
       - {numerator: 5, denominator: 1}
 
+  # Tintinnabuli: the T-voice derived from the motif's M-voice. The motif
+  # is the deja-vu stabs' line; the T-voice sits below it, note-against-note.
+  - kind: tintinnabuli
+    min_density: 40
+    position: 2
+    range_direction: inferior
+    process: constant
+    partial_ratios:
+      - {numerator: 1, denominator: 1}
+      - {numerator: 2, denominator: 1}
+      - {numerator: 3, denominator: 1}
+      - {numerator: 4, denominator: 1}
+    feedback_num_min: 990
+    feedback_num_max: 998
+    feedback_den: 1000
+    brightness: {numerator: 4, denominator: 10}
+    pluck_position_permille: 300
+    detune_cents: 0
+    amplitude_millibels: -7000
+    tonic_triad_mode: auto
+
   - kind: bass
     pattern:
       steps_per_bar: 8

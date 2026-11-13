@@ -397,9 +397,7 @@ def _move_tintinnabuli_position(move: DirectorMove, plan: Plan, parts: Arrangeme
     if move.applies_to and "tintinnabuli" not in move.applies_to:
         return None
     m_indices = [
-        i
-        for i, event in enumerate(parts.events)
-        if event.instrument == "tintinnabuli_m" and isinstance(event, PluckEvent)
+        i for i, event in enumerate(parts.events) if event.instrument == "motif" and isinstance(event, PluckEvent)
     ]
     t_indices = [
         i
@@ -413,20 +411,22 @@ def _move_tintinnabuli_position(move: DirectorMove, plan: Plan, parts: Arrangeme
     # positions the rule is defined over.
     new_position = move.parameter if move.parameter > 0 else plan.tintinnabuli_position
     new_position = min(5, max(1, new_position))
+    declared_mode = plan.tintinnabuli_tonic_triad_mode
     new_events = list(parts.events)
     changed = False
-    for mi, ti in zip(m_indices, t_indices, strict=False):
+    for pair_index, (mi, ti) in enumerate(zip(m_indices, t_indices, strict=False)):
         m_event = parts.events[mi]
         t_event = parts.events[ti]
-        root, mode = _section_for_frame(plan, m_event.start_frame)
+        root, section_mode = _section_for_frame(plan, m_event.start_frame)
+        mode = section_mode if declared_mode == "auto" else declared_mode
         new_midi = tintinnabuli_t_voice(
             m_event.midi,
             root,
             mode,
             new_position,
             plan.tintinnabuli_range_direction,
-            index=0,
-            process="constant",
+            index=pair_index,
+            process=plan.tintinnabuli_process,
         )
         if new_midi != t_event.midi:
             new_events[ti] = t_event.model_copy(update={"midi": new_midi})
@@ -527,5 +527,7 @@ def director(plan: Plan) -> Plan:
             **updated.model_dump(),
             "tintinnabuli_position": updated.tintinnabuli_position,
             "tintinnabuli_range_direction": updated.tintinnabuli_range_direction,
+            "tintinnabuli_process": updated.tintinnabuli_process,
+            "tintinnabuli_tonic_triad_mode": updated.tintinnabuli_tonic_triad_mode,
         }
     )

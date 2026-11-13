@@ -688,11 +688,15 @@ class Plan(FrozenModel):
     # whatever the switch says, so the Director's post-move consonance
     # measurement is a pure function of the plan alone.
     chord_voices: list[list[Rational]] = Field(default_factory=list, max_length=8)
-    # Tintinnabuli armature: the position the T-voice takes and the direction
-    # it sits from the M-voice. Excluded from serialisation so the S0 plan
-    # bytes and their hashes stay frozen; the Director reads them at runtime.
+    # Tintinnabuli armature: the position the T-voice takes, the direction it
+    # sits from the M-voice, the process that moves the position across the
+    # phrase, and the triad-quality override. Excluded from serialisation so
+    # the S0 plan bytes and their hashes stay frozen; the Director reads them
+    # at runtime.
     tintinnabuli_position: int = Field(default=1, ge=1, le=5, exclude=True)
     tintinnabuli_range_direction: int = Field(default=-1, ge=-1, le=1, exclude=True)
+    tintinnabuli_process: str = Field(default="constant", exclude=True)
+    tintinnabuli_tonic_triad_mode: str = Field(default="auto", exclude=True)
     planar_offset_semitones: int = Field(default=0, ge=-12, le=12)
     ornament_permille: int = Field(default=0, ge=0, le=200)
     grace_offset_frames: int = Field(default=0, ge=0, le=500)
