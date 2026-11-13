@@ -454,6 +454,46 @@ _HANDLERS: Mapping[str, Callable[[DirectorMove, Plan, Arrangement], Arrangement 
 )
 
 
+def _rederive_tintinnabuli(events: list[Event], plan: Plan, position: int) -> list[Event]:
+    """Re-derive the T-voice from the M (motif) events that actually sound.
+
+    The T-voice is a rule over the M note and the armature; if a move (a motif
+    transform, or the position move itself) rewrote the M notes, the T notes
+    must follow, or the duo stops being a duo. This is the safety net that runs
+    at the end of ``director()`` so every move's result is reconciled.
+    """
+    m_events = [e for e in events if isinstance(e, PluckEvent) and e.instrument == "motif"]
+    t_events = [e for e in events if isinstance(e, PluckEvent) and e.instrument == "tintinnabuli"]
+    if not m_events or len(m_events) != len(t_events):
+        return events
+    declared_mode = plan.tintinnabuli_tonic_triad_mode
+    process = plan.tintinnabuli_process
+    direction = plan.tintinnabuli_range_direction
+    new_midis: list[int] = []
+    for pair_index, m_event in enumerate(m_events):
+        root, section_mode = _section_for_frame(plan, m_event.start_frame)
+        mode = section_mode if declared_mode == "auto" else declared_mode
+        new_midis.append(
+            tintinnabuli_t_voice(
+                m_event.midi,
+                root,
+                mode,
+                position,
+                direction,
+                index=pair_index,
+                process=process,
+            )
+        )
+    t_iter = iter(new_midis)
+    out: list[Event] = []
+    for event in events:
+        if isinstance(event, PluckEvent) and event.instrument == "tintinnabuli":
+            out.append(event.model_copy(update={"midi": next(t_iter)}))
+        else:
+            out.append(event)
+    return out
+
+
 def director(plan: Plan) -> Plan:
     """Apply the strategy deck to a Plan. The input is never modified.
 
@@ -467,6 +507,9 @@ def director(plan: Plan) -> Plan:
     sections = list(plan.sections)
     delay_sends = list(plan.delay_sends)
     log = list(plan.director_log)
+    # The T-voice armature travels with the running plan; a position move
+    # updates it, and the final re-derivation reconciles the T notes.
+    tintinnabuli_position = plan.tintinnabuli_position
     for move in plan.strategy_deck:
         if move.sample >= plan.duration_frames:
             continue
@@ -476,6 +519,7 @@ def director(plan: Plan) -> Plan:
                 "motif_appearances": appearances,
                 "sections": sections,
                 "delay_sends": delay_sends,
+                "tintinnabuli_position": tintinnabuli_position,
             }
         )
         result = _apply(move, running)
@@ -486,6 +530,12 @@ def director(plan: Plan) -> Plan:
         sections = result.sections
         delay_sends = result.delay_sends
         log.append(move)
+        if move.strategy == MOVE_TINTINNABULI_POSITION:
+            new_position = move.parameter if move.parameter > 0 else tintinnabuli_position
+            tintinnabuli_position = min(5, max(1, new_position))
+    # Reconcile the T-voice with the M events that actually sound, so motif
+    # transforms and the position move both leave the duo note-against-note.
+    events = _rederive_tintinnabuli(events, plan, tintinnabuli_position)
     # c41: the declared centroid is a statement about the material that
     # sounds, so it is re-derived from the FINAL events. The deck contains
     # transpose_up_fourth, which rewrites pad, drone and lead midi: a field
@@ -525,7 +575,7 @@ def director(plan: Plan) -> Plan:
     return Plan.model_validate(
         {
             **updated.model_dump(),
-            "tintinnabuli_position": updated.tintinnabuli_position,
+            "tintinnabuli_position": tintinnabuli_position,
             "tintinnabuli_range_direction": updated.tintinnabuli_range_direction,
             "tintinnabuli_process": updated.tintinnabuli_process,
             "tintinnabuli_tonic_triad_mode": updated.tintinnabuli_tonic_triad_mode,
