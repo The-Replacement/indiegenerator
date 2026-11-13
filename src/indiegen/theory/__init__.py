@@ -8,11 +8,16 @@ draws, nothing here renders, and nothing here imports the render path.
 from __future__ import annotations
 
 from indiegen.theory.motif import (
+    RI,
     Cell,
+    I,
+    R,
+    T,
     augment,
     fragment,
     invert,
     retrograde,
+    retrograde_inversion,
     transform,
     transpose,
 )
@@ -38,6 +43,10 @@ __all__ = (
     "RELATIVE_INTERVALS",
     "RELATIVE_MODES",
     "Cell",
+    "I",
+    "R",
+    "RI",
+    "T",
     "augment",
     "circular_semitone_dist",
     "fragment",
@@ -51,6 +60,7 @@ __all__ = (
     "nearest_scale_note",
     "relative_of",
     "retrograde",
+    "retrograde_inversion",
     "transform",
     "transpose",
 )
