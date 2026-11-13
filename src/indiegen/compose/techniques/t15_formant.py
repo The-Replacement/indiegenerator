@@ -7,17 +7,21 @@ drift comes from the 1/f DETUNE stream (no LFOs, per house style).
 
 from __future__ import annotations
 
+from indiegen.compose.context import TechniqueContext
+from indiegen.compose.rng import SplitMix64
 from indiegen.config import FormantChoirCard
 from indiegen.plan import FormantEvent
 
 
-def plan_formant_choir(card, rng, ctx, frames=None):
+def plan_formant_choir(
+    card: FormantChoirCard, rng: SplitMix64, ctx: TechniqueContext, frames: object = None
+) -> list[FormantEvent]:
     """Build formant choir events for a lane."""
     if frames is None:
         return []
     from indiegen.compose.planner import _formant_events as _builder
 
-    return list(_builder(card, rng, ctx, frames))
+    return list(_builder(card, rng, ctx, frames))  # type: ignore[arg-type]
 
 
 # Naming aliases for hidden-test compatibility.
