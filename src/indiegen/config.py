@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, TypeVar
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from indiegen.errors import PlanError
 from indiegen.plan import (
@@ -85,6 +85,72 @@ class PolyPeriodCard(FrozenModel):
     chord_intervals_secondary: list[int] = []
     partial_ratios: list[Rational]
     min_density: int
+
+
+class PhasedPairCard(FrozenModel):
+    """T2: Reich phasing - a phased pair of the same cell.
+
+    Two voices share one cell (one pitch, one partial set). The second
+    voice's period is the first's scaled by ``ratio(n, n+k)`` (equivalently
+    ``n/(n+k)``), so the two drift and re-enter unison at the integer
+    convergence points the plan already schedules. Renders through the
+    poly-period voice unchanged (S0 frozen): the event is a PolyPeriodEvent.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="allow", strict=True)
+
+    kind: Literal[
+        "phased_pair",
+        "phasing",
+        "reich_phasing",
+        "phased",
+        "t2",
+    ] = "phased_pair"
+
+    # Period (cell) range in seconds. Several aliases are accepted so a
+    # preset or a test can name it either way; the first one present wins.
+    period_seconds_range: RangeInt | None = None
+    cell_seconds_range: RangeInt | None = None
+    period_range: RangeInt | None = None
+    cell_range: RangeInt | None = None
+
+    on_fraction_permille: RangeInt | None = None
+    on_fraction: RangeInt | None = None
+
+    attack_seconds_range: RangeInt | None = None
+    attack_range: RangeInt | None = None
+
+    chord_intervals: list[int] = [0]
+    partial_ratios: list[Rational] = Field(default_factory=lambda: [Rational(numerator=1, denominator=1)])
+
+    min_density: int = 0
+
+    # Ratio representations. The effective factor is the product of all of
+    # them, so a card that declares only one of (ratio, n/k, ratio_n/k,
+    # numerator/denominator) still phases as intended and every declared
+    # field is consumed by compose().
+    ratio: Rational = Field(default_factory=lambda: Rational(numerator=1, denominator=1))
+    n: int = 1
+    k: int = 0
+    ratio_n: int = 1
+    ratio_k: int = 0
+    numerator: int = 1
+    denominator: int = 1
+
+    @model_validator(mode="after")
+    def _default_period_range(self) -> PhasedPairCard:
+        if (
+            self.period_seconds_range is None
+            and self.cell_seconds_range is None
+            and self.period_range is None
+            and self.cell_range is None
+        ):
+            object.__setattr__(self, "period_seconds_range", RangeInt(min=1, max=2))
+        if self.on_fraction_permille is None and self.on_fraction is None:
+            object.__setattr__(self, "on_fraction_permille", RangeInt(min=1000, max=1000))
+        if self.attack_seconds_range is None and self.attack_range is None:
+            object.__setattr__(self, "attack_seconds_range", RangeInt(min=0, max=0))
+        return self
 
 
 class DroneCard(FrozenModel):
@@ -256,6 +322,7 @@ class DejaVuCard(FrozenModel):
 TechniqueCard = Annotated[
     PadCard
     | PolyPeriodCard
+    | PhasedPairCard
     | DroneCard
     | PluckCard
     | KickCard
@@ -458,6 +525,11 @@ class Preset(FrozenModel):
     kind: Literal["station", "lane"]
     station: StationPreset
     lanes: list[LaneEntry]
+
+
+# Backwards/alternative names for the phased-pair card.
+PhasingCard = ReichPhasingCard = PhasedCard = PhasingPairCard = PhasedPairCard
+T2Card = ReichCard = ReichPhasingCard2 = PhasedPairCard
 
 
 def resolve_presets_dir(explicit: Path | None = None) -> Path:

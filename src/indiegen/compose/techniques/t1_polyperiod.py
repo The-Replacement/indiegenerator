@@ -218,3 +218,10 @@ def plan_poly_period(card: PolyPeriodCard, rng: SplitMix64, ctx: TechniqueContex
         partials=partials,
     )
     return [event]
+
+
+def plan_phased_pair(card, rng, ctx):  # type: ignore[no-untyped-def]
+    """Compatibility wrapper for T2 (see ``t2_phasing``)."""
+    from indiegen.compose.techniques.t2_phasing import plan_phased_pair as _impl
+
+    return _impl(card, rng, ctx)

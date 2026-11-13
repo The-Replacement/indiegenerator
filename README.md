@@ -476,8 +476,8 @@ This slice is the arranger, not the last one. Everything below is
   (Frippertronics), T5 (deja-vu), T6 (euclidean rhythms with conditional
   triggers), T7 (the 1/f control signals), T10 (the dub chain and the
   sidechain), T11 (spectral drone stack), T13 (Karplus–Strong), T14 (the
-  Director) and T16 (the modal shifts) exist. T2, T4, T8, T9, T12 and T15 do
-  not.
+  Director) and T16 (the modal shifts) exist. T2 (Reich phasing) now exists
+  too. T4, T8, T9, T12 and T15 do not.
 - **The install is a copy, not a service.** It validates, copies atomically
   and stops. It never starts or restarts the radio, and it only runs when
   it is asked to.

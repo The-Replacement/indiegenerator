@@ -24,7 +24,7 @@ from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
 from indiegen.compose.microtiming import apply_micro_timing
 from indiegen.compose.rng import SplitMix64, groove_offsets, seed_from_bytes
-from indiegen.compose.techniques import plan_drone, plan_plucks, plan_poly_period
+from indiegen.compose.techniques import plan_drone, plan_phased_pair, plan_plucks, plan_poly_period
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
 from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
 from indiegen.compose.techniques.t14_motif import StringVoice, build_cell, plan_motif
@@ -40,6 +40,7 @@ from indiegen.config import (
     LanePreset,
     LeadCard,
     PadCard,
+    PhasedPairCard,
     PinkCard,
     PluckCard,
     PolyPeriodCard,
@@ -1862,6 +1863,20 @@ def _poly_period_events(
     return plan_poly_period(poly, rng, ctx)
 
 
+def _phased_pair_events(
+    card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
+) -> Sequence[Event]:
+    phased = cast(PhasedPairCard, card)
+    if frames.nodes:
+        admitted = any(
+            ctx.admits(index, "poly_period", frames.nodes[index].density, phased.min_density)
+            for index in range(len(frames.nodes))
+        )
+        if not admitted:
+            return []
+    return plan_phased_pair(phased, rng, ctx)
+
+
 def _pluck_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     return plan_plucks(cast(PluckCard, card), rng, ctx)
 
@@ -1907,6 +1922,11 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "pad": CardSpec(_pad_events, "pad", _min_density_card, True),
         "lead": CardSpec(_lead_events, "lead", _min_density_card),
         "poly_period": CardSpec(_poly_period_events, "poly_period", _min_density_card),
+        "phased_pair": CardSpec(_phased_pair_events, "poly_period", _min_density_card),
+        "phasing": CardSpec(_phased_pair_events, "poly_period", _min_density_card),
+        "reich_phasing": CardSpec(_phased_pair_events, "poly_period", _min_density_card),
+        "phased": CardSpec(_phased_pair_events, "poly_period", _min_density_card),
+        "t2": CardSpec(_phased_pair_events, "poly_period", _min_density_card),
         "pluck": CardSpec(_pluck_events, "ks", _min_density_card),
         "kick": CardSpec(_kick_events, "kick", _pattern_min_density),
         "snare": CardSpec(_snare_events, "snare", _pattern_min_density),
