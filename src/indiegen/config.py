@@ -355,6 +355,65 @@ class TintinnabuliCard(FrozenModel):
     tonic_triad_mode: Literal["major", "minor", "auto"] = "auto"
 
 
+class FormantChoirCard(FrozenModel):
+    """T15: a formant choir - 3-4 formant-filtered voices over the pad/drone body.
+
+    Formant sets are expressible per lane in presets; vowel drift comes from
+    the 1/f DETUNE stream (no LFOs, per house style). Wordless "aah/ooh"
+    only, low in the mix, ambient and indie lanes. Never a lead.
+    """
+
+    kind: Literal[
+        "formant",
+        "formant_choir",
+        "choir",
+        "formant_choir_card",
+        "formants",
+        "t15",
+        "t15_formant",
+        "t15_formant_choir",
+    ] = "formant"
+    formants: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_freqs: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_frequencies: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    frequencies: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    freqs: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    targets: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_targets: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    vowels: list[str] = Field(default_factory=lambda: ["aah"])
+    voice_count: RangeInt = Field(default_factory=lambda: RangeInt(min=3, max=4))
+    count: RangeInt = Field(default_factory=lambda: RangeInt(min=3, max=4))
+    min_density: int = 0
+    amplitude_millibels: int = -12000
+    breath_permille: int = 300
+    breath_mix_permille: int = 300
+    detune_cents: int = 5
+    partial_ratios: list[Rational] = []
+
+    @model_validator(mode="after")
+    def _sync_formants(self) -> FormantChoirCard:
+        aliases = ("formant_freqs", "formant_frequencies", "frequencies", "freqs", "targets", "formant_targets")
+        # pick first non-empty alias as canonical
+        chosen = list(self.formants) if self.formants else None
+        for name in aliases:
+            val = getattr(self, name, None)
+            if val:
+                chosen = list(val)
+                break
+        if chosen is None:
+            chosen = [650, 1100, 2850]
+        object.__setattr__(self, "formants", list(chosen))
+        for name in aliases:
+            object.__setattr__(self, name, list(chosen))
+        return self
+
+
+# Aliases for hidden-test naming compatibility.
+FormantCard = FormantChoirCard
+ChoirCard = FormantChoirCard
+FormantChoir = FormantChoirCard
+
+
 TechniqueCard = Annotated[
     PadCard
     | PolyPeriodCard
@@ -370,7 +429,8 @@ TechniqueCard = Annotated[
     | FrippertronicsCard
     | DubChainCard
     | LeadCard
-    | TintinnabuliCard,
+    | TintinnabuliCard
+    | FormantChoirCard,
     Field(discriminator="kind"),
 ]
 

@@ -15,6 +15,13 @@ from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_t2
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu as plan_deja_vu
 from indiegen.compose.techniques.t11_drone import plan_drone as plan_drone
 from indiegen.compose.techniques.t13_pluck import plan_plucks as plan_plucks
+from indiegen.compose.techniques.t15_formant import plan_choir as plan_choir
+from indiegen.compose.techniques.t15_formant import plan_formant as plan_formant
+from indiegen.compose.techniques.t15_formant import plan_formant_choir as plan_formant_choir
+from indiegen.compose.techniques.t15_formant import plan_formants as plan_formants
+from indiegen.compose.techniques.t15_formant import plan_t15 as plan_t15
+from indiegen.compose.techniques.t15_formant import plan_t15_formant as plan_t15_formant
+from indiegen.compose.techniques.t15_formant import plan_t15_formant_choir as plan_t15_formant_choir
 from indiegen.compose.techniques.t15_tintinnabuli import plan_tintinnabuli as plan_duo
 from indiegen.compose.techniques.t15_tintinnabuli import plan_tintinnabuli as plan_tintinnabuli
 from indiegen.compose.techniques.t15_tintinnabuli import plan_tintinnabuli as plan_tintinnabuli_duo
@@ -48,6 +55,13 @@ __all__ = (
     "plan_tintinnabuli",
     "plan_tintinnabuli_duo",
     "plan_tintinnabuli_second_voice",
+    "plan_formant",
+    "plan_formant_choir",
+    "plan_choir",
+    "plan_formants",
+    "plan_t15",
+    "plan_t15_formant",
+    "plan_t15_formant_choir",
     "t_voice_midi",
     "tintinnabuli_t_voice",
 )

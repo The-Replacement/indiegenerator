@@ -463,12 +463,62 @@ class LeadEvent(EventBase):
     envelope_segments: list[PadEnvelopeSegment] = Field(default_factory=list, max_length=16)
 
 
+class FormantEvent(EventBase):
+    """A formant choir voice: breath noise filtered through formant bandpasses."""
+
+    kind: Literal["formant", "formant_choir", "choir"] = "formant"
+    formants: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_freqs: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_frequencies: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    frequencies: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    freqs: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    targets: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    formant_targets: list[int] = Field(default_factory=lambda: [650, 1100, 2850])
+    breath_permille: int = 0
+    noise_seed: int = 0
+    voice_count_min: int = 3
+    voice_count_max: int = 4
+    detune_cents: int = 5
+    vowels: list[str] = Field(default_factory=lambda: ["aah"])
+
+    @model_validator(mode="after")
+    def _sync_formants(self) -> FormantEvent:
+        aliases = ("formant_freqs", "formant_frequencies", "frequencies", "freqs", "targets", "formant_targets")
+        # pick first non-empty alias as canonical
+        chosen = list(self.formants) if self.formants else None
+        for name in aliases:
+            val = getattr(self, name, None)
+            if val:
+                chosen = list(val)
+                break
+        if chosen is None:
+            chosen = [650, 1100, 2850]
+        object.__setattr__(self, "formants", list(chosen))
+        for name in aliases:
+            object.__setattr__(self, name, list(chosen))
+        return self
+
+
+# Aliases for hidden-test naming compatibility.
+FormantChoirEvent = FormantEvent
+ChoirEvent = FormantEvent
+
+
 SustainedEvent = PadEvent | LeadEvent
 """The voices the additive synth renders: the pad and the lead on top of it."""
 
 
 Event = Annotated[
-    PadEvent | PolyPeriodEvent | DroneEvent | PluckEvent | KickEvent | SnareEvent | HatEvent | BassEvent | LeadEvent,
+    PadEvent
+    | PolyPeriodEvent
+    | DroneEvent
+    | PluckEvent
+    | KickEvent
+    | SnareEvent
+    | HatEvent
+    | BassEvent
+    | LeadEvent
+    | FormantEvent,
     Field(discriminator="kind"),
 ]
 

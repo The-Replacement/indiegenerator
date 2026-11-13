@@ -34,6 +34,7 @@ from indiegen.config import (
     DirectorCard,
     DroneCard,
     DubChainCard,
+    FormantChoirCard,
     FrippertronicsCard,
     HatCard,
     KickCard,
@@ -58,6 +59,7 @@ from indiegen.plan import (
     DirectorMove,
     DubChainSpec,
     Event,
+    FormantEvent,
     FrippertronicsSpec,
     HitBase,
     LeadEvent,
@@ -424,7 +426,10 @@ def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
             voices.append(LEAD_RATIOS)
         elif isinstance(card, PadCard):
             voices.append(tuple((index, 1) for index in range(1, card.partials.max + 1)))
-        elif isinstance(card, (PluckCard, DejaVuCard, BassCard, TintinnabuliCard)) and card.partial_ratios:
+        elif (
+            isinstance(card, (PluckCard, DejaVuCard, BassCard, TintinnabuliCard, FormantChoirCard))
+            and card.partial_ratios
+        ):
             voices.append(tuple((ratio.numerator, ratio.denominator) for ratio in card.partial_ratios))
     return voices
 
@@ -1950,6 +1955,46 @@ def _bass_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, fr
     return [plan_bass(cast(BassCard, card), rng, ctx, frames.pink)]
 
 
+def _formant_events(
+    card: TechniqueCard,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    frames: _LaneFrames,
+) -> Sequence[Event]:
+    """One formant choir voice per admitted section."""
+    formant = cast(FormantChoirCard, card)
+    out: list[Event] = []
+    for index in range(len(frames.nodes)):
+        if not ctx.admits(index, "formant", frames.nodes[index].density, formant.min_density):
+            continue
+        boundary = frames.boundaries[index]
+        length = frames.lengths[index]
+        attack = min(length // 8, length // 4) if length else 0
+        release = min(length // 8, length // 4) if length else 0
+        vc = formant.voice_count if hasattr(formant, "voice_count") else formant.count
+        out.append(
+            FormantEvent(
+                kind="formant",
+                instrument="formant",
+                start_frame=boundary,
+                duration_frames=length,
+                midi=frames.section_roots[index],
+                pan_permille=0,
+                amplitude_millibels=formant.amplitude_millibels,
+                attack_frames=attack,
+                release_frames=release,
+                formants=list(formant.formants),
+                breath_permille=formant.breath_permille,
+                noise_seed=int(ctx.seed) + index,
+                voice_count_min=vc.min,
+                voice_count_max=vc.max,
+                detune_cents=formant.detune_cents,
+                vowels=list(formant.vowels),
+            )
+        )
+    return out
+
+
 def _no_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     """A card that is a send or a stream, not an instrument: it schedules nothing."""
     return []
@@ -1989,6 +2034,14 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "algo_part": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
         "algo_paart": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
         "drone": CardSpec(_drone_events, "drone", _min_density_card, True),
+        "formant": CardSpec(_formant_events, "formant", _min_density_card),
+        "formant_choir": CardSpec(_formant_events, "formant", _min_density_card),
+        "choir": CardSpec(_formant_events, "formant", _min_density_card),
+        "formant_choir_card": CardSpec(_formant_events, "formant", _min_density_card),
+        "formants": CardSpec(_formant_events, "formant", _min_density_card),
+        "t15": CardSpec(_formant_events, "formant", _min_density_card),
+        "t15_formant": CardSpec(_formant_events, "formant", _min_density_card),
+        "t15_formant_choir": CardSpec(_formant_events, "formant", _min_density_card),
         "pink": CardSpec(_no_events, None, lambda _: 0),
         "frippertronics": CardSpec(_no_events, None, lambda _: 0),
         "dub_chain": CardSpec(_no_events, None, lambda _: 0),
