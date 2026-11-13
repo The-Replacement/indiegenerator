@@ -39,9 +39,11 @@ def retrograde(cell: Cell) -> Cell:
     return list(reversed(cell))
 
 
-def augment(cell: Cell) -> Cell:
-    """The cell stretched: every note lasts twice as long."""
-    return [(midi, duration * 2) for midi, duration in cell]
+def augment(cell: Cell, factor: int = 2) -> Cell:
+    """The cell stretched: every note lasts ``factor`` times as long."""
+    if factor < 1:
+        factor = 1
+    return [(midi, duration * factor) for midi, duration in cell]
 
 
 def fragment(cell: Cell, length: int = 2) -> Cell:
@@ -58,6 +60,16 @@ def fragment(cell: Cell, length: int = 2) -> Cell:
 def T(cell: Cell, semitones: int) -> Cell:  # noqa: N802
     """Transpose by ``semitones`` (alias for ``transpose``)."""
     return transpose(cell, semitones)
+
+
+def T_n(cell: Cell, n: int) -> Cell:  # noqa: N802
+    """Transpose by ``n`` (parameterized form)."""
+    return transpose(cell, n)
+
+
+def I_n(cell: Cell, n: int) -> Cell:  # noqa: N802
+    """Inversion with transposition ``n``: I_n(x) = n - x."""
+    return [(n - midi, duration) for midi, duration in cell]
 
 
 def orbit_length(name: str, parameter: int = 0, axis_midi: int = 0) -> int:
@@ -125,7 +137,7 @@ def retrograde_invert(cell: Cell, axis_midi: int) -> Cell:
     return retrograde(invert(cell, axis_midi))
 
 
-def transform(name: str, cell: Cell, parameter: int, axis_midi: int) -> Cell:
+def transform(name: str, cell: Cell, parameter: int, axis_midi: int) -> Cell:  # noqa: C901
     """Apply one transform by name.
 
     The parameter is the transform's own argument: the semitones of a
@@ -140,14 +152,17 @@ def transform(name: str, cell: Cell, parameter: int, axis_midi: int) -> Cell:
         return invert(cell, axis_midi)
     if name in ("retrograde", "R"):
         return retrograde(cell)
-    if name in ("augment",):
-        return augment(cell)
-    if name in ("fragment",):
-        return fragment(cell, max(1, parameter))
+    if name in ("augment", "augment_n"):
+        factor = parameter if parameter and parameter > 0 else 2
+        return augment(cell, factor)
+    if name in ("fragment", "fragment_n"):
+        return fragment(cell, max(1, parameter if parameter else 2))
     if name in ("retrograde_inversion", "RI", "retrograde_invert"):
         return retrograde(invert(cell, axis_midi))
-    if name in ("T", "transpose", "transpose_n"):
+    if name in ("T", "transpose", "transpose_n", "T_n"):
         return transpose(cell, parameter)
     if name in ("I", "invert", "invert_n", "I_n"):
+        if name in ("I_n",):
+            return I_n(cell, parameter if parameter else axis_midi)
         return invert(cell, axis_midi)
     raise KeyError(f"unknown motif transform {name!r}")

@@ -36,6 +36,7 @@ from indiegen.plan import (
 )
 from indiegen.spectrum import declared_centroid_millihz
 from indiegen.theory.consonance import chord_dissonance
+from indiegen.theory.motif import transform as motif_transform
 from indiegen.theory.scales import chord_pool, mode_scale, relative_of, tintinnabuli_t_voice
 
 TRANSPOSE_UP_FOURTH: str = "transpose_up_fourth"
@@ -356,18 +357,26 @@ def _reharmonize_relative(move: DirectorMove, plan: Plan, parts: Arrangement) ->
 
 
 def _shape_transpose(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
-    return [note + move.parameter for note in notes]
+    cell = [(note, 1) for note in notes]
+    axis = plan.sections[min(appearance.section_index, len(plan.sections) - 1)].root_midi if plan.sections else 0
+    shaped = motif_transform("transpose", cell, move.parameter, axis)
+    return [note for note, _ in shaped]
 
 
 def _shape_invert(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
     # The axis is the harmonic centre of the section the appearance is in,
     # the same axis the composer used.
+    cell = [(note, 1) for note in notes]
     axis = plan.sections[min(appearance.section_index, len(plan.sections) - 1)].root_midi if plan.sections else 0
-    return [2 * axis - note for note in notes]
+    shaped = motif_transform("invert", cell, 0, axis)
+    return [note for note, _ in shaped]
 
 
 def _shape_retrograde(plan: Plan, appearance: MotifAppearance, notes: list[int], move: DirectorMove) -> list[int]:
-    return list(reversed(notes))
+    cell = [(note, 1) for note in notes]
+    axis = plan.sections[min(appearance.section_index, len(plan.sections) - 1)].root_midi if plan.sections else 0
+    shaped = motif_transform("retrograde", cell, 0, axis)
+    return [note for note, _ in shaped]
 
 
 # One entry per strategy: the name a preset declares, and the function that
