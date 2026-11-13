@@ -30,12 +30,13 @@ from indiegen.plan import (
     KickEvent,
     MotifAppearance,
     Plan,
+    PluckEvent,
     SectionPlan,
     SnareEvent,
 )
 from indiegen.spectrum import declared_centroid_millihz
 from indiegen.theory.consonance import chord_dissonance
-from indiegen.theory.scales import chord_pool, mode_scale, relative_of
+from indiegen.theory.scales import chord_pool, mode_scale, relative_of, tintinnabuli_t_voice
 
 TRANSPOSE_UP_FOURTH: str = "transpose_up_fourth"
 TRANSPOSE_MOTIF: str = "transpose_motif"
@@ -48,6 +49,7 @@ DROP_BASS: str = "drop_bass"
 SOLO_TEXTURE: str = "solo_texture"
 SWAP_DELAY_TO_TRIPLETS: str = "swap_delay_to_triplets"
 REHARMONIZE_RELATIVE: str = "reharmonize_relative"
+MOVE_TINTINNABULI_POSITION: str = "move_tintinnabuli_position"
 
 # The instruments the rhythm strategies act on.
 RHYTHM_INSTRUMENTS: tuple[str, ...] = ("kick", "snare", "hat")
@@ -379,6 +381,61 @@ _MOTIF_SHAPES: Mapping[str, Callable[[Plan, MotifAppearance, list[int], Director
     }
 )
 
+
+def _section_for_frame(plan: Plan, frame: int) -> tuple[int, str]:
+    for section in plan.sections:
+        if section.start_frame <= frame < section.end_frame:
+            return section.root_midi, section.mode
+    if plan.sections:
+        return plan.sections[-1].root_midi, plan.sections[-1].mode
+    scale = plan.scale_midi
+    root = scale[0] if scale else 60
+    return root, "minor"
+
+
+def _move_tintinnabuli_position(move: DirectorMove, plan: Plan, parts: Arrangement) -> Arrangement | None:
+    if move.applies_to and "tintinnabuli" not in move.applies_to:
+        return None
+    m_indices = [
+        i
+        for i, event in enumerate(parts.events)
+        if event.instrument == "tintinnabuli_m" and isinstance(event, PluckEvent)
+    ]
+    t_indices = [
+        i
+        for i, event in enumerate(parts.events)
+        if event.instrument == "tintinnabuli" and isinstance(event, PluckEvent)
+    ]
+    if not m_indices or not t_indices:
+        return None
+    # The move's parameter is the position it moves the T-voice TO; a move
+    # that does not name one keeps the plan's armature. Clamp to the five
+    # positions the rule is defined over.
+    new_position = move.parameter if move.parameter > 0 else plan.tintinnabuli_position
+    new_position = min(5, max(1, new_position))
+    new_events = list(parts.events)
+    changed = False
+    for mi, ti in zip(m_indices, t_indices, strict=False):
+        m_event = parts.events[mi]
+        t_event = parts.events[ti]
+        root, mode = _section_for_frame(plan, m_event.start_frame)
+        new_midi = tintinnabuli_t_voice(
+            m_event.midi,
+            root,
+            mode,
+            new_position,
+            plan.tintinnabuli_range_direction,
+            index=0,
+            process="constant",
+        )
+        if new_midi != t_event.midi:
+            new_events[ti] = t_event.model_copy(update={"midi": new_midi})
+            changed = True
+    if not changed:
+        return None
+    return Arrangement(new_events, parts.appearances, parts.sections, parts.delay_sends)
+
+
 _HANDLERS: Mapping[str, Callable[[DirectorMove, Plan, Arrangement], Arrangement | None]] = MappingProxyType(
     {
         TRANSPOSE_UP_FOURTH: _transpose_up_fourth,
@@ -392,6 +449,7 @@ _HANDLERS: Mapping[str, Callable[[DirectorMove, Plan, Arrangement], Arrangement 
         HALF_TIME: _half_time_move,
         SWAP_DELAY_TO_TRIPLETS: _triplets,
         REHARMONIZE_RELATIVE: _reharmonize_relative,
+        MOVE_TINTINNABULI_POSITION: _move_tintinnabuli_position,
     }
 )
 
@@ -462,4 +520,12 @@ def director(plan: Plan) -> Plan:
             "director_log": log,
         }
     )
-    return Plan.model_validate(updated.model_dump())
+    # The armature fields are excluded from serialisation (S0 freeze), so a
+    # plain model_dump() round-trip would reset them. Carry them explicitly.
+    return Plan.model_validate(
+        {
+            **updated.model_dump(),
+            "tintinnabuli_position": updated.tintinnabuli_position,
+            "tintinnabuli_range_direction": updated.tintinnabuli_range_direction,
+        }
+    )

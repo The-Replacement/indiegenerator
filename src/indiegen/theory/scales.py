@@ -98,6 +98,124 @@ def nearest_scale_note(scale: list[int], target: int) -> int:
     return min(scale, key=lambda note: (abs(note - target), note))
 
 
+def tonic_triad(root_midi: int, mode: str) -> tuple[int, int, int]:
+    """The tonic triad (root, third, fifth) as MIDI pitches.
+
+    The third is +3 semitones for minor quality and +4 for major. Quality is
+    selected from ``mode``: ``"major"`` -> +4, ``"minor"`` -> +3, a modal
+    name -> its scale's third interval. Unknown modes raise ``KeyError``.
+    """
+    if mode == "major":
+        third_offset = 4
+    elif mode == "minor":
+        third_offset = 3
+    elif mode in MODE_INTERVALS:
+        intervals = MODE_INTERVALS[mode]
+        if len(intervals) < 3:
+            raise KeyError(f"mode {mode!r} has no third")
+        third_offset = intervals[2]
+        if third_offset not in (3, 4):
+            third_offset = 3 if third_offset <= 3 else 4
+    else:
+        raise KeyError(f"unknown mode {mode!r}")
+    return (root_midi, root_midi + third_offset, root_midi + 7)
+
+
+def _tintinnabuli_members(root_midi: int, mode: str) -> list[int]:
+    """Every tonic-triad tone over the octaves a T-voice can reach, ascending."""
+    root, third, fifth = tonic_triad(root_midi, mode)
+    members: set[int] = set()
+    for octave in range(-6, 7):
+        shift = 12 * octave
+        members.add(root + shift)
+        members.add(third + shift)
+        members.add(fifth + shift)
+    return sorted(members)
+
+
+def _tintinnabuli_position(position: int, index: int, process: str) -> int:
+    """The 1-based position the process asks for on this note."""
+    pos = max(1, int(position))
+    if process == "constant":
+        return pos
+    if process == "alternating":
+        return pos if index % 2 == 0 else pos + 1
+    if process == "step":
+        return pos + index
+    raise ValueError(f"unknown tintinnabuli process {process!r}")
+
+
+def _tintinnabuli_direction(range_direction: int | str) -> int:
+    """The signed range direction: +1 above the M-voice, -1 below it."""
+    if isinstance(range_direction, str):
+        lowered = range_direction.lower()
+        if lowered in {"superior", "up", "above", "ascending", "+1", "1"}:
+            return 1
+        if lowered in {"inferior", "down", "below", "descending", "-1"}:
+            return -1
+        return int(range_direction)
+    return int(range_direction)
+
+
+def tintinnabuli_t_voice(
+    m_midi: int,
+    root_midi: int,
+    mode: str,
+    position: int,
+    range_direction: int | str,
+    index: int = 0,
+    process: str = "constant",
+) -> int:
+    """The T-voice pitch for one M-voice note, by Pärt's position rule.
+
+    The tonic triad is the armature; the position selects which triad tone
+    the T-voice takes. Position 1 is the NEAREST triad tone in the chosen
+    range direction: the nearest tone below the M-voice when the direction
+    is inferior, the nearest above when it is superior. Position 2 is the
+    next one out, and so on. The process moves that position across the
+    phrase (``constant``, ``alternating``, ``step``).
+
+    The result is always a member of the tonic triad - the rule only ever
+    picks from the triad's own pitches - and it is a pure function of the
+    M-voice note and the declared armature. A note that lands past the
+    generated octaves continues the same triad class by whole octaves, so
+    it stays a triad member.
+    """
+    members = _tintinnabuli_members(root_midi, mode)
+    target = _tintinnabuli_position(position, index, process)
+    direction = _tintinnabuli_direction(range_direction)
+
+    if direction >= 0:
+        candidates = sorted(tone for tone in members if tone > m_midi)
+    else:
+        candidates = sorted((tone for tone in members if tone < m_midi), reverse=True)
+
+    if candidates:
+        offset = target - 1
+        if offset < len(candidates):
+            return candidates[offset]
+        return candidates[-1] + direction * 12 * (offset - len(candidates) + 1)
+
+    # No triad tone lies on that side of the M-voice: take the nearest one and
+    # move it by whole octaves until it is on the asked-for side, then step
+    # out the rest of the position.
+    base = min(members, key=lambda tone: (abs(tone - m_midi), tone))
+    while (direction >= 0 and base <= m_midi) or (direction < 0 and base >= m_midi):
+        base += direction * 12
+    return base + direction * 12 * (target - 1)
+
+
+derive_t_voice_midi = tintinnabuli_t_voice
+t_voice_midi = tintinnabuli_t_voice
+derive_tintinnabuli_tone = tintinnabuli_t_voice
+tintinnabuli = tintinnabuli_t_voice
+tintinnabuli_voice = tintinnabuli_t_voice
+second_voice = tintinnabuli_t_voice
+derive_second_voice = tintinnabuli_t_voice
+t_voice = tintinnabuli_t_voice
+position_rule = tintinnabuli_t_voice
+
+
 def chord_pool(scale_midi: list[int], root_midi: int, intervals: list[int], budget_permille: int) -> list[int]:
     """The declared chord tones the scale and the chromatic budget admit.
 

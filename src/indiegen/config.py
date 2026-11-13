@@ -319,6 +319,44 @@ class DejaVuCard(FrozenModel):
     partial_ratios: list[Rational] = []
 
 
+class TintinnabuliCard(FrozenModel):
+    """Tintinnabuli duo: M-voice plus T-voice derived from the tonic triad.
+
+    M-voice is the motif/pluck cell in a higher register; T-voice is derived
+    note-against-note by the position rule against the section's tonic triad.
+    Both voices reuse the Karplus-Strong ``PluckEvent``. The defaults make a
+    bare ``kind: tintinnabuli`` card playable; a preset can override any of
+    them, and every declared field is consumed by ``plan_tintinnabuli``.
+    """
+
+    kind: Literal[
+        "tintinnabuli",
+        "tintinnabuli_duo",
+        "tintinnabuli_second_voice",
+        "second_voice",
+        "part",
+        "paart",
+        "algo_part",
+        "algo_paart",
+    ] = "tintinnabuli"
+    count: RangeInt = Field(default_factory=lambda: RangeInt(min=4, max=8))
+    min_density: int = 0
+    position: int = Field(default=1, ge=1, le=5)
+    range_direction: Literal["superior", "inferior"] = "inferior"
+    process: Literal["constant", "alternating", "step"] = "constant"
+    partial_ratios: list[Rational] = []
+    feedback_num_min: int = 900
+    feedback_num_max: int = 990
+    feedback_den: int = 1000
+    brightness: Rational = Field(default_factory=lambda: Rational(numerator=1, denominator=2))
+    pluck_position_permille: int = 150
+    detune_cents: int = 5
+    duration_seconds: RangeInt = Field(default_factory=lambda: RangeInt(min=1, max=3))
+    spacing_seconds: RangeInt = Field(default_factory=lambda: RangeInt(min=1, max=3))
+    amplitude_millibels: int = -6000
+    tonic_triad_mode: Literal["major", "minor", "auto"] = "auto"
+
+
 TechniqueCard = Annotated[
     PadCard
     | PolyPeriodCard
@@ -333,7 +371,8 @@ TechniqueCard = Annotated[
     | DejaVuCard
     | FrippertronicsCard
     | DubChainCard
-    | LeadCard,
+    | LeadCard
+    | TintinnabuliCard,
     Field(discriminator="kind"),
 ]
 

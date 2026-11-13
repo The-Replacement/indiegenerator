@@ -24,7 +24,7 @@ from indiegen.compose.context import TechniqueContext
 from indiegen.compose.director import ENDING_GUARD_SECONDS
 from indiegen.compose.microtiming import apply_micro_timing
 from indiegen.compose.rng import SplitMix64, groove_offsets, seed_from_bytes
-from indiegen.compose.techniques import plan_drone, plan_phased_pair, plan_plucks, plan_poly_period
+from indiegen.compose.techniques import plan_drone, plan_phased_pair, plan_plucks, plan_poly_period, plan_tintinnabuli
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
 from indiegen.compose.techniques.t6_drums import plan_bass, plan_hat, plan_kick, plan_snare
 from indiegen.compose.techniques.t14_motif import StringVoice, build_cell, plan_motif
@@ -49,6 +49,7 @@ from indiegen.config import (
     StationPreset,
     StrategyCard,
     TechniqueCard,
+    TintinnabuliCard,
 )
 from indiegen.errors import PlanError
 from indiegen.plan import (
@@ -423,7 +424,7 @@ def _lane_voices(lane: LanePreset) -> list[tuple[tuple[int, int], ...]]:
             voices.append(LEAD_RATIOS)
         elif isinstance(card, PadCard):
             voices.append(tuple((index, 1) for index in range(1, card.partials.max + 1)))
-        elif isinstance(card, (PluckCard, DejaVuCard, BassCard)) and card.partial_ratios:
+        elif isinstance(card, (PluckCard, DejaVuCard, BassCard, TintinnabuliCard)) and card.partial_ratios:
             voices.append(tuple((ratio.numerator, ratio.denominator) for ratio in card.partial_ratios))
     return voices
 
@@ -772,6 +773,14 @@ def _string_voice(cards: Sequence[TechniqueCard]) -> StringVoice | None:
         if isinstance(card, DejaVuCard):
             return StringVoice(
                 feedback_numerator=card.feedback_num,
+                feedback_denominator=card.feedback_den,
+                brightness=card.brightness,
+                pluck_position_permille=card.pluck_position_permille,
+                detune_cents=card.detune_cents,
+            )
+        if isinstance(card, TintinnabuliCard):
+            return StringVoice(
+                feedback_numerator=card.feedback_num_min,
                 feedback_denominator=card.feedback_den,
                 brightness=card.brightness,
                 pluck_position_permille=card.pluck_position_permille,
@@ -1160,6 +1169,17 @@ def _assemble_plan(inputs: _PlanInputs) -> Plan:
             [Rational(numerator=numerator, denominator=denominator) for numerator, denominator in voice]
             for voice in _lane_voices(lane)
         ],
+        tintinnabuli_position=next(
+            (card.position for card in lane.techniques if isinstance(card, TintinnabuliCard)), 1
+        ),
+        tintinnabuli_range_direction=next(
+            (
+                1 if card.range_direction == "superior" else -1
+                for card in lane.techniques
+                if isinstance(card, TintinnabuliCard)
+            ),
+            -1,
+        ),
         planar_offset_semitones=station.planar_offset_semitones,
         ornament_permille=station.ornament_permille,
         grace_offset_frames=station.grace_offset_frames,
@@ -1887,6 +1907,12 @@ def _deja_vu_events(
     return plan_deja_vu(cast(DejaVuCard, card), rng, ctx)
 
 
+def _tintinnabuli_events(
+    card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames
+) -> Sequence[Event]:
+    return plan_tintinnabuli(cast(TintinnabuliCard, card), rng, ctx)
+
+
 def _kick_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     return [plan_kick(cast(KickCard, card), rng, ctx, frames.pink)]
 
@@ -1933,6 +1959,14 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "hat": CardSpec(_hat_events, "hat", _pattern_min_density),
         "bass": CardSpec(_bass_events, "bass", _pattern_min_density),
         "deja_vu": CardSpec(_deja_vu_events, "pluck", _min_density_card),
+        "tintinnabuli": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "tintinnabuli_duo": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "tintinnabuli_second_voice": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "second_voice": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "part": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "paart": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "algo_part": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
+        "algo_paart": CardSpec(_tintinnabuli_events, "tintinnabuli", _min_density_card),
         "drone": CardSpec(_drone_events, "drone", _min_density_card, True),
         "pink": CardSpec(_no_events, None, lambda _: 0),
         "frippertronics": CardSpec(_no_events, None, lambda _: 0),
@@ -2175,6 +2209,13 @@ def _smoothed_pluck(scale: list[int], previous: int, current: int) -> int | None
     return candidates[0][1]
 
 
+# The tintinnabuli duo's notes are a rule's output, not a line to smooth.
+# The voice-leading passes must leave them alone: snapping the M-voice or the
+# T-voice to the section voicing turns the duo into a unison and can pull the
+# T-voice off the tonic triad (issue #20 verify B1).
+TINTINNABULI_INSTRUMENTS: tuple[str, ...] = ("tintinnabuli", "tintinnabuli_m")
+
+
 def _pluck_indices_by_instrument(out: list[Event]) -> dict[str, list[int]]:
     """Pluck event indices grouped by instrument, in plan order."""
     from indiegen.plan import PluckEvent
@@ -2234,6 +2275,8 @@ def _lead_plucks(
     """
     moved_motif: dict[tuple[int, int], int] = {}
     for instrument, indices in _pluck_indices_by_instrument(out).items():
+        if instrument in TINTINNABULI_INSTRUMENTS:
+            continue
         moved_motif.update(_lead_one_instrument(out, boundaries, section_scales, instrument, indices))
     return moved_motif
 
@@ -2393,6 +2436,8 @@ def _lead_geodesic(
     moved_motif: dict[tuple[int, int], int] = {}
     for idx, event in enumerate(out):
         if isinstance(event, PluckEvent):
+            if event.instrument in TINTINNABULI_INSTRUMENTS:
+                continue
             section = _section_at_frame(boundaries, event.start_frame)
             voicing = voicings[section] if section < len(voicings) else voicings[-1]
             if not voicing:
