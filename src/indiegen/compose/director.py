@@ -535,7 +535,16 @@ def director(plan: Plan) -> Plan:
             tintinnabuli_position = min(5, max(1, new_position))
     # Reconcile the T-voice with the M events that actually sound, so motif
     # transforms and the position move both leave the duo note-against-note.
-    events = _rederive_tintinnabuli(events, plan, tintinnabuli_position)
+    final_plan = Plan.model_validate(
+        {
+            **plan.model_copy(update={"sections": sections, "events": events}).model_dump(),
+            "tintinnabuli_position": tintinnabuli_position,
+            "tintinnabuli_range_direction": plan.tintinnabuli_range_direction,
+            "tintinnabuli_process": plan.tintinnabuli_process,
+            "tintinnabuli_tonic_triad_mode": plan.tintinnabuli_tonic_triad_mode,
+        }
+    )
+    events = _rederive_tintinnabuli(events, final_plan, tintinnabuli_position)
     # c41: the declared centroid is a statement about the material that
     # sounds, so it is re-derived from the FINAL events. The deck contains
     # transpose_up_fourth, which rewrites pad, drone and lead midi: a field
