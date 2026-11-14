@@ -2511,7 +2511,7 @@ def _snap_to_register(midi: int, low: int, high: int) -> int:
     return min(candidates, key=lambda p: abs(p - midi))
 
 
-def _lead_geodesic(  # noqa: C901
+def _lead_geodesic(
     out: list[Event],
     boundaries: list[int],
     section_roots: list[int],
@@ -2542,10 +2542,6 @@ def _lead_geodesic(  # noqa: C901
     for idx, event in enumerate(out):
         if isinstance(event, PluckEvent):
             if event.instrument in TINTINNABULI_INSTRUMENTS:
-                continue
-            # Issue #14: motif plucks carry their own transform arc (closed
-            # orbits), so they are not snapped to the section voicing.
-            if event.instrument == "motif":
                 continue
             section = _section_at_frame(boundaries, event.start_frame)
             voicing = voicings[section] if section < len(voicings) else voicings[-1]
