@@ -2,7 +2,7 @@ name: gate
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 # A push to a branch that already has a pull request open would otherwise run
