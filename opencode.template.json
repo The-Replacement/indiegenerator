@@ -13,17 +13,24 @@
     "SECURITY.md",
     "docs/*.md"
   ],
-  "tools": {
-    "websearch": true
-  },
-  "agent": {
-    "build": { "disable": true },
-    "plan": { "disable": true }
-  },
   "mcp": {
-    "sequential-thinking": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking@2.1.1"]
+    "servers": {
+      "sequential-thinking": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@modelcontextprotocol/server-sequential-thinking@2.1.1"
+        ]
+      }
+    }
+  },
+  "agents": {
+    "build": {
+      "disabled": true
+    },
+    "plan": {
+      "disabled": true
     }
   }
 }
