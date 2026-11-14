@@ -659,6 +659,31 @@ SustainedEvent = PadEvent | LeadEvent
 """The voices the additive synth renders: the pad and the lead on top of it."""
 
 
+# --- T8 radiophonic (ring-mod + test-tone) ----------------------------------
+
+
+class RadiophonicEvent(EventBase):
+    """A radiophonic voice: a test-tone partial stack ring-modulated by a carrier."""
+
+    kind: Literal[
+        "radiophonic",
+        "ring_mod",
+        "ringmod",
+        "test_tone",
+        "t8",
+        "t8_radiophonic",
+    ] = "radiophonic"
+    partials: list[int] = Field(default_factory=lambda: [1, 2, 3])
+    carrier_ratio: Rational = Field(default_factory=lambda: Rational(numerator=2, denominator=1))
+    noise_seed: int = 0
+
+
+# Aliases
+RingModEvent = RadiophonicEvent
+TestToneEvent = RadiophonicEvent
+T8Event = RadiophonicEvent
+
+
 Event = Annotated[
     PadEvent
     | PolyPeriodEvent
@@ -670,7 +695,8 @@ Event = Annotated[
     | BassEvent
     | LeadEvent
     | FormantEvent
-    | GranularEvent,
+    | GranularEvent
+    | RadiophonicEvent,
     Field(discriminator="kind"),
 ]
 
