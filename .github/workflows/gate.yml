@@ -20,6 +20,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # On pull_request, the default checkout is GitHub's synthetic merge
+          # commit ("Merge <sha> into <base>"), which is not a commit anyone
+          # wrote and which tests/test_repo.py rightly rejects as non-conventional.
+          # Test the head of the PR instead: it is what would be merged.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-python@v7
         with:
@@ -64,6 +70,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # On pull_request, the default checkout is GitHub's synthetic merge
+          # commit ("Merge <sha> into <base>"), which is not a commit anyone
+          # wrote and which tests/test_repo.py rightly rejects as non-conventional.
+          # Test the head of the PR instead: it is what would be merged.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-python@v7
         with:
