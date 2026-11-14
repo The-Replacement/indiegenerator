@@ -514,6 +514,25 @@ class GranularCloudCard(FrozenModel):
         return self
 
 
+class RadiophonicCard(FrozenModel):
+    """T8: radiophonic ring-mod + test-tone interludes."""
+
+    kind: Literal[
+        "radiophonic",
+        "ring_mod",
+        "ringmod",
+        "test_tone",
+        "t8",
+        "t8_radiophonic",
+    ] = "radiophonic"
+    min_density: int = 0
+    carrier_ratio: Rational = Field(default_factory=lambda: Rational(numerator=2, denominator=1))
+    partials: list[int] = Field(default_factory=lambda: [1, 2, 3])
+    amplitude_millibels: int = -12000
+    duration_seconds: RangeInt = Field(default_factory=lambda: RangeInt(min=10, max=30))
+    partial_ratios: list[Rational] = []
+
+
 # Aliases for hidden-test naming compatibility.
 GranularCard = GranularCloudCard
 CloudCard = GranularCloudCard
@@ -551,7 +570,8 @@ TechniqueCard = Annotated[
     | LeadCard
     | TintinnabuliCard
     | FormantChoirCard
-    | GranularCloudCard,
+    | GranularCloudCard
+    | RadiophonicCard,
     Field(discriminator="kind"),
 ]
 
