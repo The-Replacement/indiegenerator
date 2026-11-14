@@ -52,6 +52,7 @@ from indiegen.plan import (
     PadEvent,
     PluckEvent,
     PolyPeriodEvent,
+    RadiophonicEvent,
     RhythmEvent,
     SectionPlan,
 )
@@ -86,7 +87,7 @@ def pitched_notes(events: Sequence[Event]) -> list[tuple[int, int, int]]:
     """
     out: list[tuple[int, int, int]] = []
     for event in events:
-        if isinstance(event, (PluckEvent, PadEvent, LeadEvent, DroneEvent)):
+        if isinstance(event, (PluckEvent, PadEvent, LeadEvent, DroneEvent, RadiophonicEvent)):
             out.append((event.start_frame, event.start_frame + event.duration_frames, event.midi))
         elif isinstance(event, PolyPeriodEvent):
             out.extend(

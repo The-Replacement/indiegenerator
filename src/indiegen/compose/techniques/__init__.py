@@ -13,6 +13,24 @@ from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_phas
 from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_reich_phasing
 from indiegen.compose.techniques.t2_phasing import plan_phased_pair as plan_t2
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu as plan_deja_vu
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_radiophonic as plan_radiophonic,
+)
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_ring_mod as plan_ring_mod,
+)
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_ringmod as plan_ringmod,
+)
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_t8 as plan_t8,
+)
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_t8_radiophonic as plan_t8_radiophonic,
+)
+from indiegen.compose.techniques.t8_radiophonic import (
+    plan_test_tone as plan_test_tone,
+)
 from indiegen.compose.techniques.t11_drone import plan_drone as plan_drone
 from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_cloud
 from indiegen.compose.techniques.t12_granular import plan_granular_cloud as plan_clouds
@@ -72,6 +90,12 @@ __all__ = (
     "plan_phased_pair",
     "plan_phasing",
     "plan_plucks",
+    "plan_radiophonic",
+    "plan_ring_mod",
+    "plan_ringmod",
+    "plan_test_tone",
+    "plan_t8",
+    "plan_t8_radiophonic",
     "plan_poly_period",
     "plan_reich_phasing",
     "plan_duo",

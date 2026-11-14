@@ -60,12 +60,13 @@ from indiegen.plan import (
     PadEvent,
     PluckEvent,
     PolyPeriodEvent,
+    RadiophonicEvent,
 )
 from indiegen.synth.osc import midi_to_hz
 
 # The voices whose spectrum is declared as partial ratios. A tuple, because a
 # module-level mutable container is not allowed in this package (test_hygiene).
-ADDITIVE: Final = (PadEvent, LeadEvent, PolyPeriodEvent, DroneEvent)
+ADDITIVE: Final = (PadEvent, LeadEvent, PolyPeriodEvent, DroneEvent, RadiophonicEvent)
 
 
 def _partial_pairs(event: Event) -> Iterator[tuple[float, int]]:
@@ -85,6 +86,14 @@ def _partial_pairs(event: Event) -> Iterator[tuple[float, int]]:
             yield (
                 base * ratio * 2.0 ** (partial.detune_cents / 1200.0),
                 (event.amplitude_millibels + partial.amplitude_millibels),
+            )
+    elif isinstance(event, RadiophonicEvent):
+        base = midi_to_hz(event.midi)
+        partials = event.partials if event.partials else [1, 2, 3]
+        for pp in partials:
+            yield (
+                base * float(pp),
+                event.amplitude_millibels,
             )
     elif isinstance(event, PolyPeriodEvent):
         for voice in event.voices:
@@ -148,7 +157,7 @@ def modal_mixture_permille(  # noqa: C901
         if overlap <= 0:
             continue
         midis: list[int] = []
-        if isinstance(event, (PadEvent, LeadEvent, DroneEvent, PluckEvent)):
+        if isinstance(event, (PadEvent, LeadEvent, DroneEvent, PluckEvent, RadiophonicEvent)):
             midis.append(int(event.midi))
         elif isinstance(event, PolyPeriodEvent):
             for voice in event.voices:
