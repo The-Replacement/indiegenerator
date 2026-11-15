@@ -1,0 +1,113 @@
+schema: 1
+project:
+  name: indiegenerator
+  stack: python
+components:
+  agents:
+  - git-ops
+  - github-ops
+  - n3rv
+  - n3rv-scout
+  - n3rv-sensor
+  - project-ops
+  - sdd-archiver
+  - sdd-designer
+  - sdd-explorer
+  - sdd-proposer
+  - sdd-speccer
+  - sdd-task-planner
+  - sdd-verifier
+  skills:
+  - code
+  - commits
+  - git-ops
+  - github-ops
+  - judgment-day
+  - project-board
+  - sdd-apply
+  - sdd-archive
+  - sdd-design
+  - sdd-explore
+  - sdd-propose
+  - sdd-spec
+  - sdd-spec-kit-plan
+  - sdd-spec-kit-spec
+  - sdd-spec-kit-tasks
+  - sdd-tasks
+  - sdd-verify
+  - testing
+  commands:
+  - handoff
+  - judgment-day
+  - new-satellite
+  - review
+  - sdd-new
+  - spec-kit
+  hooks:
+  - pre-push
+detection:
+  structure:
+    has_src_dir: true
+    has_tests_dir: true
+    has_docs_dir: true
+    has_scripts_dir: true
+    has_web_files: false
+    entry_points:
+    - indiegen
+    key_dirs:
+    - out
+    - out2
+    - out3
+    - out_batch
+    - out_c31
+    - presets
+    - tools
+  frameworks:
+  - name: mypy
+    category: typechecking
+    guidance: 'mypy conventions:
+
+      - Run `mypy src/` for type checking
+
+      - Configure in `pyproject.toml` under `[tool.mypy]`
+
+      - Use `# type: ignore[code]` with specific error codes'
+    version_hint: null
+  - name: pytest
+    category: testing
+    guidance: 'pytest patterns:
+
+      - Use `conftest.py` for shared fixtures
+
+      - Use `@pytest.mark.parametrize` for table-driven tests
+
+      - Use `tmp_path` fixture for temporary file system
+
+      - Use `monkeypatch` fixture for mocking
+
+      - Name test files `test_*.py` and functions `test_*`'
+    version_hint: null
+  - name: ruff
+    category: linting
+    guidance: 'ruff conventions:
+
+      - Run `ruff check .` for linting, `ruff format .` for formatting
+
+      - Configure rules in `pyproject.toml` under `[tool.ruff]`
+
+      - Use `# noqa: RULE` for inline suppressions, not blanket disable'
+    version_hint: null
+  tools: []
+mcp:
+  servers:
+  - name: sequential-thinking
+    type: local
+    command:
+    - npx
+    - -y
+    - '@modelcontextprotocol/server-sequential-thinking@2.1.1'
+    url: null
+    environment: null
+    description: ''
+    disabled: false
+board: null

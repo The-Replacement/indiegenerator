@@ -23,8 +23,12 @@ out*/
 .vscode/
 .DS_Store
 
-# N3RV — NEVER COMMIT (template-controlled)
-.n3rv/
+# N3RV — generated. Ignored, EXCEPT files that were already tracked before
+# this rule existed: AGENTS.md, opencode.json and opencode.template.json are
+# still tracked here and stay reviewable in diffs. The declared state is
+# committed on purpose — it is what a reviewer reads before the generator runs.
+.n3rv/*
+!.n3rv/state.yaml
 .opencode/
 .githooks/
 .specify/

@@ -19,7 +19,7 @@
 - `src/` — Source code
 - `tests/` — Test suite
 - `docs/` — Documentation
-
+- `scripts/` — Utility scripts
 
 ### Entry Points
 
@@ -32,11 +32,15 @@
 - `out/`
 - `out2/`
 - `out3/`
+- `out_batch/`
+- `out_c31/`
 - `presets/`
+- `tools/`
 
 
 ## Rules
 
+- **Language: English everywhere.** Code, identifiers, comments, docstrings, gate output/labels, docs, commit messages, issue comments. No exceptions for "the file was already in Spanish" — the file is the debt, not the convention.
 - Never add "Co-Authored-By" or AI attribution to commits. Use conventional commits only.
 - Never build after changes.
 - When asking a question, STOP and wait for response. Never continue or assume answers.
@@ -153,7 +157,8 @@ This template is maintained by [The-Replacement](https://github.com/The-Replacem
 - Linting: `ruff check`
 - Type checking: `mypy .`
 - License: Apache-2.0
-- Python: >=3.15
+- Python: `requires-python` in `pyproject.toml` — the only source of truth; a
+  number written here goes stale the day the floor moves
 
 ### Entry Points Pattern
 ```python
