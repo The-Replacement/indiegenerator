@@ -157,8 +157,6 @@ This template is maintained by [The-Replacement](https://github.com/The-Replacem
 - Linting: `ruff check`
 - Type checking: `mypy .`
 - License: Apache-2.0
-- Python: `requires-python` in `pyproject.toml` — the only source of truth; a
-  number written here goes stale the day the floor moves
 
 ### Entry Points Pattern
 ```python
