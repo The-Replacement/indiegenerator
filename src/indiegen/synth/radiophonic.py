@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from indiegen.gain import millibels_to_gain
 from indiegen.plan import RadiophonicEvent
+from indiegen.synth.env import dc_blocked_block, dc_blocker_state
 from indiegen.synth.osc import midi_to_hz
 
 
 @dataclass(frozen=True)
 class RadiophonicState:
     phase: float = 0.0
+    # The blocker carries across blocks like every other voice's: the default
+    # carrier (2:1) lands on partial 2, so sin^2 leaves a DC term of 0.5 that
+    # gate 2 refuses.
+    dc: np.ndarray = field(default_factory=dc_blocker_state)
 
 
 def radiophonic_state(event: RadiophonicEvent, sample_rate: int = 44100) -> RadiophonicState:
@@ -43,7 +48,8 @@ def render_radiophonic_block(
     out = voice * carrier
     amp = millibels_to_gain(event.amplitude_millibels)
     out = out * amp
-    return out, state
+    blocked, dc_carry = dc_blocked_block(out, sample_rate, state.dc)
+    return blocked, RadiophonicState(phase=state.phase, dc=dc_carry)
 
 
 def render_radiophonic(event: RadiophonicEvent, sample_rate: int) -> np.ndarray:
