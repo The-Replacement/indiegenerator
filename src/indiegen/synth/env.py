@@ -23,9 +23,9 @@ def dc_blocked_block(signal: np.ndarray, sample_rate: int, state: np.ndarray) ->
     This is the shared tail of the blockwise voice skeleton: allocate a
     silent block (``synth.osc.zero_block``), accumulate the voice's own
     partials into it - that loop is each instrument's alone and is not
-    shared - then finish here. The pluck, the poly-period voice and the
-    drone all end this way; the pad is the one exception, because it is
-    never DC-blocked (see ``dc_block``).
+    shared - then finish here. The pluck, the poly-period voice, the drone
+    and the radiophonic stack all end this way; the pad is the one exception,
+    because it is never DC-blocked (see ``dc_block``).
     """
     return dc_block_state(signal, sample_rate, state)
 
