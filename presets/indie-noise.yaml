@@ -102,6 +102,12 @@ techniques:
     # at 0.925 LU against a 0.5 limit without this corner.
     lowpass_hz: 14000
 
+  # T8: the radiophonic voice. A ring-mod carrier (2:1) over partials 1:2:3
+  # at -12 dB for 10-30 s stretches — the Delia Derbyshire workshop sound.
+  # Card defaults are kept: this lane carries it first, other lanes follow
+  # once it has aired. Appended last so the existing draws keep their order.
+  - kind: radiophonic
+
 section_count_range: [4, 6]
 # The durations this lane may be rendered at: the full tracks, the
 # longforms and the interludes of BRIEF 15's batch.
