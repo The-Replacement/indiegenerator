@@ -69,13 +69,16 @@ from indiegen.synth.granular import GranularState, granular_state, render_granul
 from indiegen.synth.ks import PluckState, pluck_state, render_pluck_block
 from indiegen.synth.pad import PadState, pad_state, render_pad_block
 from indiegen.synth.poly_period import PolyPeriodState, poly_period_state, render_poly_period_block
+from indiegen.synth.radiophonic import RadiophonicState, radiophonic_state, render_radiophonic_block
 
 BLOCK_SIZE: int = 8192
 RENDER_BLOCK: int = 131072
 
 DrumEvent = KickEvent | SnareEvent | HatEvent | BassEvent
 
-VoiceState = PadState | PolyPeriodState | DroneState | PluckState | DrumState | FormantState | GranularState
+VoiceState = (
+    PadState | PolyPeriodState | DroneState | PluckState | DrumState | FormantState | GranularState | RadiophonicState
+)
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,8 @@ def _voice_state(event: Event, sample_rate: int) -> VoiceState:
             return pad_state(event)
         case "formant" | "formant_choir" | "choir":
             return formant_state(event, sample_rate)
+        case "radiophonic" | "ring_mod" | "ringmod" | "test_tone" | "t8" | "t8_radiophonic":
+            return radiophonic_state(event)
         case (
             "granular"
             | "cloud"
@@ -170,6 +175,8 @@ def _voice_block(
             return render_pad_block(event, sample_rate, start, stop, cast(PadState, state))
         case "formant" | "formant_choir" | "choir":
             return render_formant_block(event, sample_rate, start, stop, cast(FormantState, state))
+        case "radiophonic" | "ring_mod" | "ringmod" | "test_tone" | "t8" | "t8_radiophonic":
+            return render_radiophonic_block(event, sample_rate, start, stop, cast(RadiophonicState, state))
         case (
             "granular"
             | "cloud"

@@ -30,6 +30,7 @@ from indiegen.compose.techniques import (
     plan_phased_pair,
     plan_plucks,
     plan_poly_period,
+    plan_radiophonic,
     plan_tintinnabuli,
 )
 from indiegen.compose.techniques.t5_dejavu import plan_deja_vu, replay_permille
@@ -54,6 +55,7 @@ from indiegen.config import (
     PluckCard,
     PolyPeriodCard,
     Preset,
+    RadiophonicCard,
     SnareCard,
     StationPreset,
     StrategyCard,
@@ -2014,6 +2016,16 @@ def _granular_events(
     return list(plan_granular_cloud(cloud, rng, ctx, frames))
 
 
+def _radiophonic_events(
+    card: TechniqueCard,
+    rng: SplitMix64,
+    ctx: TechniqueContext,
+    frames: _LaneFrames,
+) -> Sequence[Event]:
+    """One radiophonic voice spanning the lane's track."""
+    return list(plan_radiophonic(cast(RadiophonicCard, card), rng, ctx))
+
+
 def _no_events(card: TechniqueCard, rng: SplitMix64, ctx: TechniqueContext, frames: _LaneFrames) -> Sequence[Event]:
     """A card that is a send or a stream, not an instrument: it schedules nothing."""
     return []
@@ -2073,6 +2085,12 @@ CARD_SPECS: Mapping[str, CardSpec] = MappingProxyType(
         "t12_cloud": CardSpec(_granular_events, "cloud", _min_density_card),
         "t12_granular_cloud": CardSpec(_granular_events, "cloud", _min_density_card),
         "t12_granular_clouds": CardSpec(_granular_events, "cloud", _min_density_card),
+        "radiophonic": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
+        "ring_mod": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
+        "ringmod": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
+        "test_tone": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
+        "t8": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
+        "t8_radiophonic": CardSpec(_radiophonic_events, "radiophonic", _min_density_card),
         "pink": CardSpec(_no_events, None, lambda _: 0),
         "frippertronics": CardSpec(_no_events, None, lambda _: 0),
         "dub_chain": CardSpec(_no_events, None, lambda _: 0),

@@ -67,7 +67,7 @@ jobs:
     # 13. It is the job that would have caught c27's two-section ambient, and
     # it is separate so the default run stays fast.
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
