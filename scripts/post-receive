@@ -1,18 +1,18 @@
 #!/bin/sh
-# post-receive — corre EN el mainframe, en ~/servers/indiegenerator.
-# Instalar (copia, NO symlink): HOOKS=$(git rev-parse --git-path hooks);
+# post-receive — runs ON the mainframe, in ~/servers/indiegenerator.
+# Install (copy, NOT symlink): HOOKS=$(git rev-parse --git-path hooks);
 #   install -m 0755 scripts/post-receive "$HOOKS/post-receive"
-# Requiere receive.denyCurrentBranch=updateInstead (git actualiza el worktree
-# antes de este hook; NO hacer fetch/reset).
+# Requires receive.denyCurrentBranch=updateInstead (git moves the worktree
+# before this hook runs; do NOT fetch or reset).
 #
-# Un push reconstruye y levanta SÓLO indiegen. NO toca icecast/liquidsoap:
-# --no-deps evita recrear dependencias. Sin --no-recreate: tras un build
-# dejaría la imagen vieja corriendo.
+# A push rebuilds and brings up ONLY indiegen. It does not touch
+# icecast/liquidsoap: --no-deps avoids recreating dependencies. And no
+# --no-recreate: after a build it would leave the old image running.
 #
-# Rotación on-push: la política NO está acá, se lee del .env de la radio
-# (INDIEGEN_AUTO_TRIGGER). 1 = cada push rota la biblioteca (render completo
-# ~6 min + reinicio de liquidsoap + corte de ~10 s). 0 o ausente = el push
-# sólo despliega código.
+# On-push rotation: the policy is NOT here; it is read from the radio's .env
+# (INDIEGEN_AUTO_TRIGGER) on every push. 1 = every push rotates the library
+# (full render ~6 min + liquidsoap restart + ~10 s of cut). 0 or absent =
+# the push only deploys code.
 set -eu
 
 RADIO_DIR="${RADIO_DIR:-$HOME/servers/radio}"
@@ -20,35 +20,56 @@ LOG="$RADIO_DIR/data/indiegen/deploy.log"
 mkdir -p "$(dirname "$LOG")"
 log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
 
-# Política de rotación, leída del .env en cada push: cambiarla no requiere
-# tocar ni reinstalar este hook.
+# Rotation policy, read from the .env on every push: changing it does not
+# require touching or reinstalling this hook.
 AUTO_TRIGGER=$(sed -n 's/^[[:space:]]*INDIEGEN_AUTO_TRIGGER[[:space:]]*=[[:space:]]*//p' \
   "$RADIO_DIR/.env" 2>/dev/null | tail -1 | tr -d ' \t\r\"')
 AUTO_TRIGGER="${AUTO_TRIGGER:-0}"
 
 while read -r OLD NEW REF; do
   case "$REF" in
-    refs/heads/master | refs/heads/main) ;;
+    refs/heads/*) ;;
     *) continue ;;
   esac
-  log "indiegenerator push ${OLD}..${NEW} (worktree actualizado por updateInstead)"
+  # updateInstead moves the worktree only when the pushed ref IS the branch
+  # checked out here. Any other branch updates a ref nobody has: the worktree
+  # keeps the previous commit while this hook would rebuild stale code and
+  # log success. This box checks out $HEAD_REF; a push to anything else is
+  # not a deploy (infra#12).
+  HEAD_REF="$(git symbolic-ref -q HEAD || true)"
+  if [ -z "$HEAD_REF" ]; then
+    log "FAIL: HEAD is detached; updateInstead cannot move the worktree. Deploy did nothing."
+    exit 1
+  fi
+  if [ "$REF" != "$HEAD_REF" ]; then
+    log "FAIL: pushed $REF but HEAD is on $HEAD_REF; updateInstead would leave the worktree where it is. Push $HEAD_REF instead."
+    exit 1
+  fi
+  # The worktree must actually be at the pushed commit: that is the tree the
+  # containers mount, and the only commit this deploy is allowed to serve.
+  WORKTREE_SHA="$(git rev-parse HEAD)"
+  if [ "$WORKTREE_SHA" != "$NEW" ]; then
+    log "FAIL: worktree is at $WORKTREE_SHA, not $NEW; refusing to deploy a tree that does not contain the push"
+    exit 1
+  fi
+  log "indiegenerator push ${OLD}..${NEW}; worktree moved to $WORKTREE_SHA"
   if ! docker compose -f "$RADIO_DIR/docker-compose.yml" build indiegen >>"$LOG" 2>&1; then
-    log "FALLO: build indiegen — el contenedor sigue con la imagen anterior"
+    log "FAIL: build indiegen — the container keeps the previous image"
     exit 1
   fi
   log "build ok: up -d --no-deps indiegen"
   if ! docker compose -f "$RADIO_DIR/docker-compose.yml" up -d --no-deps indiegen >>"$LOG" 2>&1; then
-    log "FALLO: up indiegen — revisar $LOG"
+    log "FAIL: up indiegen — check $LOG"
     exit 1
   fi
   if [ "$AUTO_TRIGGER" = "1" ]; then
     if ! date -u +%Y-%m-%dT%H:%M:%SZ > "$RADIO_DIR/data/indiegen/trigger"; then
-      log "FALLO: deploy ok pero no pude escribir el trigger (permisos en data/indiegen)"
+      log "FAIL: deploy ok but could not write the trigger (permissions on data/indiegen)"
       exit 1
     fi
-    log "deploy listo + ciclo disparado (INDIEGEN_AUTO_TRIGGER=1)"
+    log "deploy ready + cycle triggered (INDIEGEN_AUTO_TRIGGER=1)"
   else
-    log "deploy listo (sin ciclo; INDIEGEN_AUTO_TRIGGER=${AUTO_TRIGGER})"
+    log "deploy ready (no cycle; INDIEGEN_AUTO_TRIGGER=${AUTO_TRIGGER})"
   fi
 done
 exit 0
