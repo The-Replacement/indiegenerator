@@ -19,7 +19,15 @@ from collections.abc import Sequence
 import pytest
 
 from indiegen.compose import compose, director, tension
-from indiegen.config import load_preset
+from indiegen.config import (
+    DroneCard,
+    LeadCard,
+    PadCard,
+    PhasedPairCard,
+    PolyPeriodCard,
+    RadiophonicCard,
+    load_preset,
+)
 from indiegen.errors import PlanError
 from indiegen.gain import millibels_to_gain
 from indiegen.plan import (
@@ -37,6 +45,7 @@ from indiegen.plan import (
     PluckEvent,
     PolyPeriodEvent,
     PolyPeriodVoice,
+    RadiophonicEvent,
     Rational,
     RhythmEvent,
 )
@@ -226,6 +235,28 @@ def test_a_parametric_voice_declares_no_spectrum() -> None:
     assert declared_centroid_millihz([_pluck(60), _pluck(67)], 0, DURATION) == 0
 
 
+def test_the_radiophonic_voice_declares_its_partial_stack() -> None:
+    """T8: the ring-mod voice declares its test-tone partials (1, 2, 3).
+
+    The positive half of the sentinel pair - if ``RadiophonicEvent`` ever
+    leaves ``spectrum.ADDITIVE``, the zero-control above still passes and this
+    is what fails. midi 57 is A3 (220 Hz), so 1:2:3 is 220/440/660 Hz and the
+    equal-weight mean is exactly 440 Hz.
+    """
+    event = RadiophonicEvent(
+        instrument="radiophonic",
+        kind="radiophonic",
+        start_frame=0,
+        duration_frames=DURATION,
+        midi=57,
+        pan_permille=0,
+        amplitude_millibels=-12000,
+        attack_frames=0,
+        release_frames=0,
+    )
+    assert declared_centroid_millihz([event], 0, DURATION) == pytest.approx(440_000, abs=1)
+
+
 # --- the window -------------------------------------------------------------
 
 
@@ -323,12 +354,27 @@ def ambient_240() -> Plan:
 
 
 def test_a_lane_without_an_additive_card_declares_nothing() -> None:
-    """AC-3: the sentinel is exact, not approximate - indie-noise has no pad,
-    lead, poly-period or drone card at all. (dub-electronic now carries a
-    sustained drone bed, so it declares a spectrum.)"""
-    for lane in ("indie-noise",):
-        plan = director(compose(load_preset(lane), SEED, 60 * SAMPLE_RATE))
-        assert [section.declared_centroid_millihz for section in plan.sections] == [0] * len(plan.sections)
+    """AC-3: the sentinel is exact, not approximate - a composed plan whose
+    lane declares no additive card (pad, lead, poly-period, drone,
+    radiophonic) declares no spectrum at all.
+
+    The control is BUILT, not looked up: every lane carries an additive card
+    since T8 landed on indie-noise, so no preset in the roster plays control
+    anymore. The additive card classes (pad, lead, poly-period/phased-pair,
+    drone, radiophonic) mirror ``spectrum.ADDITIVE``; they are stripped from a
+    real lane and the sentinel must hold on what remains.
+    """
+    additive_cards = (PadCard, LeadCard, PolyPeriodCard, PhasedPairCard, DroneCard, RadiophonicCard)
+    preset = load_preset("indie-noise")
+    lane = preset.lanes[0]
+    stripped = lane.parameters.model_copy(
+        update={"techniques": [card for card in lane.parameters.techniques if not isinstance(card, additive_cards)]}
+    )
+    control = preset.model_copy(update={"lanes": [lane.model_copy(update={"parameters": stripped})]})
+    assert stripped.techniques, "the stripped control must still have techniques"
+    assert not any(isinstance(card, additive_cards) for card in stripped.techniques)
+    plan = director(compose(control, SEED, 60 * SAMPLE_RATE))
+    assert [section.declared_centroid_millihz for section in plan.sections] == [0] * len(plan.sections)
 
 
 def test_a_drone_lane_declares_a_spectrum_in_every_section() -> None:
