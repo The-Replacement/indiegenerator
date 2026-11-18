@@ -40,14 +40,13 @@ SEEDS: tuple[int, ...] = (1042, 2000, 4002)
 SWEEP_SECONDS: int = 240
 RATE: int = 44100
 
-# c14 AC7: guard against the ~0.24 collapse of the reverted orbit attempt.
-# HEAD (4937c5c) measured motorik-4002 = 0.63982 and dub-4002 = 0.760814.
-# The shipped orbit moves the motif's notes, so these two readings drift by
-# +0.0021 and -0.0005 respectively - re-derived here as regression pins. The
-# declared gate limit is unchanged at 0.4000, and both cells clear it by >0.24.
+# c14 AC7 literally requires BOTH readings to be >= the HEAD (4937c5c)
+# baselines: motorik-4002 = 0.63982 and dub-electronic-4002 = 0.760814.
+# These are not re-derived: the orbit must not reduce the correlation. The
+# declared gate limit stays 0.4000; these pins are stricter than the gate.
 GATE6_FLOOR: dict[tuple[str, int], float] = {
-    ("motorik", 4002): 0.64193,
-    ("dub-electronic", 4002): 0.760308,
+    ("motorik", 4002): 0.63982,
+    ("dub-electronic", 4002): 0.760814,
 }
 
 

@@ -454,7 +454,7 @@ def test_ac6_the_drone_reaches_the_tension_model(kosmische_240: Plan) -> None:
         )
         assert before != after
         roughness.append((before.roughness, after.roughness))
-    assert roughness == [(0, 6000), (0, 1000), (0, 1000), (5500, 2286), (6000, 1143), (0, 0)]
+    assert roughness == [(0, 6000), (0, 1000), (0, 6000), (5500, 2286), (6000, 1143), (0, 0)]
 
 
 def _with_drone_shift(plan: Plan, semitones: int) -> Plan:

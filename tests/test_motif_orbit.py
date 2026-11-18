@@ -93,13 +93,13 @@ def test_composed_string_roundtrip() -> None:
             continue
         assert app.transform in CANONICAL, app.transform
 
-    # The recorded strings are the composed canonical elements: invert and
-    # retrograde bases are recorded as T_n and I_n respectively, while the
-    # non-invertible augment/fragment statements keep their HEAD strings.
+    # The axis-relative inversion step is recorded as the small canonical T_d;
+    # retrograde (an order-2 involution that leaves the snap register) and the
+    # non-invertible augment/fragment keep their HEAD strings.
     assert [app.transform for app in non_identity[:5]] == [
         "transpose",
         "transpose",
-        "I_n",
+        "retrograde",
         "augment",
         "fragment",
     ]
