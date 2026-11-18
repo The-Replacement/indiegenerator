@@ -20,7 +20,7 @@ from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64
 from indiegen.plan import MotifAppearance, PluckEvent, Rational
 from indiegen.theory.entropy import band_ok, statement_ic_permille
-from indiegen.theory.motif import TRANSFORMS, Cell, transform
+from indiegen.theory.motif import TRANSFORMS, Cell, orbit_element, transform
 
 # The motif's amplitude, the same as the deja-vu's stabs.
 MOTIF_AMPLITUDE_MILLIBELS: int = -6000
@@ -155,8 +155,9 @@ def plan_motif(  # noqa: C901
 
         if placement + total > ctx.duration_frames:
             continue
+        final_cell, recorded_name, recorded_parameter, _ = orbit_element(cell, name, parameter, axis, statement)
         offset = placement
-        for midi, duration in shaped:
+        for midi, duration in final_cell:
             events.append(
                 PluckEvent(
                     kind="pluck",
@@ -182,11 +183,11 @@ def plan_motif(  # noqa: C901
         appearances.append(
             MotifAppearance(
                 section_index=section,
-                transform=name,
-                parameter=parameter,
+                transform=recorded_name,
+                parameter=recorded_parameter,
                 start_frame=placement,
-                notes=[midi for midi, _ in shaped],
-                durations=[duration for _, duration in shaped],
+                notes=[midi for midi, _ in final_cell],
+                durations=[duration for _, duration in final_cell],
             )
         )
         statement += 1
