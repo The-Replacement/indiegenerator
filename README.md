@@ -100,21 +100,23 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 150.6 s | 136.6 s | 147.6 s | 126.3 s | 143.1 s |
-| Faster than realtime | 3.2× | 3.5× | 3.3× | 3.8× | 3.4× |
-| Peak RSS | 1182 MB | 1191 MB | 1184 MB | 1285 MB | 1231 MB (budget 1500 MB) |
-| Integrated loudness | −16.075 LUFS | −16.023 LUFS | −16.065 LUFS | −16.078 LUFS | −16.070 LUFS |
-| True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.293 dBTP | −4.300 dBTP |
-| Loudness range | 9.208 LU | 9.251 LU | 11.048 LU | 9.155 LU | 10.682 LU |
+| Render time (whole command) | 99.9 s | 133.3 s | 152.3 s | 82.9 s | 136.7 s |
+| Faster than realtime | 4.8× | 3.6× | 3.2× | 5.8× | 3.5× |
+| Peak RSS | 697 MB | 795 MB | 728 MB | 756 MB | 825 MB (budget 1500 MB) |
+| Integrated loudness | −16.117 LUFS | −16.022 LUFS | −16.078 LUFS | −16.003 LUFS | −16.069 LUFS |
+| True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.300 dBTP | −4.300 dBTP |
+| Loudness range | 9.439 LU | 9.266 LU | 10.839 LU | 9.049 LU | 10.667 LU |
 | Sections | 5 | 6 | 4 | 4 | 4 |
-| `plan_sha256` | `b74ffd0f…` | `f7f1f837…` | `2a58be51…` | `14b67abb…` | `23700127…` |
-| `pcm_sha256` | `2d6263cc…` | `f17faddf…` | `7d7e38ef…` | `03e8b167…` | `ca934e0e…` |
+| `plan_sha256` | `d7cf1a0b…` | `14e40d9b…` | `5f7f8298…` | `9b67a709…` | `720b4470…` |
+| `pcm_sha256` | `611d8837…` | `c7f47458…` | `2670ee83…` | `f4c3fdf0…` | `264f9be6…` |
 
-These rows were re-measured on 2026-11-11, when the consonance scoring
-(issue #17) moved every lane's harmonic centre onto a root that can carry
-the lane's declared chord: every hash moved, and the loudness ranges with
-them. The row before this one was itself stale — it predated c39, which
-had added the tension fields and moved the plan without moving the row.
+These rows were re-measured on 2026-11-18 after c14 (issue #14): the motif's
+closed-subgroup orbit changed the recorded transform of each statement and
+the notes the plucks play, so every `plan_sha256` and `pcm_sha256` moved.
+The gate-6 correlation for the two previously failing cells was held at or
+above its HEAD baseline (motorik-4002 0.640817 ≥ 0.63982, dub-electronic-4002
+0.761104 ≥ 0.760814). The row before this one was measured on 2026-11-11,
+when the consonance scoring (issue #17) moved every lane's harmonic centre.
 Measure the row you publish.
 
 The hashes are the sidecar's, so the audio column is reproducible on any
