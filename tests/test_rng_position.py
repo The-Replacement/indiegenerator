@@ -83,9 +83,9 @@ def test_deck_bytes_match_head_baseline() -> None:
         assert _deck_hash(plan) == expected["deck_sha256"], key
         appearances = plan.motif_appearances
         assert len(appearances) == expected["appearance_count"], key
-        assert sum(1 for app in appearances if app.transform != "identity") == expected[
-            "appearance_transform_count"
-        ], key
+        assert sum(1 for app in appearances if app.transform != "identity") == expected["appearance_transform_count"], (
+            key
+        )
         assert _opening(plan) == expected["strategies"][0], key
 
     # The named regression: motorik-4002 opens transpose_up_fourth.
@@ -120,7 +120,7 @@ def test_draw_count_and_position_pinned(monkeypatch: object) -> None:
     assert len(records) == len(HEAD_DRAW_SIGNATURE.split())
 
     # Control-flow order in source: draw at :122, re-arm :128-154, seed :178.
-    source = (Path(__file__).resolve().parents[1] / "src" / "indiegen" / "compose" / "techniques" / "t14_motif.py")
+    source = Path(__file__).resolve().parents[1] / "src" / "indiegen" / "compose" / "techniques" / "t14_motif.py"
     text = source.read_text(encoding="utf-8")
     assert SOURCE_NAME in text
     assert SOURCE_DRAW in text
