@@ -19,7 +19,7 @@ from indiegen.compose.rng import SplitMix64
 from indiegen.config import load_preset
 from indiegen.plan import canonical_bytes
 
-BASELINE_PATH = Path("/tmp/opencode/c14_baseline_decks.json")
+BASELINE_PATH = Path(__file__).resolve().parent / "golden" / "motif_deck_baseline_head.json"
 
 # Pinned runtime draw-site signature for motorik 1042 @ 45 s on HEAD. Each
 # token is "<caller function>:<SplitMix64 method>". Source line TEXT (not line
