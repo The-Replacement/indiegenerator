@@ -103,3 +103,29 @@ def test_composed_string_roundtrip() -> None:
         "augment",
         "fragment",
     ]
+
+
+def test_single_identity() -> None:
+    """AC4: statement 0 is the only identity; no step-6 second identity."""
+    appearances, _ = _appearances()
+    identities = [app for app in appearances if app.transform == "identity"]
+    assert len(identities) == 1
+    assert appearances[0].transform == "identity"
+
+    # For every orbit the helper uses, no returned cell equals the base.
+    final, name, parameter, axis = orbit_element(BASE_CELL, "transpose", 0, 48, 6)
+    assert name in CANONICAL
+    assert final != BASE_CELL
+    for generator in (("transpose", 2, 0), ("I_n", 3, 0), ("RI", 0, 4)):
+        tail = orbit(BASE_CELL, *generator)[1:]
+        assert BASE_CELL not in tail
+    assert TRANSFORMS[0] == "transpose"
+
+
+def test_statement_zero_is_verbatim() -> None:
+    """The identity statement records the cell unchanged."""
+    appearances, _ = _appearances()
+    first = appearances[0]
+    assert first.transform == "identity"
+    assert first.parameter == 0
+    assert list(zip(first.notes, first.durations, strict=True)) == BASE_CELL
