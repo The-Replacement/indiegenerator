@@ -2459,6 +2459,15 @@ def _appearance_notes(
         return appearances
     from indiegen.plan import PluckEvent
 
+    # c14 / AC6: a motif appearance's notes ARE the recorded orbit transform
+    # of the base cell (theory.motif.orbit_element). Geodesic snapping is not
+    # a group element: copying snapped pluck pitches here would destroy the
+    # final-plan transform -> notes round-trip. The plucks stay snapped for
+    # audio; the appearance keeps the shape the plan declares. Bass and every
+    # non-motif pluck are still voice-led by _lead_geodesic.
+    if any(isinstance(ev, PluckEvent) and ev.instrument == "motif" for ev in out):
+        return appearances
+
     new_appearances: list[MotifAppearance] = []
     for appearance in appearances:
         notes = list(appearance.notes)
