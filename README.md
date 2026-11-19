@@ -563,6 +563,23 @@ network access at runtime, no ML, no model weights, no samples.
 
 ---
 
+## Seed sweep
+
+The `sweep`-marked suite (five lanes × three seeds × 240 s, gates 4/5/6/7/13)
+runs in a throwaway `python:3.15-slim` container on the mainframe against a
+pinned checkout, so a laptop never pays the ~69-minute single-process cost.
+The one canonical command:
+
+```bash
+scripts/sweep-mainframe.sh <40-hex-sha> [--collect-only]
+```
+
+`--collect-only` collects (85) without rendering. The local path
+`.venv/bin/pytest -q -m sweep` still works but is no longer the default. The
+CI `sweep` job in `.github/workflows/gate.yml` remains an independent gate.
+
+---
+
 ## Legal
 
 **The code** is licensed under the Apache License 2.0 — see [LICENSE](LICENSE).
