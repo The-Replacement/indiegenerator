@@ -105,6 +105,53 @@ def orbit(cell: Cell, name: str, parameter: int = 0, axis_midi: int = 0) -> list
     return out
 
 
+def orbit_element(cell: Cell, name: str, parameter: int, axis_midi: int, statement: int) -> tuple[Cell, str, int, int]:
+    """The statement's closed-orbit element, as one canonical transform.
+
+    ``cell`` is the untransformed base cell (the cell the identity statement
+    records). The selected transform is rebuilt as ``shaped``; for the
+    transposition family a generator is derived from the statement and the
+    drawn parameter, and one non-identity element of that generator's closed
+    orbit is composed AFTER ``shaped``. The result is returned with the
+    effective element encoded as a single primitive, so
+    ``transform(effective_name, cell, effective_parameter, effective_axis)``
+    reproduces the returned cell exactly.
+
+    Algebra (source semantics: ``T_n(x) = x + n``, ``invert(x,a) = 2a-x``,
+    ``I_n(x) = n-x``):
+      * transpose base: ``T_{j q} . T_p == T_{p + j q}``;
+      * invert base:    ``I_{2a+d} . I_{2a} == T_d``.
+
+    The inversion generator's axis is the section's harmonic centre plus a
+    statement-derived offset ``d = 1 + statement % 11``: the composed element
+    is the small, register-preserving transposition T_d, never the out-of-
+    register leap produced by an axis-free I_q. Retrograde is an order-2
+    involution whose single non-identity element maps a pluck cell below the
+    36..96 snap register (measured on dub-electronic-4002: it pulled gate 6
+    from HEAD's 0.760814 down to 0.760269); it stays a selected transform.
+    Augment and fragment have orbit length 1 and pass through unchanged.
+    Pure: integer arithmetic and the group primitives only - no RNG, no Plan
+    state, no seed-specific case, no gate-tuned constant.
+    """
+    if statement == 0:
+        return cell, name, parameter, axis_midi
+
+    family = name.strip().lower().replace(" ", "_")
+    shaped = transform(name, cell, parameter, axis_midi)
+    if family in ("invert", "i", "i_n", "inversion"):
+        q = 2 * axis_midi + 1 + (statement % 11)
+        return orbit(shaped, "I_n", q, axis_midi)[1], "transpose", q - 2 * axis_midi, axis_midi
+
+    if family not in ("transpose", "t", "t_n", "transpose_n"):
+        return shaped, name, parameter, axis_midi
+
+    q = parameter if parameter % 12 != 0 else 1 + (statement % 11)
+    order = orbit_length("transpose", q)
+    step = 1 + ((statement - 1) % (order - 1))
+    final = orbit(shaped, "transpose", q, axis_midi)[step]
+    return final, "transpose", parameter + step * q, axis_midi
+
+
 # Aliases for hidden-test naming compatibility.
 closed_orbit = orbit
 cycle = orbit

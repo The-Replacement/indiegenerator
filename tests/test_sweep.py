@@ -32,12 +32,22 @@ from indiegen.validate import (
     check_gate_6,
     check_gate_7,
     check_gate_13,
+    timbre_measurement,
 )
 
 LANES: tuple[str, ...] = ("motorik", "kosmische", "dub-electronic", "indie-noise", "ambient")
 SEEDS: tuple[int, ...] = (1042, 2000, 4002)
 SWEEP_SECONDS: int = 240
 RATE: int = 44100
+
+# c14 AC7 literally requires BOTH readings to be >= the HEAD (4937c5c)
+# baselines: motorik-4002 = 0.63982 and dub-electronic-4002 = 0.760814.
+# These are not re-derived: the orbit must not reduce the correlation. The
+# declared gate limit stays 0.4000; these pins are stricter than the gate.
+GATE6_FLOOR: dict[tuple[str, int], float] = {
+    ("motorik", 4002): 0.63982,
+    ("dub-electronic", 4002): 0.760814,
+}
 
 
 def _cases() -> list[tuple[str, int]]:
@@ -54,6 +64,12 @@ def test_lane_seed_renders_the_trajectory_gates(lane: str, seed: int) -> None:
     plan: Plan = director(compose(load_preset(lane), seed, SWEEP_SECONDS * RATE))
     mix = render_plan(plan)
     pcm = master(plan, mix, BLOCK_SIZE)
+
+    floor = GATE6_FLOOR.get((lane, seed))
+    if floor is not None:
+        measured, _ = timbre_measurement(plan, mix)
+        assert measured >= floor, (lane, seed, measured)
+        assert measured > 0.4000, (lane, seed, measured)
 
     failures: list[GateResult] = []
     failures += check_gate_4(plan, pcm)
