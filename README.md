@@ -107,7 +107,7 @@ process each:
 | True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.300 dBTP | −4.300 dBTP |
 | Loudness range | 9.439 LU | 9.266 LU | 10.839 LU | 9.049 LU | 10.667 LU |
 | Sections | 5 | 6 | 4 | 4 | 4 |
-| `plan_sha256` | `f8cd603b…` | `1a792ed6…` | `921a8049…` | `ad0caa21…` | `9ad47430…` |
+| `plan_sha256` | `d7cf1a0b…` | `14e40d9b…` | `5f7f8298…` | `9b67a709…` | `720b4470…` |
 | `pcm_sha256` | `611d8837…` | `c7f47458…` | `2670ee83…` | `f4c3fdf0…` | `264f9be6…` |
 
 These rows were re-measured on 2026-11-18 after c14 (issue #14): the motif's

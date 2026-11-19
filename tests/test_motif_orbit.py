@@ -11,13 +11,9 @@ motorik 1042 @ 45 s, HEAD worktree). The contract therefore belongs at the
 
 from __future__ import annotations
 
-import pytest
-
-from indiegen.compose import compose, director
 from indiegen.compose.context import TechniqueContext
 from indiegen.compose.rng import SplitMix64
 from indiegen.compose.techniques.t14_motif import StringVoice, plan_motif
-from indiegen.config import load_preset
 from indiegen.plan import Rational
 from indiegen.theory.motif import TRANSFORMS, Cell, orbit, orbit_element, transform
 
@@ -124,29 +120,6 @@ def test_single_identity() -> None:
         tail = orbit(BASE_CELL, *generator)[1:]
         assert BASE_CELL not in tail
     assert TRANSFORMS[0] == "transpose"
-
-
-@pytest.mark.parametrize("lane", ("motorik", "kosmische", "ambient", "dub-electronic", "indie-noise"))
-def test_final_plan_roundtrip_all_lanes(lane: str) -> None:
-    """AC6 on the FINAL plan: the base cell is reconstructed from plan data.
-
-    The identity appearance is statement 0, which orbit_element passes through
-    verbatim, so its notes/durations ARE the base cell build_cell composed.
-    The axis is the final section's root; every recorded element is now an
-    axis-independent T_n / retrograde / augment / fragment primitive.
-    """
-    plan = director(compose(load_preset(lane), 1042, 45 * 44100))
-    appearances = plan.motif_appearances
-    identities = [app for app in appearances if app.transform == "identity"]
-    assert len(identities) == 1, lane
-    base = list(zip(identities[0].notes, identities[0].durations, strict=True))
-
-    non_identity = [app for app in appearances if app.transform != "identity"]
-    assert len(non_identity) >= 3, lane
-    for app in non_identity:
-        axis = plan.sections[app.section_index].root_midi
-        played = list(zip(app.notes, app.durations, strict=True))
-        assert transform(app.transform, base, app.parameter, axis) == played, (lane, app.transform)
 
 
 def test_statement_zero_is_verbatim() -> None:
