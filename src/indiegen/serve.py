@@ -347,6 +347,7 @@ def serve(
     trigger_file: Path | None,
     seed_strategy: str = "advance",
     run_on_start: bool = True,
+    trigger_only: bool = False,
     max_cycles: int = 0,
     meta_dir: Path | None = None,
 ) -> None:
@@ -354,7 +355,15 @@ def serve(
     if meta_dir is None:
         meta_dir = audio_dir
     state = load_state(work_dir)
-    next_at = time.monotonic() + (0.0 if run_on_start else float(interval_seconds))
+    trigger_only = trigger_only or interval_seconds <= 0
+    periodic = not trigger_only and interval_seconds > 0
+    _now0 = time.monotonic()
+    if run_on_start:
+        next_at = _now0
+    elif periodic:
+        next_at = _now0 + float(interval_seconds)
+    else:
+        next_at = float("inf")
     log.info(
         "serve start preset=%s count=%s audio=%s meta=%s interval=%ss restart=%s cycle=%s state=%s",
         preset,
@@ -438,4 +447,4 @@ def serve(
                 state.cycle,
             )
 
-        next_at = time.monotonic() + float(interval_seconds)
+        next_at = (time.monotonic() + float(interval_seconds)) if periodic else float("inf")

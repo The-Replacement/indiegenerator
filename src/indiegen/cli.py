@@ -408,6 +408,14 @@ def serve(
         str, typer.Option("--seed-strategy", help="Seed strategy: advance, fixed, time.")
     ] = "advance",
     interval_seconds: Annotated[int, typer.Option("--interval-seconds", help="Seconds between cycles.")] = 21600,
+    trigger_only: Annotated[
+        bool,
+        typer.Option(
+            "--trigger-only",
+            help="Run only when --trigger-file appears; never on a timer. Implied by --interval-seconds <= 0.",
+            envvar="INDIEGEN_TRIGGER_ONLY",
+        ),
+    ] = False,
     trigger_file: Annotated[
         Path | None, typer.Option("--trigger-file", help="If this file appears, run a cycle immediately.")
     ] = None,
@@ -461,6 +469,7 @@ def serve(
             trigger_file=trigger_file,
             seed_strategy=seed_strategy,
             run_on_start=run_on_start,
+            trigger_only=trigger_only,
             max_cycles=max_cycles,
         )
     except (DecodeError, PlanError, RenderError, OSError, ValueError) as exc:
