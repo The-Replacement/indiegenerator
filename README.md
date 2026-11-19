@@ -127,6 +127,25 @@ and that holds: the pre-c31 code reads 720 MB on the ambient eight-minute
 command and c31 reads 746 MB, inside the run-to-run spread this file warns
 about below.
 
+The block-size question (issue #31) needed numbers from ONE method, so it was
+measured separately: one fresh process per cell, stdlib `resource.getrusage`
+plus `time.perf_counter`, baseline first. The verbatim method string and the
+raw records are in `docs/perf/r31-render-block.json`, rendered into
+`docs/perf/r31-render-block.md`. These numbers are NOT the column above and
+must never be mixed with it:
+
+| `RENDER_BLOCK` | ambient 900 s wall | ambient 900 s peak RSS | motorik 480 s wall | motorik 480 s peak RSS |
+|---:|---:|---:|---:|---:|
+| 131072 (baseline) | 275.006 s | 1361.7 MB | 99.154 s | 690.3 MB |
+| 32768 | 259.719 s | 1314.0 MB | 97.673 s | 691.4 MB |
+| 16384 | 270.607 s | 1308.6 MB | 101.577 s | 693.0 MB |
+
+Both candidates stay inside the 171 s / 1425 MB headroom and breach no budget,
+but neither improves the baseline by the required 5%: 32768 is 1.5% faster on
+the 480 s cell and 3.5% lighter on the 900 s cell; 16384 is 2.4% SLOWER and
+3.9% lighter. On a host this variable that is noise, so the decision is A and
+`RENDER_BLOCK` stays 131072.
+
 The budget is an eight-minute track in three minutes and 1.5 GB of RSS, and
 both hold with room: the slowest lane is the motorik at 150.6 s, and the
 master chain's peak memory (the peak envelope plus the limited mix) is 850 MB
@@ -495,7 +514,12 @@ This slice is the arranger, not the last one. Everything below is
   array that spans the track scaled with it — the mix (one stereo float64
   array, 605 MB), the peak envelope, the limited mix, the 4× oversampled peak.
   c29 streamed the render and the master, and the same fifteen-minute piece is
-  now **1263 MB** in 268.9 s, inside the budget.
+  now **1263 MB** in 268.9 s, inside the budget. The same piece was re-measured
+  for issue #31 with the single fresh-process method: 275.0 s / 1361.7 MB at
+  `RENDER_BLOCK=131072`, 259.7 s / 1314.0 MB at 32768, 270.6 s / 1308.6 MB at
+  16384. That method is not the c29 method, so these figures are not comparable
+  to the 1263 MB above — only to each other. On that basis no size was adopted
+  (see `docs/handoff/r31-render-block.md`).
 - **The loudness range has a documented exception on the dub lane.** The range
   is a range with an exception, not a gate; the brief's own text says "ambient
   lower, documented", and the dub lane is the one with the widest dynamics.
