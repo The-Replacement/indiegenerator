@@ -31,7 +31,7 @@ about the whole seed space.
   c27 failure, 4002 a third arrangement), never random.
 - `pyproject.toml` — the `sweep` marker.
 - `.github/workflows/gate.yml` — the gate job deselects `sweep`; the `sweep`
-  job is its own run with a 30-minute timeout.
+  job is its own run with a 45-minute timeout.
 
 ## Verification
 
@@ -47,5 +47,5 @@ about the whole seed space.
 - The sweep runs gates 4-7 and 13 only. Gates 1-3 and 8-12 are the master and
   codec gates, covered by the default run and by ffmpeg in the gate job.
 - The gate job and the sweep job both render; on a contended CI runner the
-  sweep may approach its timeout. The 30-minute ceiling on a 7:48 local run
+  sweep may approach its timeout. The 45-minute ceiling on a 7:48 local run
   has room but is worth watching.

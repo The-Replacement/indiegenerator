@@ -141,7 +141,9 @@ THE RULES THAT ARE NOT NEGOTIABLE
 Commands: .venv/bin/pytest, .venv/bin/ruff check ., .venv/bin/ruff format
 --check ., .venv/bin/mypy src, and
 .venv/bin/python -m indiegen.cli render --preset motorik --seed 1042 --out out/
-The seed sweep is its own CI job and a local .venv/bin/pytest -q -m sweep.
+The seed sweep runs on the mainframe via scripts/sweep-mainframe.sh <sha>; the
+local .venv/bin/pytest -q -m sweep is still available but no longer the
+default, and the CI sweep job stays an independent gate.
 Gate 12 (the codec) and gate 11 need ffmpeg and run only in `validate` and
 `install`, never in the render path. Note: there is no pytest-timeout
 plugin, so --timeout is rejected.
