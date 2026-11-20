@@ -581,9 +581,12 @@ The one canonical command:
 scripts/sweep-mainframe.sh <40-hex-sha> [--collect-only]
 ```
 
-`--collect-only` collects (85) without rendering. The local path
-`.venv/bin/pytest -q -m sweep` still works but is no longer the default. The
-CI `sweep` job in `.github/workflows/gate.yml` remains an independent gate.
+`--collect-only` collects (85) without rendering. The copy into `/scratch`
+excludes `data/` and `.git/`, so render history never rides along; the whole
+container run is bounded by `SWEEP_TIMEOUT` (seconds, default 3600, exit 124 on
+expiry). The local path `.venv/bin/pytest -q -m sweep` still works but is no
+longer the default. The CI `sweep` job in `.github/workflows/gate.yml` remains
+an independent gate.
 
 ---
 
