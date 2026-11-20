@@ -392,20 +392,20 @@ def test_the_director_re_derives_the_field(kosmische_240: Plan, composed_plan: P
     motorik = director(compose(load_preset("motorik"), SEED, 60 * SAMPLE_RATE))
     before = compose(load_preset("motorik"), SEED, 60 * SAMPLE_RATE)
     assert [s.declared_centroid_millihz for s in before.sections] == [
-        294_061,
-        247_013,
-        294_033,
-        440_594,
-        293_524,
+        293_354,
+        246_870,
+        293_580,
+        439_492,
+        294_089,
     ]
     assert [s.declared_centroid_millihz for s in motorik.sections] == [
-        294_061,
-        247_013,
-        294_033,
-        440_594,
-        355_892,
+        293_354,
+        246_870,
+        293_580,
+        439_492,
+        356_578,
     ]
-    assert composed_plan.sections[3].declared_centroid_millihz == 440_594
+    assert composed_plan.sections[3].declared_centroid_millihz == 439_492
 
 
 def test_ac4_transposing_the_drone_raises_every_section(kosmische_240: Plan) -> None:

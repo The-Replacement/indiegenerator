@@ -64,9 +64,12 @@ title_words:
 # section's level by up to three decibels to land inside the corridor. The
 # corridor is the form's intent; the trimmed level is what the listener
 # hears, and gate 5 asserts the delivered energy follows it. The planned
-# tension level T also drives layer admission where a lane opts in: at or
-# below 421 (a sparse/fullness dip, pass1) a section admits all layers; above
-# 421 the node's density is in charge. Admission is per-lane and off by default
+# tension level T is measured from the material and judged by gate 14. A
+# SEPARATE layer-independent INTENSITY I (section length, the function's
+# density and declared level, and the motif's interval roughness) drives layer
+# admission where a lane opts in: a section with I <= 300 strips to its bed
+# (pad/drone plus the unconditional motif); every other section fills (admits
+# all the lane's layers). Admission is per-lane and off by default
 # (tension_admission_enabled: false unless a lane declares true). The four
 # pitched lanes enable it; ambient keeps it off. The default corridor is the
 # whole range.

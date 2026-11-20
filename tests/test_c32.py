@@ -96,7 +96,7 @@ def test_no_drum_hit_lands_in_a_section_that_has_not_reached_it(lane: str, secon
     }
     events = schedule(plan)
     for section in plan.sections:
-        if admission_on and _admission_mode(section.tension_permille) == "all":
+        if admission_on and _admission_mode(section.intensity_permille) == "all":
             continue
         for voice, minimum in minimums.items():
             if section.density >= minimum:

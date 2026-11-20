@@ -16,7 +16,7 @@ from indiegen.compose import compose, director
 from indiegen.config import load_preset
 from indiegen.plan import MotifAppearance, canonical_json
 
-HEAD_FIELD_DIGEST = "71a56d99184130fec7b4bd7483483b07ad7481bd1f26c48de22925f01bad0974"
+HEAD_FIELD_DIGEST = "1fae390b7102f1b7c21d6d3e4bed913a132e59ea7ccda7cc3e7ca2f9f2099395"
 HEAD_MOTIF_APPEARANCE_KEYS = frozenset({"section_index", "transform", "parameter", "start_frame", "notes", "durations"})
 HEAD_PLAN_KEYS = frozenset(json.loads(canonical_json(director(compose(load_preset("motorik"), 1042, 45 * 44100)))))
 

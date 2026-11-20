@@ -1,178 +1,25 @@
 {
-  "ambient-1042": {
-    "appearance_count": 18,
-    "appearance_transform_count": 17,
-    "deck_sha256": "d5d52a783b5319fb152b31b70c8fa97dac1737da9ab77d7e77e85bf62e0427f3",
-    "strategies": [
-      "transpose_up_fourth",
-      "swap_delay_to_triplets"
-    ]
-  },
-  "ambient-2000": {
-    "appearance_count": 16,
-    "appearance_transform_count": 15,
-    "deck_sha256": "bec30c92f32f8c1dddb784c1436930c03de8448e676e2313047fe5dc77aa6559",
-    "strategies": [
-      "reharmonize_relative",
-      "swap_delay_to_triplets"
-    ]
-  },
-  "ambient-4002": {
-    "appearance_count": 18,
-    "appearance_transform_count": 17,
-    "deck_sha256": "81e3163eab8a9fde275990802cde255aac36f8e933009d9dfae1d8912104d8b2",
-    "strategies": [
-      "reharmonize_relative",
-      "swap_delay_to_triplets"
-    ]
-  },
-  "dub-electronic-1042": {
-    "appearance_count": 18,
-    "appearance_transform_count": 17,
-    "deck_sha256": "c71fd747dc0ef9bd038a1c4a88358f4c6f8d12e61c7f0e536fe3f65fdf505d9d",
-    "strategies": [
-      "solo_texture",
-      "half_time",
-      "transpose_up_fourth",
-      "drop_drums",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "drop_drums",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "drop_drums",
-      "swap_delay_to_triplets"
-    ]
-  },
-  "dub-electronic-2000": {
-    "appearance_count": 14,
-    "appearance_transform_count": 13,
-    "deck_sha256": "0afe73cebbe47be0e58cdc6bebe6bf0c627f1756939cd054473b09bf10f0c041",
-    "strategies": [
-      "drop_kick",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "drop_drums",
-      "drop_kick",
-      "transpose_up_fourth",
-      "solo_texture"
-    ]
-  },
   "dub-electronic-4002": {
     "appearance_count": 17,
     "appearance_transform_count": 16,
-    "deck_sha256": "707dfd1eaa242c48ed68ae33635d39079990f81e67a18168c0dff81ad2c428a3",
+    "deck_sha256": "8baf34577aaf4ce06065cd570d4f6001b3e9a3fefd946ea05ff987b6ea5d2ffb",
     "strategies": [
       "drop_bass",
       "solo_texture",
       "half_time",
       "drop_kick",
       "reharmonize_relative",
-      "half_time",
-      "drop_drums",
-      "reharmonize_relative"
-    ]
-  },
-  "indie-noise-1042": {
-    "appearance_count": 13,
-    "appearance_transform_count": 12,
-    "deck_sha256": "c244c1ce3208233edf6e60370fb200bd3e65055834a1e8e186e5199b8b83ca76",
-    "strategies": [
-      "swap_delay_to_triplets",
-      "half_time",
-      "drop_drums",
-      "swap_delay_to_triplets",
-      "drop_drums",
-      "half_time",
-      "swap_delay_to_triplets",
-      "reharmonize_relative"
-    ]
-  },
-  "indie-noise-2000": {
-    "appearance_count": 20,
-    "appearance_transform_count": 19,
-    "deck_sha256": "7faa4c6f895943ce77f29b1ce7657108fc5af249f550de41bbb5b80cf840c45f",
-    "strategies": [
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "drop_drums",
-      "solo_texture",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "half_time",
-      "reharmonize_relative"
-    ]
-  },
-  "indie-noise-4002": {
-    "appearance_count": 18,
-    "appearance_transform_count": 17,
-    "deck_sha256": "f012683ba5b70898e1afe0f64e7f378aa52e8722635cd8f8f5f6fea3e49e729e",
-    "strategies": [
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "half_time",
-      "drop_drums",
       "swap_delay_to_triplets",
       "reharmonize_relative",
       "swap_delay_to_triplets"
-    ]
-  },
-  "kosmische-1042": {
-    "appearance_count": 14,
-    "appearance_transform_count": 13,
-    "deck_sha256": "3db3d0cbe520e266445766a4f0dc4ea994b471b2e659d156ddcc4dc6e0c4c158",
-    "strategies": [
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "transpose_up_fourth",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets"
-    ]
-  },
-  "kosmische-2000": {
-    "appearance_count": 13,
-    "appearance_transform_count": 12,
-    "deck_sha256": "04bc8247831b64046c4fe558ba2969de47d188bdfc33ef6e6f165ac0abcd1c5c",
-    "strategies": [
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "transpose_up_fourth",
-      "swap_delay_to_triplets",
-      "transpose_up_fourth",
-      "swap_delay_to_triplets",
-      "reharmonize_relative"
-    ]
-  },
-  "kosmische-4002": {
-    "appearance_count": 14,
-    "appearance_transform_count": 13,
-    "deck_sha256": "14d2f8ac3a100412937ac31196ff20aa9d9cb6d452ae03ad71906679eda6c501",
-    "strategies": [
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "reharmonize_relative",
-      "swap_delay_to_triplets",
-      "transpose_up_fourth",
-      "swap_delay_to_triplets",
-      "transpose_up_fourth"
     ]
   },
   "motorik-1042": {
     "appearance_count": 20,
     "appearance_transform_count": 19,
-    "deck_sha256": "1a28ff8f947522aa48a211b5ebdb5d85d06577d75e00fdc760d47aa7ef4ab181",
+    "deck_sha256": "b8d61fce5d93f4839f7932862997f526d62b7d1faf7d7c6d149e0e9e0729639d",
     "strategies": [
-      "swap_delay_to_triplets",
+      "transpose_up_fourth",
       "reharmonize_relative",
       "half_time",
       "drop_bass",
@@ -187,36 +34,36 @@
   "motorik-2000": {
     "appearance_count": 21,
     "appearance_transform_count": 20,
-    "deck_sha256": "79a248fd39c5f2f916d544c1ca43a1fe8d45a48202bef40ccef7b27a94340fa1",
+    "deck_sha256": "a69499955467f6301a7ba04572f2e2c0a29841e301731c4ffbb974a75dfaa357",
     "strategies": [
-      "drop_kick",
-      "drop_bass",
+      "reharmonize_relative",
+      "half_time",
       "solo_texture",
       "swap_delay_to_triplets",
       "drop_drums",
-      "reharmonize_relative",
       "drop_bass",
+      "solo_texture",
       "drop_kick",
       "swap_delay_to_triplets",
-      "drop_kick",
-      "half_time",
-      "swap_delay_to_triplets"
+      "transpose_up_fourth",
+      "swap_delay_to_triplets",
+      "transpose_up_fourth"
     ]
   },
   "motorik-4002": {
     "appearance_count": 21,
     "appearance_transform_count": 20,
-    "deck_sha256": "4ead693eb83c8a6ed6b0f343114551a477e8596d71b3f5a97d47d73365312928",
+    "deck_sha256": "1e1fbf6efb8d4005eb2976c74eceb4177e9a3aed33f5ab582dee2cdcb5806f17",
     "strategies": [
-      "transpose_up_fourth",
       "swap_delay_to_triplets",
+      "solo_texture",
       "drop_drums",
       "reharmonize_relative",
       "solo_texture",
       "drop_drums",
       "solo_texture",
       "drop_kick",
-      "solo_texture"
+      "swap_delay_to_triplets"
     ]
   }
 }

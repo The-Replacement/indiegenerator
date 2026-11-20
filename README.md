@@ -119,6 +119,13 @@ above its HEAD baseline (motorik-4002 0.640817 ≥ 0.63982, dub-electronic-4002
 when the consonance scoring (issue #17) moved every lane's harmonic centre.
 Measure the row you publish.
 
+c39 (issue #39) adds a layer-independent intensity that drives layer admission
+(a section with low intensity strips to its bed; every other section fills).
+Because the value is recorded in the plan, every `plan_sha256` moves. The audio
+of the four lanes that opt into admission (motorik, kosmische, dub-electronic,
+indie-noise) may move; ambient opts out and keeps its audio. The rows above are
+the pre-c39 tree; re-measure them after the change lands.
+
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
 RSS is from the 2026-10-22 run and was measured with a different tool: a
