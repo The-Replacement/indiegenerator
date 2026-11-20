@@ -33,25 +33,26 @@ python3.15 -m venv .venv          # Python 3.15.0 (mise: python@3.15)
 The render prints fourteen lines and leaves two files in `out/`: the tagged
 FLAC and a JSON sidecar holding the plan and the measurements. The numbers
 below are this command's real output on the development machine; the hash is
-the audio and the hash is the point. **Re-measured at c41 (this commit):** the
-block that stood here was from before c27 widened ambient's section graph — it
-recorded three sections and a `pcm_sha256` that no longer matched the committed
-artifact.
+the audio and the hash is the point. **Re-measured at c39 (issue #39,
+2026-11-20):** `pcm_sha256` is `0fe70908…`, matching the committed ambient
+golden; the block previously standing here carried the older `18aa71cd…` and an
+English filename.
 
 ```
-path: out/ambient_glass_low_s1042.flac
-sidecar: out/ambient_glass_low_s1042.json
+path: out/ambient_vidrio_bajo_s1042.flac
+sidecar: out/ambient_vidrio_bajo_s1042.json
 duration: 90.000000
 format: FLAC 44100Hz PCM_16 2ch
 form: interlude
-peak: -4.306 dBFS
-true_peak: -4.301 dBTP
-loudness: -16.002 LUFS
-loudness_range: 12.808 LU
+peak: -4.305 dBFS
+true_peak: -4.300 dBTP
+loudness: -16.130 LUFS
+loudness_range: 11.651 LU
 sections: 4
 techniques: poly_period,drone,pluck
-plan_sha256: 44e87268fd1398df2beea8d5375ca1108c7115522525521944b3fa7167d1a3aa
-pcm_sha256: 18aa71cd33393bfd4d246bffcde4a2be7f134dfc0745942145a1f77b0ad00fa3
+plan_sha256: a3b1496ea7afd099a906fbd07dd46fd4ca2a8e746b9316b2ba6a2ab5180cf582
+pcm_sha256: 0fe70908aa2c2214042ffd87effeab32e9c21537a52a9397f0c17a5a57bbaf1f
+render_seconds: 27.521
 ```
 
 Other commands:
@@ -91,7 +92,7 @@ the numbers are what the machine does, not a benchmark. The host is shared and
 repeat runs of the same command have differed by up to 30%, so read the times
 as an order of magnitude and the hashes as the fact.
 
-Eight-minute pieces, measured on 2026-11-11 with exactly this command, one
+Eight-minute pieces, re-measured on 2026-11-20 after c39 (issue #39) with exactly this command, one
 process each:
 
 ```bash
@@ -100,31 +101,28 @@ process each:
 
 | Measurement | motorik | kosmische | dub-electronic | indie-noise | ambient |
 |---|---|---|---|---|---|
-| Render time (whole command) | 99.9 s | 133.3 s | 152.3 s | 82.9 s | 136.7 s |
-| Faster than realtime | 4.8× | 3.6× | 3.2× | 5.8× | 3.5× |
-| Peak RSS | 697 MB | 795 MB | 728 MB | 756 MB | 825 MB (budget 1500 MB) |
-| Integrated loudness | −16.117 LUFS | −16.022 LUFS | −16.078 LUFS | −16.003 LUFS | −16.069 LUFS |
-| True peak (4× oversampled) | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.300 dBTP | −4.300 dBTP |
-| Loudness range | 9.439 LU | 9.266 LU | 10.839 LU | 9.049 LU | 10.667 LU |
+| Render time (whole command) | 125.4 s | 173.8 s | 169.3 s | 90.3 s | 145.3 s |
+| Faster than realtime | 3.8× | 2.8× | 2.8× | 5.3× | 3.3× |
+| Peak RSS | 707 MB | 772 MB | 725 MB | 753 MB | 836 MB (budget 1500 MB) |
+| Integrated loudness | −16.126 LUFS | −16.022 LUFS | −16.123 LUFS | −16.004 LUFS | −16.069 LUFS |
+| True peak (4× oversampled) | −4.298 dBTP | −4.299 dBTP | −4.299 dBTP | −4.299 dBTP | −4.300 dBTP |
+| Loudness range | 11.089 LU | 9.266 LU | 11.527 LU | 9.474 LU | 10.667 LU |
 | Sections | 5 | 6 | 4 | 4 | 4 |
-| `plan_sha256` | `d7cf1a0b…` | `14e40d9b…` | `5f7f8298…` | `9b67a709…` | `720b4470…` |
-| `pcm_sha256` | `611d8837…` | `c7f47458…` | `2670ee83…` | `f4c3fdf0…` | `264f9be6…` |
+| `plan_sha256` | `b15253db…` | `02a4952f…` | `c3080904…` | `b9d108a8…` | `1d2fa23a…` |
+| `pcm_sha256` | `6c8076d4…` | `c7f47458…` | `153ad877…` | `a71768cc…` | `264f9be6…` |
 
-These rows were re-measured on 2026-11-18 after c14 (issue #14): the motif's
-closed-subgroup orbit changed the recorded transform of each statement and
-the notes the plucks play, so every `plan_sha256` and `pcm_sha256` moved.
-The gate-6 correlation for the two previously failing cells was held at or
+These rows were re-measured on 2026-11-20 after c39 (issue #39): the
+layer-independent intensity moved the audio of motorik, dub-electronic and
+indie-noise, while kosmische and ambient render bit-identically (their
+`pcm_sha256` is unchanged); every `plan_sha256` moved because the intensity is
+recorded in the plan. The row before this one was re-measured on 2026-11-18
+after c14 (issue #14): the motif's closed-subgroup orbit changed the recorded
+transform of each statement and the notes the plucks play, moving every hash,
+with the gate-6 correlation for the two previously failing cells held at or
 above its HEAD baseline (motorik-4002 0.640817 ≥ 0.63982, dub-electronic-4002
-0.761104 ≥ 0.760814). The row before this one was measured on 2026-11-11,
-when the consonance scoring (issue #17) moved every lane's harmonic centre.
-Measure the row you publish.
-
-c39 (issue #39) adds a layer-independent intensity that drives layer admission
-(a section with low intensity strips to its bed; every other section fills).
-Because the value is recorded in the plan, every `plan_sha256` moves. The audio
-of the four lanes that opt into admission (motorik, kosmische, dub-electronic,
-indie-noise) may move; ambient opts out and keeps its audio. The rows above are
-the pre-c39 tree; re-measure them after the change lands.
+0.761104 ≥ 0.760814). Still earlier, the 2026-11-11 row followed the consonance
+scoring (issue #17), which moved every lane's harmonic centre. Measure the row
+you publish.
 
 The hashes are the sidecar's, so the audio column is reproducible on any
 machine that runs the command above; the other columns are this one. Peak
