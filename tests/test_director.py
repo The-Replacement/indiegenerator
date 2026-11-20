@@ -237,27 +237,37 @@ def test_the_motif_transforms_rewrite_the_appearances(composed_plan: Plan) -> No
 
 
 def test_the_drum_drops_take_the_hits_out(composed_plan: Plan) -> None:
-    """A drop removes the hits of its instruments inside its span."""
+    """A drop removes the hits of its instruments inside its span.
+
+    c39: a low-intensity section is bed-only, so the intro carries no drums.
+    The drop is aimed at the first section that actually has drum instruments.
+    """
     from indiegen.plan import DirectorMove
 
+    drums = next(
+        section
+        for section in composed_plan.sections
+        if any(instrument in section.instrumentation for instrument in ("kick", "snare", "hat"))
+    )
     move = DirectorMove(
-        sample=0,
+        sample=drums.start_frame,
         strategy="drop_drums",
         detail="take the drums out for a while",
         parameter=0,
-        crossfade_frames=44100,
+        crossfade_frames=drums.end_frame - drums.start_frame,
         applies_to=["kick", "snare", "hat"],
     )
     plan = composed_plan.model_copy(update={"strategy_deck": [move]})
     directed = director(plan)
     assert len(directed.director_log) == 1
+    span_stop = move.sample + move.crossfade_frames
     for event in directed.events:
         if not isinstance(event, (KickEvent, SnareEvent, HatEvent)):
             continue
         if event.instrument not in ("kick", "snare", "hat"):
             continue
         for hit in event.hits:
-            assert not (0 <= hit.frame < 44100)
+            assert not (move.sample <= hit.grid_frame() < span_stop)
 
 
 def test_director_module_constructs_no_rng() -> None:

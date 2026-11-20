@@ -74,14 +74,19 @@ def test_the_rotation_turns_the_pattern() -> None:
 
 
 def test_the_kick_plays_on_the_quarters(motorik_plan: Plan) -> None:
-    """The recipe: the kick on the quarters."""
+    """The recipe: the kick on the quarters.
+
+    The drums are micro-timed (c26 swing: spacings alternate 1.1 / 0.9 beats), so
+    the invariant is that every second kick is exactly two beats after the one
+    before it. c39's layer selection can place the first kick in a phase-offset
+    section, so spacing (not absolute step) is what is checked.
+    """
     kicks = [event for event in motorik_plan.events if isinstance(event, KickEvent)]
     assert kicks
-    event = kicks[0]
-    frames_per_bar = motorik_plan.frames_per_beat * 4
-    for hit in event.hits[:8]:
-        step = (hit.frame % frames_per_bar) // (frames_per_bar // 16)
-        assert step % 4 == 0
+    hits = kicks[0].hits[:8]
+    two_beats = 2 * motorik_plan.frames_per_beat
+    for earlier, later in zip(hits, hits[2:], strict=False):
+        assert later.grid_frame() - earlier.grid_frame() == two_beats
 
 
 def test_the_snare_plays_on_two_and_four(motorik_plan: Plan) -> None:

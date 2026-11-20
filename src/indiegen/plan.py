@@ -761,6 +761,11 @@ class SectionPlan(FrozenModel):
     tension_delta_permille: int = Field(default=0, ge=-1000, le=1000)
     tension_delta_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     tension_delta_max_permille: int = Field(default=1000, ge=-1000, le=1000)
+    # c39: a layer-independent intensity (0..1000) that drives layer selection
+    # (low -> bed, else all). Recorded for inspection and the layer-selection
+    # test; the renderer does not read it. Distinct from tension_permille,
+    # which stays the material-measured quantity gate 14 judges.
+    intensity_permille: int = Field(default=0, ge=0, le=1000)
     # c11: entropy IC band carried from the section graph.
     entropy_ic_min_permille: int = Field(default=-1000, ge=-1000, le=1000)
     entropy_ic_max_permille: int = Field(default=1000, ge=-1000, le=1000)

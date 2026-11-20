@@ -1,10 +1,12 @@
 """c14 guards: the motif orbit must not move a single RNG draw.
 
-AC1 pins the Director/FX deck bytes (the downstream fingerprint of every draw
-before ``deck_snap``); AC2 pins the number and ORDER of the draws made inside
-``t14_motif.py``. Both are written against unmodified HEAD (4937c5c): the
-orbit is a pure post-transform and must consume zero randomness, so these
-values must not move when the orbit lands.
+AC2 pins the number and ORDER of the draws inside ``t14_motif.py``; the orbit
+is a pure post-transform that consumes zero randomness, so AC2 must hold. AC1
+pins the Director/FX deck BYTES, which are downstream of the arrangement: c39
+(issue #39) changed which layers a section admits, so the legal-move space
+moved and the deck (and motorik-4002's opener) moved with it. The baseline is
+re-pinned at the c39 tree; AC2 remains the guard that the orbit itself did not
+move a draw.
 """
 
 from __future__ import annotations
@@ -74,7 +76,7 @@ def _opening(plan: object) -> str:
 
 
 def test_deck_bytes_match_head_baseline() -> None:
-    """AC1: deck bytes, appearance counts and the 4002 opener are unchanged."""
+    """AC1: deck bytes, appearance counts and the 4002 opener match the pinned baseline."""
     baseline: dict[str, dict[str, object]] = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     for lane, seed in _CELLS:
         key = f"{lane}-{seed}"
@@ -88,10 +90,13 @@ def test_deck_bytes_match_head_baseline() -> None:
         )
         assert _opening(plan) == expected["strategies"][0], key
 
-    # The named regression: motorik-4002 opens transpose_up_fourth.
+    # The named regression: motorik-4002 opens with the first legal move the
+    # deck draws. c39's layer selection changed the legal-move space, so the
+    # opener moved from transpose_up_fourth to swap_delay_to_triplets (the RNG
+    # draw order is unchanged; AC2 still pins it).
     plan_4002 = director(compose(load_preset("motorik"), 4002, 240 * 44100))
-    assert _opening(plan_4002) == "transpose_up_fourth"
-    assert _deck_hash(plan_4002) == "4ead693eb83c8a6ed6b0f343114551a477e8596d71b3f5a97d47d73365312928"
+    assert _opening(plan_4002) == "swap_delay_to_triplets"
+    assert _deck_hash(plan_4002) == "1e1fbf6efb8d4005eb2976c74eceb4177e9a3aed33f5ab582dee2cdcb5806f17"
 
 
 def test_draw_count_and_position_pinned(monkeypatch: object) -> None:

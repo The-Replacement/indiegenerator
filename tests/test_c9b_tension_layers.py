@@ -49,29 +49,23 @@ def _ctx(
 
 
 @pytest.mark.parametrize(
-    ("tension", "mode"),
+    ("intensity", "mode"),
     [
-        (420, "all"),
-        (421, "all"),
-        (422, "density"),
-        (449, "density"),
-        (450, "density"),
-        (451, "density"),
-        (549, "density"),
-        (550, "density"),
-        (551, "density"),
-        (500, "density"),
-        (0, "all"),
-        (1000, "density"),
+        (0, "low"),
+        (100, "low"),
+        (300, "low"),
+        (301, "all"),
+        (500, "all"),
+        (1000, "all"),
     ],
 )
-def test_admission_mode_vectors(tension: int, mode: str) -> None:
-    """Sparse (low tension/fullness, #38) admits all; others defer to density."""
-    assert _admission_mode(tension) == mode
+def test_admission_mode_vectors(intensity: int, mode: str) -> None:
+    """c39: low intensity strips to the bed; every other section fills."""
+    assert _admission_mode(intensity) == mode
 
 
-def test_first_section_500_is_density() -> None:
-    assert _admission_mode(500) == "density"
+def test_mid_intensity_fills() -> None:
+    assert _admission_mode(500) == "all"
 
 
 def test_admits_off_falls_back_to_density() -> None:
@@ -141,19 +135,15 @@ def test_bed_is_pad_and_drone_only() -> None:
     assert bed_instruments == {"pad", "drone"}
 
 
-def test_bool_flip_changes_plan_where_threshold_hits() -> None:
-    """Admission consumes the bool and changes the plan where a section is sparse.
+def test_admission_flag_strips_low_intensity_to_bed() -> None:
+    """c39: enabling admission strips a low-intensity section to its bed.
 
-    kosmische 60 s 1061 outro has pass1 T=413 (<=421, #38 fullness-shaped) so
-    it admits all layers when enabled. The lane preset keeps admission off by
-    default; the mechanism is exercised by forcing the flag on.
-
-    The seed moved from 1042 when the CP progression became the default: CP
-    rewrote the section roots, so the outro's pass1 tension moved from 420 to
-    429 and the section no longer crosses the threshold. The mechanism is
-    unchanged; this is the case that still crosses it.
+    motorik 1042 draws an intro with intensity <= 300; with admission on it is
+    bed-only (pad + pluck), while the density-gated default also admits the
+    kick. This exercises the flag on a case it actually moves (kosmische 1042
+    is a no-op: every section's I-mode matches its density result).
     """
-    base = load_preset("kosmische")
+    base = load_preset("motorik")
     entry = base.lanes[0]
 
     def _with_flag(flag: bool) -> object:
@@ -169,16 +159,14 @@ def test_bool_flip_changes_plan_where_threshold_hits() -> None:
             }
         )
 
-    plan_on = director(compose(_with_flag(True), 1061, 60 * SAMPLE_RATE))
-    plan_off = director(compose(_with_flag(False), 1061, 60 * SAMPLE_RATE))
+    plan_on = director(compose(_with_flag(True), 1042, 240 * SAMPLE_RATE))
+    plan_off = director(compose(_with_flag(False), 1042, 240 * SAMPLE_RATE))
     assert canonical_json(plan_on) != canonical_json(plan_off)
-    outro_on = next(section for section in plan_on.sections if section.function == "outro")
-    outro_off = next(section for section in plan_off.sections if section.function == "outro")
-    assert "lead" not in outro_off.instrumentation
-    assert "lead" in outro_on.instrumentation
-    assert (
-        outro_on.tension_permille != outro_off.tension_permille or outro_on.instrumentation != outro_off.instrumentation
-    )
+    intro_on = next(section for section in plan_on.sections if section.function == "intro")
+    intro_off = next(section for section in plan_off.sections if section.function == "intro")
+    assert intro_on.intensity_permille <= 300
+    assert "kick" not in intro_on.instrumentation
+    assert "kick" in intro_off.instrumentation
 
 
 def test_lead_entry_is_retained_under_all() -> None:

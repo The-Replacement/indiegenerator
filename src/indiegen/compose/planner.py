@@ -1066,42 +1066,15 @@ def _form_for(station: StationPreset, duration_frames: int | None) -> Form:
     return station.forms[0].form
 
 
-ADMISSION_RULE: str = "current"
-HIGH_THRESHOLD: int = 700
-LOW_THRESHOLD: int = 300
+def _admission_mode(intensity: int) -> str:
+    """The layer mode a section's intensity selects.
 
-
-def _admission_mode(
-    tension: int,
-    rule: str | None = None,
-    high_threshold: int | None = None,
-    low_threshold: int | None = None,
-) -> str:
-    """The layer mode a planned tension level selects.
-
-    Tension tracks arrangement fullness (#38): sparse sections have low
-    tension, so ``all`` fires at T <= 421 to fill them. Full sections defer
-    to the density gate.
-
-    ``rule="highlow"`` (issue #39 evidence slice) selects high/low families
-    by tension; default rule preserves current behavior. When ``rule`` is
-    None, the module-level ``ADMISSION_RULE`` is used (set by harnesses).
+    c39: low intensity strips the section to its bed; every other section
+    fills (``all``). Intensity is layer-independent (see ``_intensity``), so
+    this selection is causal and has no fixed point. Tension stays a separate,
+    recorded quantity measured from the material (gate 14 judges it).
     """
-    if rule is None:
-        rule = ADMISSION_RULE
-    if rule == "highlow":
-        if high_threshold is None:
-            high_threshold = HIGH_THRESHOLD
-        if low_threshold is None:
-            low_threshold = LOW_THRESHOLD
-        if tension >= high_threshold:
-            return "high"
-        if tension <= low_threshold:
-            return "low"
-        return "density"
-    if tension <= 421:
-        return "all"
-    return "density"
+    return "low" if intensity <= 300 else "all"
 
 
 @dataclass(frozen=True)
@@ -1571,6 +1544,13 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
     )
 
     def _make_ctx(admission_modes: list[str], enabled: bool) -> TechniqueContext:
+        high_family: set[str] = set()
+        low_family: set[str] = set()
+        for card in lane.techniques:
+            spec = CARD_SPECS.get(card.kind)
+            if spec is None or spec.instrument is None:
+                continue
+            (low_family if spec.bed else high_family).add(spec.instrument)
         return TechniqueContext(
             preset=preset.name,
             seed=seed,
@@ -1597,8 +1577,11 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             bed_instruments=list(bed_instruments),
             section_ic_bands=[[node.entropy_ic_min_permille, node.entropy_ic_max_permille] for node in nodes],
             geodesic_voice_leading=station.geodesic_voice_leading,
+            high_family=sorted(high_family),
+            low_family=sorted(low_family),
         )
 
+    intensity_values: list[int] | None = None
     if not lane.tension_admission_enabled:
         ctx = _make_ctx([], False)
         events = _events_for_lane(
@@ -1643,18 +1626,8 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         tension_values_pass1, tension_steps_pass1, tension_levels_pass1 = _tension_walk(
             preset, seed, nodes, boundaries, lengths, frames_per_bar, events_pass1
         )
-        if ADMISSION_RULE == "highlow" and tension_values_pass1:
-            ordered = sorted(tension_values_pass1)
-            n = len(ordered)
-            low_cut = ordered[n // 3]
-            high_cut = ordered[(2 * n) // 3]
-            globals()["HIGH_THRESHOLD"] = high_cut
-            globals()["LOW_THRESHOLD"] = low_cut
-        _ht = globals().get("HIGH_THRESHOLD")
-        _lt = globals().get("LOW_THRESHOLD")
-        admission_modes = [
-            _admission_mode(value, high_threshold=_ht, low_threshold=_lt) for value in tension_values_pass1
-        ]
+        intensity_values = _intensity(events_pass1, nodes, boundaries, lengths)
+        admission_modes = [_admission_mode(value) for value in intensity_values]
         rng.restore(snap)
         ctx = _make_ctx(admission_modes, True)
         events = _events_for_lane(
@@ -1677,6 +1650,9 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
         section_scales,
     )
 
+    if intensity_values is None:
+        intensity_values = _intensity(events, nodes, boundaries, lengths)
+
     if not lane.tension_admission_enabled:
         tension_values, tension_steps, tension_levels = _tension_walk(
             preset, seed, nodes, boundaries, lengths, frames_per_bar, events
@@ -1693,6 +1669,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             tension_values,
             tension_steps,
             tension_levels,
+            intensity_values=intensity_values,
             harmony_cp_enabled=station.harmony_cp_enabled,
             harmony_cp_fallback=cp_fallback,
             geodesic_dists=geodesic_dists,
@@ -1712,6 +1689,7 @@ def compose(preset: Preset, seed: int, duration_frames: int | None = None, form:
             tension_values_pass1,
             tension_steps_pass1,
             tension_levels_pass1,
+            intensity_values=intensity_values,
             harmony_cp_enabled=station.harmony_cp_enabled,
             harmony_cp_fallback=cp_fallback,
             geodesic_dists=geodesic_dists,
@@ -2127,6 +2105,49 @@ def _events_for_lane(
     return events
 
 
+def _intensity(
+    events: list[Event],
+    nodes: list[SectionProfile],
+    boundaries: list[int],
+    lengths: list[int],
+) -> list[int]:
+    """A layer-independent intensity per section (permille 0..1000).
+
+    Read BEFORE admission from signals that do not depend on which lane layers
+    played: section length (graph-drawn), the function's density and declared
+    level, and the motif's interval roughness (the motif is unconditional).
+    It deliberately ignores the lane's density-gated material, so it can drive
+    layer selection without the T=f(L), L=g(T) cycle.
+    """
+    count = len(nodes)
+    dur = [float(lengths[index]) for index in range(count)]
+    dens = [float(nodes[index].density) for index in range(count)]
+    lev = [float(nodes[index].level_millibels) for index in range(count)]
+    rough = []
+    for index in range(count):
+        low, high = boundaries[index], boundaries[index + 1]
+        notes = [
+            event.midi
+            for event in events
+            if getattr(event, "instrument", None) == "motif"
+            and getattr(event, "midi", None) is not None
+            and low <= event.start_frame < high
+        ]
+        intervals = {abs(b - a) for a, b in zip(notes, notes[1:], strict=False)}
+        rough.append(float(len(intervals)))
+
+    def _norm(values: list[float]) -> list[float]:
+        lo, hi = min(values), max(values)
+        if hi == lo:
+            return [0.5 for _ in values]
+        return [(value - lo) / (hi - lo) for value in values]
+
+    dur_n, dens_n, lev_n, rough_n = _norm(dur), _norm(dens), _norm(lev), _norm(rough)
+    return [
+        round(1000 * (0.25 * dur_n[i] + 0.25 * rough_n[i] + 0.25 * dens_n[i] + 0.25 * lev_n[i])) for i in range(count)
+    ]
+
+
 def _tension_walk(
     preset: Preset,
     seed: int,
@@ -2177,6 +2198,7 @@ def _section_plans(
     tension_values: list[int],
     tension_steps: list[int],
     tension_levels: list[int],
+    intensity_values: list[int] | None = None,
     harmony_cp_enabled: bool = False,
     harmony_cp_fallback: int = 0,
     geodesic_dists: list[int] | None = None,
@@ -2207,6 +2229,7 @@ def _section_plans(
                 centroid_hz=_planned_centroid(lane.timbre, node.function),
                 declared_centroid_millihz=declared_centroid_millihz(events, start, stop),
                 tension_permille=tension_values[index],
+                intensity_permille=(intensity_values[index] if intensity_values else 0),
                 tension_delta_permille=tension_steps[index],
                 tension_delta_min_permille=node.tension_delta_min_permille,
                 tension_delta_max_permille=node.tension_delta_max_permille,
