@@ -610,7 +610,7 @@ an independent gate.
 
 ```
 src/indiegen/
-├── cli.py          render, batch, catalog, validate, install, explain
+├── cli.py          render, batch, catalog, validate, install, explain, triage
 ├── config.py       preset models and the loader
 ├── plan.py         the frozen, integer-only Plan and its canonical hash
 ├── render.py       schedule() and the block renderer

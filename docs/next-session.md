@@ -45,7 +45,7 @@ chain, a conservative voice-leading pass); the mix bus (trims, sends, one low
 pass, the bass-keyed 200-500 Hz duck); the master chain (measured loudness
 onto -16 LUFS, a true-peak limiter, LRA, seeded TPDF dither); every gate of
 BRIEF 11 in force; the CLI (render, batch, catalog, validate, install,
-explain); the catalog and the atomic writer. The render streams: the mix is a
+explain, triage); the catalog and the atomic writer. The render streams: the mix is a
 float64 memmap stem and the master holds only the int16 output (c29).
 NEW IN c34: gate 12 measures the mp3 roundtrip OVER THE OVERLAP, not as it
 arrives - MP3's 1152-frame tail padding no longer counts (6fa3a73).

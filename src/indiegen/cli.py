@@ -247,6 +247,51 @@ def catalog(
 
 
 @app.command()
+def triage(
+    directory: Annotated[Path, typer.Option("--dir", help="The directory holding the tracks.")] = Path("out"),
+    top: Annotated[int, typer.Option("--top", help="Always flag the N furthest tracks.")] = 0,
+    threshold: Annotated[float | None, typer.Option("--threshold", help="Flag above this distance.")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output.")] = False,
+) -> None:
+    """Score a directory's tracks against its own library and flag outliers."""
+    from indiegen.triage import triage as score_library
+
+    if not directory.is_dir():
+        typer.echo(f"error: {directory} is not a directory", err=True)
+        raise typer.Exit(code=1)
+    try:
+        report = score_library(directory, threshold=threshold, top=top)
+    except OSError as exc:
+        _fail(exc)
+    if as_json:
+        import json
+
+        typer.echo(
+            json.dumps(
+                {
+                    "method": report.method,
+                    "mean": report.mean,
+                    "skipped": report.skipped,
+                    "tracks": [
+                        {"path": t.path, "distance": t.distance, "flagged": t.flagged, "features": t.features}
+                        for t in report.tracks
+                    ],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return
+    typer.echo(f"method: {report.method}")
+    typer.echo(f"tracks: {len(report.tracks)}")
+    for name in report.skipped:
+        typer.echo(f"skipped: {name} (no usable measurements)", err=True)
+    for track in report.tracks:
+        mark = "FLAG" if track.flagged else "ok"
+        typer.echo(f"{mark} {track.distance:.2f} {track.path}")
+
+
+@app.command()
 def validate(
     files: Annotated[list[Path], typer.Argument(help="The tracks to check.")],
     no_codec: Annotated[bool, typer.Option("--no-codec", help="Skip the gates that need ffmpeg.")] = False,

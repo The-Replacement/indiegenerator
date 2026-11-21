@@ -175,5 +175,5 @@ def test_the_install_refuses_a_track_that_failed_the_gates(
 
 def test_the_commands_are_registered(cli_runner: CliRunner) -> None:
     result = cli_runner.invoke(app, ["--help"])
-    for command in ("render", "batch", "catalog", "validate", "install", "explain"):
+    for command in ("render", "batch", "catalog", "validate", "install", "explain", "triage"):
         assert command in result.stdout
